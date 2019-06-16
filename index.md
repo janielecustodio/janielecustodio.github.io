@@ -6,9 +6,7 @@ I my research, I use operations research and statistics to solve problems in Sup
 
 This page contains a summary of my current and previous research projects, as well as my work experience, publications, past and upcoming conferences.
 
-You can contact me at: janiele at gwu dot edu
-
-## Education
+### Education
 **George Washington University, Washington, DC (Aug 2016 -  2021)**
 - PhD in Systems Engineering 
 - Concentration: Operations Research and Management Science
@@ -19,8 +17,7 @@ You can contact me at: janiele at gwu dot edu
 **Purdue University, West Lafayette, IN, USA (Aug 2013 – Aug 2014)**
 - Visiting Student at the School of Industrial Engineering
 
-
-## Professional Experience
+### Professional Experience
 
 **George Washington University (Jan 2019 - Present)**
 - Instructor with full responsibilities
@@ -43,30 +40,24 @@ You can contact me at: janiele at gwu dot edu
 **Brasal Refrigerantes (Sep 2011 – Apr 2012)**
 - Quality Assurance Intern
 
-```markdown
-Syntax highlighted code block
+### Research
 
-# Header 1
-## Header 2
-### Header 3
+## About
+I am interested in applying Operations Research and Management Science techniques to solve problems in the area of supply chain management, energy and finance.
 
-- Bulleted
-- List
+Main subjects: Mixed Integer Nonlinear Programming, Stochastic Programming, Queueing Theory, Convex Optimization, Second-order Cone Programming
 
-1. Numbered
-2. List
+## Current Project
+Convex reformulations of stochastic queuing location-allocation problems
 
-**Bold** and _Italic_ and `Code` text
+## Publications
+- J. Custodio, A. Zavaleta, M. Lejeune, _Note on 'A Chance-Constrained Programming Framework to Handle Uncertainties in Radiation Therapy Treatment Planning'_, **European Journal of Operations Research**,  v. 275, pp. 793-794, Jun 2019. [link](https://doi.org/10.1016/j.ejor.2018.11.071)
 
-[Link](url) and ![Image](src)
-```
+- R. Garcia, J. Contreras, V. Gonzalez and  J. Custodio, _Applying Modern Portfolio Theory for a Dynamic Energy Portfolio Allocation in Electricity Markets_, **Electric Power Systems Research**, v. 150, pp. 11-23, Sep 2017. 
+[link](https://doi.org/10.1016/j.epsr.2017.04.026)
 
-For more details see [GitHub Flavored Markdown](https://guides.github.com/features/mastering-markdown/).
+- S. Barbalho, S. Silva, M. Dias and J. Custodio, _Applicability of Engineering Change Management on the tropicalization of an Industrial Equipment_, **Producao Online**},  v. 16, n. 2 (2016). Apr 2016. [link](http://dx.doi.org/10.14488/1676-1901.v16i2.2198)
 
-### Jekyll Themes
+### Contact
 
-Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/janielecustodio/janielecustodio.github.io/settings). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
-
-### Support or Contact
-
-Having trouble with Pages? Check out our [documentation](https://help.github.com/categories/github-pages-basics/) or [contact support](https://github.com/contact) and we’ll help you sort it out.
+janiele at gwu dot edu
