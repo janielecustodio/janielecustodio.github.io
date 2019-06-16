@@ -9,19 +9,39 @@ This page contains a summary of my current and previous research projects, as we
 You can contact me at: janiele at gwu dot edu
 
 ## Education
-```markdown
-George Washington University, Washington, DC (Aug 2016 -  2021)
+**George Washington University, Washington, DC (Aug 2016 -  2021)**
 - PhD in Systems Engineering 
 - Concentration: Operations Research and Management Science
 
-University of Brasilia, Brasilia, DF, Brazil (Jul 2010 – Jul 2016)
+**University of Brasilia, Brasilia, DF, Brazil (Jul 2010 – Jul 2016)**
 - BSc. in Production Engineering
 
-Purdue University, West Lafayette, IN, USA (Aug 2013 – Aug 2014)
+**Purdue University, West Lafayette, IN, USA (Aug 2013 – Aug 2014)**
 - Visiting Student at the School of Industrial Engineering
 
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
-```
+
+## Professional Experience
+
+**George Washington University (Jan 2019 - Present)**
+- Instructor with full responsibilities
+
+**NSF I-Corps (Jul - Sep 2017)**
+- Entrepreneurial Lead
+
+**Vyttra Diagnosticos (Mar 2016 – Aug 2016)**
+- Jr Supply Chain Analyst
+
+**Advance Medical Brazil (Oct 2015 – Feb 2016)**
+- Sales and Operations Planning Intern
+
+**University of Brasilia (Dec 2014 – May 2015)**
+- Research Assistant
+
+**Falconi Consultants (Apr 2012 – Apr 2013)**
+- Consulting Intern
+
+**Brasal Refrigerantes (Sep 2011 – Apr 2012)**
+- Quality Assurance Intern
 
 ```markdown
 Syntax highlighted code block
