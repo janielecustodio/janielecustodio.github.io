@@ -1,10 +1,22 @@
-## Welcome to GitHub Pages
+## About
 
-You can use the [editor on GitHub](https://github.com/janielecustodio/janielecustodio.github.io/edit/master/index.md) to maintain and preview the content for your website in Markdown files.
+I am a doctoral candidate in Systems Engineering at the George Washington University.
 
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
+I my research, I use operations research and statistics to solve problems in Supply Chain Management and Healthcare.
 
-# Markdown
+This page contains a summary of my current and previous research projects, as well as my work experience, publications, past and upcoming conferences.
+
+You can contact me at: janiele at gwu dot edu
+
+## Education
+
+*George Washington University, Washington, DC ( Aug 2016 -  2021)*
+- PhD in Systems Engineering 
+- Concentration: Operations Research and Management Science
+*University of Brasilia, Brasilia, DF, Brazil (Jul 2010 – Jul 2016)*
+- BSc. in Production Engineering
+*Purdue University, West Lafayette, IN, USA (Aug 2013 – Aug 2014)*
+- Visiting Student at the School of Industrial Engineering
 
 Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
 
