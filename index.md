@@ -1,4 +1,4 @@
-## About
+# About
 
 I am a doctoral candidate in Systems Engineering at the George Washington University.
 
@@ -6,7 +6,7 @@ I my research, I use operations research and statistics to solve problems in Sup
 
 This page contains a summary of my current and previous research projects, as well as my work experience, publications, past and upcoming conferences.
 
-## Education
+# Education
 **George Washington University, Washington, DC (Aug 2016 -  2021)**
 - PhD in Systems Engineering 
 - Concentration: Operations Research and Management Science
@@ -17,7 +17,7 @@ This page contains a summary of my current and previous research projects, as we
 **Purdue University, West Lafayette, IN, USA (Aug 2013 – Aug 2014)**
 - Visiting Student at the School of Industrial Engineering
 
-## Professional Experience
+# Professional Experience
 
 **George Washington University (Jan 2019 - Present)**
 - Instructor with full responsibilities
@@ -40,17 +40,17 @@ This page contains a summary of my current and previous research projects, as we
 **Brasal Refrigerantes (Sep 2011 – Apr 2012)**
 - Quality Assurance Intern
 
-## Research
+# Research
 
-### About
-I am interested in applying Operations Research and Management Science techniques to solve problems in the area of supply chain management, energy and finance.
-
+## Summary
 Main subjects: Mixed Integer Nonlinear Programming, Stochastic Programming, Queueing Theory, Convex Optimization, Second-order Cone Programming
 
-### Current Project
+Applications: Emergency Medical Services, Supply Chain Management, Energy, Transportation, Finance
+
+## Current Project
 Convex reformulations of stochastic queuing location-allocation problems
 
-### Publications
+## Publications
 - J. Custodio, A. Zavaleta, M. Lejeune, _Note on 'A Chance-Constrained Programming Framework to Handle Uncertainties in Radiation Therapy Treatment Planning'_, **European Journal of Operations Research**,  v. 275, pp. 793-794, Jun 2019. [link](https://doi.org/10.1016/j.ejor.2018.11.071)
 
 - R. Garcia, J. Contreras, V. Gonzalez and  J. Custodio, _Applying Modern Portfolio Theory for a Dynamic Energy Portfolio Allocation in Electricity Markets_, **Electric Power Systems Research**, v. 150, pp. 11-23, Sep 2017. 
@@ -58,12 +58,12 @@ Convex reformulations of stochastic queuing location-allocation problems
 
 - S. Barbalho, S. Silva, M. Dias and J. Custodio, _Applicability of Engineering Change Management on the tropicalization of an Industrial Equipment_, **Producao Online**},  v. 16, n. 2 (2016). Apr 2016. [link](http://dx.doi.org/10.14488/1676-1901.v16i2.2198)
 
-### Upcoming Presentations
+## Upcoming Presentations
 - J. Custodio and M. Lejeune, **INFORMS**, Seattle, WA, Oct 2019
   - _Queuing Models for Drone-Aided Healthcare Delivery_
   - _Convex integer reformulations of stochastic location-allocation queuing problems_
 
-### Recent Presentations
+## Past Presentations
 
 - J. Custodio and M. Lejeune, _Conic  reformulations  of  chance-constrained stochastic location-allocation problems under exogenous uncertainty:  application to drone-aidedhealthcare delivery_, **GDRR**, Washington, DC, May 2019.
 
@@ -76,6 +76,6 @@ Convex reformulations of stochastic queuing location-allocation problems
   
 - J. Custodio and E. Shittu, _Systems  Architecture  for  a  Replicable  Mobility  System_, **Industry Studies Conference**, Seattle, WA, May 2018.
 
-## Contact
+# Contact
 
 janiele at gwu dot edu
