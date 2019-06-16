@@ -17,29 +17,6 @@ This page contains a summary of my current and previous research projects, as we
 **Purdue University, West Lafayette, IN, USA (Aug 2013 – Aug 2014)**
 - Visiting Student at the School of Industrial Engineering
 
-# Professional Experience
-
-**George Washington University (Jan 2019 - Present)**
-- Instructor with full responsibilities
-
-**NSF I-Corps (Jul - Sep 2017)**
-- Entrepreneurial Lead
-
-**Vyttra Diagnosticos (Mar 2016 – Aug 2016)**
-- Jr Supply Chain Analyst
-
-**Advance Medical Brazil (Oct 2015 – Feb 2016)**
-- Sales and Operations Planning Intern
-
-**University of Brasilia (Dec 2014 – May 2015)**
-- Research Assistant
-
-**Falconi Consultants (Apr 2012 – Apr 2013)**
-- Consulting Intern
-
-**Brasal Refrigerantes (Sep 2011 – Apr 2012)**
-- Quality Assurance Intern
-
 # Research
 
 Main subjects: Mixed Integer Nonlinear Programming, Stochastic Programming, Queueing Theory, Convex Optimization, Second-order Cone Programming
@@ -74,6 +51,29 @@ Convex reformulations of stochastic queuing location-allocation problems
   - **Technology, Management, and Policy Consortium**, The Hague, Netherlands, June 2018
   
 - J. Custodio and E. Shittu, _Systems  Architecture  for  a  Replicable  Mobility  System_, **Industry Studies Conference**, Seattle, WA, May 2018.
+
+# Professional Experience
+
+**George Washington University (Jan 2019 - Present)**
+- Instructor with full responsibilities
+
+**NSF I-Corps (Jul - Sep 2017)**
+- Entrepreneurial Lead
+
+**Vyttra Diagnosticos (Mar 2016 – Aug 2016)**
+- Jr Supply Chain Analyst
+
+**Advance Medical Brazil (Oct 2015 – Feb 2016)**
+- Sales and Operations Planning Intern
+
+**University of Brasilia (Dec 2014 – May 2015)**
+- Research Assistant
+
+**Falconi Consultants (Apr 2012 – Apr 2013)**
+- Consulting Intern
+
+**Brasal Refrigerantes (Sep 2011 – Apr 2012)**
+- Quality Assurance Intern
 
 # Contact
 
