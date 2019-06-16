@@ -9,7 +9,7 @@ This page contains a summary of my current and previous research projects, as we
 You can contact me at: janiele at gwu dot edu
 
 ## Education
-
+```markdown
 **George Washington University, Washington, DC ( Aug 2016 -  2021)**
 
 - PhD in Systems Engineering 
@@ -24,6 +24,7 @@ You can contact me at: janiele at gwu dot edu
 - Visiting Student at the School of Industrial Engineering
 
 Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
+```
 
 ```markdown
 Syntax highlighted code block
