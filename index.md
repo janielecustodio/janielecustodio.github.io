@@ -42,7 +42,6 @@ This page contains a summary of my current and previous research projects, as we
 
 # Research
 
-## Summary
 Main subjects: Mixed Integer Nonlinear Programming, Stochastic Programming, Queueing Theory, Convex Optimization, Second-order Cone Programming
 
 Applications: Emergency Medical Services, Supply Chain Management, Energy, Transportation, Finance
