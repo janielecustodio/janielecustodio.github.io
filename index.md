@@ -10,12 +10,17 @@ You can contact me at: janiele at gwu dot edu
 
 ## Education
 
-*George Washington University, Washington, DC ( Aug 2016 -  2021)*
+**George Washington University, Washington, DC ( Aug 2016 -  2021)**
+
 - PhD in Systems Engineering 
 - Concentration: Operations Research and Management Science
-*University of Brasilia, Brasilia, DF, Brazil (Jul 2010 – Jul 2016)*
+
+**University of Brasilia, Brasilia, DF, Brazil (Jul 2010 – Jul 2016)**
+
 - BSc. in Production Engineering
-*Purdue University, West Lafayette, IN, USA (Aug 2013 – Aug 2014)*
+
+**Purdue University, West Lafayette, IN, USA (Aug 2013 – Aug 2014)**
+
 - Visiting Student at the School of Industrial Engineering
 
 Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
