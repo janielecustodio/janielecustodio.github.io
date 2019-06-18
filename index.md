@@ -1,8 +1,4 @@
-# About
-
-I am a doctoral candidate in Systems Engineering at the George Washington University.
-
-I my research, I use operations research and statistics to solve problems in Supply Chain Management and Healthcare.
+Welcome!
 
 This page contains a summary of my current and previous research projects, as well as my work experience, publications, past and upcoming conferences.
 
@@ -18,7 +14,6 @@ This page contains a summary of my current and previous research projects, as we
 - Visiting Student at the School of Industrial Engineering
 
 # Research
-
 Main subjects: Mixed Integer Nonlinear Programming, Stochastic Programming, Queueing Theory, Convex Optimization, Second-order Cone Programming
 
 Applications: Emergency Medical Services, Supply Chain Management, Energy, Transportation, Finance
