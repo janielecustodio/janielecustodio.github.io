@@ -9,14 +9,25 @@ This page contains a summary of my current and previous research projects, as we
 
 **University of Brasilia, Brasilia, DF, Brazil (Jul 2010 – Jul 2016)**
 - BSc. in Production Engineering
+- Senior Thesis: [link](href{http://bdm.unb.br/bitstream/10483/15646/1/2016_JanieleEduardaSilvaCostaCustodio_tcc.pdf)
 
 **Purdue University, West Lafayette, IN, USA (Aug 2013 – Aug 2014)**
 - Visiting Student at the School of Industrial Engineering
 
 # Research
-Main subjects: Mixed Integer Nonlinear Programming, Stochastic Programming, Queueing Theory, Convex Optimization, Second-order Cone Programming
+Main subjects:
+- Mixed Integer Nonlinear Programming
+- Stochastic Programming
+- Queueing Theory
+- Convex Optimization
+- Second-order Cone Programming
 
-Applications: Emergency Medical Services, Supply Chain Management, Energy, Transportation, Finance
+Applications: 
+- Emergency Medical Services
+- Supply Chain Management
+- Energy
+- Transportation
+- Finance
 
 ## Current Project
 Convex reformulations of stochastic queuing location-allocation problems
