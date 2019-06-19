@@ -24,6 +24,7 @@ Main subjects:
 
 Applications: 
 - Emergency Medical Services
+- Drone Delivery
 - Supply Chain Management
 - Energy
 - Transportation
