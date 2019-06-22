@@ -4,6 +4,10 @@ title: Janiele Custodio
 description: Systems Engineering PhD Candidate
 tagline: 'Research Page'
 
+toc: true
+toc_label: "My Table of Contents"
+toc_icon: "cog"
+
 defaults:
   # _docs
   - scope:
