@@ -1,5 +1,7 @@
 Welcome!
 
+I am a Systems Engineering PhD Candidate at the George Washington University. My research focuses on using operations research to solve  stochastic nonconvex integer problems that arise in emergency response and supply chain networks. I also have experience in the areas of energy systems modeling, portfolio optimization, and transportation.
+
 This page contains a summary of my current and previous research projects, as well as my work experience, publications, past and upcoming conferences.
 
 # Education
