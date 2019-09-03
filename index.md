@@ -52,7 +52,7 @@ Convex reformulations of stochastic queuing location-allocation problems
 
 - J. Custodio and M. Lejeune, _Conic  reformulations  of  chance-constrained stochastic location-allocation problems under exogenous uncertainty:  application to drone-aidedhealthcare delivery_, **GDRR**, Washington, DC, May 2019.
 
-- J. Custodio and M. Lejeune, _Conic formulations of a network of drone-aided healthcaredelivery under congestion_, **POMS**, Washington, DC, May 2019.
+- J. Custodio and M. Lejeune, _Conic formulations of a network of drone-aided healthcare delivery with congestion_, **POMS**, Washington, DC, May 2019.
 
 - J. Custodio and E. Shittu, _When Agents Trade in Electricity Attributes, Who Benefits?_
   - **Industry Studies Conference**, Washington, DC, May, 2017
