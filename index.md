@@ -34,8 +34,8 @@ Applications:
 - Transportation
 - Finance
 
-## Current Project
-Convex reformulations of stochastic queuing location-allocation problems
+<!-- ## Current Project
+Convex reformulations of stochastic queuing location-allocation problems -->
 
 ## Publications
 - J. Custodio, A. Zavaleta, M. Lejeune, _Note on 'A Chance-Constrained Programming Framework to Handle Uncertainties in Radiation Therapy Treatment Planning'_, **European Journal of Operations Research**,  v. 275, pp. 793-794, Jun 2019. [link](https://doi.org/10.1016/j.ejor.2018.11.071)
