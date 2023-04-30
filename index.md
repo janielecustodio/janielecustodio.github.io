@@ -64,7 +64,10 @@ Convex reformulations of stochastic queuing location-allocation problems
 - J. Custodio and E. Shittu, _Systems  Architecture  for  a  Replicable  Mobility  System_, **Industry Studies Conference**, Seattle, WA, May 2018.
 
 # Professional Experience
+Please check my LinkedIn profile for my most recent professional updates.
+{{ site.linkedin_badge }}
 
+<!-- 
 **George Washington University (Jan 2019 - Present)**
 - Instructor with full responsibilities
 
@@ -84,12 +87,10 @@ Convex reformulations of stochastic queuing location-allocation problems
 - Consulting Intern
 
 **Brasal Refrigerantes (Sep 2011 – Apr 2012)**
-- Quality Assurance Intern
+- Quality Assurance Intern -->
 
 # Contact
 
 janiele at gwu dot edu
 
-Here is my LinkedIn badge:
 
-{{ site.linkedin_badge }}
