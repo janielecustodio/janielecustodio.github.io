@@ -1,11 +1,13 @@
 Welcome!
 
-I am a Systems Engineering PhD Candidate at the George Washington University. My research focuses on using operations research to solve  stochastic nonconvex integer problems that arise in emergency response and supply chain networks. I also have experience in the areas of energy systems modeling, portfolio optimization, and transportation.
+I am a Quantitative Finance Associate at Morgan Stanley, in the Securitized Products Group.
+
+Prior to that, I pursued a PhD in Systems Engineering at the George Washington University. My research focuses on using operations research to solve stochastic nonconvex integer problems that arise in emergency response and supply chain networks. I also have experience in the areas of energy systems modeling, portfolio optimization, and transportation.
 
 This page contains a summary of my current and previous research projects, as well as my work experience, publications, past and upcoming conferences.
 
 # Education
-**George Washington University, Washington, DC (Aug 2016 -  2021)**
+**George Washington University, Washington, DC (Aug 2016 -  May 2022)**
 - PhD in Systems Engineering 
 - Concentration: Operations Research and Management Science
 
@@ -87,3 +89,7 @@ Convex reformulations of stochastic queuing location-allocation problems
 # Contact
 
 janiele at gwu dot edu
+
+<script src="https://platform.linkedin.com/badges/js/profile.js" async defer type="text/javascript"></script>
+<div class="badge-base LI-profile-badge" data-locale="pt_BR" data-size="medium" data-theme="light" data-type="VERTICAL" data-vanity="janielecustodio" data-version="v1"><a class="badge-base__link LI-simple-link" href="https://www.linkedin.com/in/janielecustodio?trk=profile-badge">Janiele Custodio, PhD</a></div>
+              
