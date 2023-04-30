@@ -43,13 +43,13 @@ Convex reformulations of stochastic queuing location-allocation problems -->
 - R. Garcia, J. Contreras, V. Gonzalez and  J. Custodio, _Applying Modern Portfolio Theory for a Dynamic Energy Portfolio Allocation in Electricity Markets_, **Electric Power Systems Research**, v. 150, pp. 11-23, Sep 2017. 
 [link](https://doi.org/10.1016/j.epsr.2017.04.026)
 
-- S. Barbalho, S. Silva, M. Dias and J. Custodio, _Applicability of Engineering Change Management on the tropicalization of an Industrial Equipment_, **Producao Online**},  v. 16, n. 2 (2016). Apr 2016. [link](http://dx.doi.org/10.14488/1676-1901.v16i2.2198)
+<!-- - S. Barbalho, S. Silva, M. Dias and J. Custodio, _Applicability of Engineering Change Management on the tropicalization of an Industrial Equipment_, **Producao Online**},  v. 16, n. 2 (2016). Apr 2016. [link](http://dx.doi.org/10.14488/1676-1901.v16i2.2198)
 
 ## Upcoming Presentations
 - J. Custodio and M. Lejeune, **INFORMS**, Seattle, WA, Oct 2019
   - _Queuing Models for Drone-Aided Healthcare Delivery_
   - _Convex integer reformulations of stochastic location-allocation queuing problems_
-
+ -->
 ## Past Presentations
 
 - J. Custodio and M. Lejeune, _Conic  reformulations  of  chance-constrained stochastic location-allocation problems under exogenous uncertainty:  application to drone-aidedhealthcare delivery_, **GDRR**, Washington, DC, May 2019.
