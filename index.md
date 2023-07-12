@@ -65,6 +65,11 @@ Convex reformulations of stochastic queuing location-allocation problems -->
   
 - J. Custodio and E. Shittu, _Systems  Architecture  for  a  Replicable  Mobility  System_, **Industry Studies Conference**, Seattle, WA, May 2018.
 
+# Professional Memberships
+- Society of Quantitative Analysts - May 2023 - Present
+- INFORMS - 2016 - Present
+
+
 # Professional Experience
 Please check my LinkedIn profile for my most recent professional updates.
 {{ site.linkedin_badge }}
