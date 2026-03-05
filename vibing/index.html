@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vibe Coding — Janiele Custodio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#0d0f14;--ink2:#161a23;--ink3:#1e2330;
+  --line:#262d3d;--line2:#2f3850;
+  --muted:#5a6480;--muted2:#7a869e;
+  --body:#c8cfdc;--head:#eef0f5;
+  --accent:#b8ff57;--r:6px;
+}
+html{scroll-behavior:smooth}
+body{
+  background:var(--ink);color:var(--body);
+  font-family:'IBM Plex Sans',sans-serif;
+  font-size:15px;line-height:1.7;min-height:100vh;
+  display:flex;-webkit-font-smoothing:antialiased;
+}
+
+/* SIDEBAR */
+.sidebar{
+  width:220px;min-width:220px;
+  background:var(--ink2);border-right:1px solid var(--line);
+  display:flex;flex-direction:column;
+  position:fixed;top:0;left:0;height:100vh;
+  padding:32px 0;z-index:100;
+  transition:transform .25s ease;overflow-y:auto;
+}
+.sidebar-brand{padding:0 24px 28px;border-bottom:1px solid var(--line);margin-bottom:20px}
+.sidebar-brand-name{font-size:16px;font-weight:600;color:var(--head);letter-spacing:.01em;line-height:1.3}
+.sidebar-brand-sub{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);margin-top:3px;letter-spacing:.06em}
+.nav-section{padding:0 16px;margin-bottom:6px}
+.nav-section-label{
+  font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:500;
+  text-transform:uppercase;letter-spacing:.15em;color:var(--muted);
+  padding:0 8px;margin-bottom:4px;display:flex;align-items:center;gap:6px;
+}
+.nav-section-label::after{content:'';flex:1;height:1px;background:var(--line)}
+.nav-link{
+  display:flex;align-items:center;gap:9px;
+  padding:7px 10px;border-radius:var(--r);
+  color:var(--muted2);text-decoration:none;
+  font-size:13px;font-weight:400;transition:background .15s,color .15s;
+}
+.nav-link:hover{background:var(--ink3);color:var(--body);text-decoration:none}
+.nav-link.active{background:rgba(184,255,87,.08);color:var(--accent);font-weight:500}
+.nav-link.sub{padding-left:28px;font-size:12px}
+.nav-icon{font-size:14px;width:16px;text-align:center;flex-shrink:0}
+.nav-group-children{display:block}
+.chevron{margin-left:auto;font-size:10px;opacity:.5;transform:rotate(90deg)}
+
+/* MAIN */
+.main{margin-left:220px;flex:1;padding:56px 64px;max-width:860px}
+
+.vibing-hero{margin-bottom:36px;padding-bottom:24px;border-bottom:1px solid var(--line)}
+.vibing-hero-label{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--accent);letter-spacing:.12em;text-transform:uppercase;margin-bottom:10px}
+.vibing-hero-title{font-size:28px;font-weight:600;color:var(--head);margin-bottom:8px}
+.vibing-hero-desc{font-size:14px;color:var(--muted2);max-width:560px}
+
+.section{margin-bottom:44px}
+.section-title{
+  font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;
+  text-transform:uppercase;letter-spacing:.15em;color:var(--muted);
+  margin-bottom:16px;display:flex;align-items:center;gap:10px;
+}
+.section-title::after{content:'';flex:1;height:1px;background:var(--line)}
+
+.project-card{
+  display:flex;align-items:center;gap:16px;
+  padding:18px 20px;background:var(--ink2);
+  border:1px solid var(--line);border-radius:10px;
+  text-decoration:none;color:inherit;
+  transition:border-color .15s,background .15s,transform .1s;
+  margin-bottom:12px;
+}
+.project-card:hover{border-color:var(--accent);background:rgba(184,255,87,.04);transform:translateY(-1px);text-decoration:none}
+.project-card-icon{width:44px;height:44px;background:rgba(184,255,87,.1);border:1px solid rgba(184,255,87,.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.project-card-body{flex:1}
+.project-card-name{font-size:15px;font-weight:600;color:var(--head);margin-bottom:3px}
+.project-card-desc{font-size:12px;color:var(--muted2);line-height:1.5}
+.project-card-arrow{font-size:18px;color:var(--muted);transition:color .15s,transform .15s}
+.project-card:hover .project-card-arrow{color:var(--accent);transform:translateX(3px)}
+
+/* MOBILE */
+.mobile-menu-btn{
+  display:none;position:fixed;top:14px;left:14px;z-index:200;
+  background:var(--ink2);border:1px solid var(--line2);border-radius:var(--r);
+  width:36px;height:36px;align-items:center;justify-content:center;
+  cursor:pointer;font-size:18px;color:var(--body);
+}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99}
+.sidebar-overlay.active{display:block}
+@media(max-width:900px){
+  .sidebar{transform:translateX(-100%)}
+  .sidebar.open{transform:translateX(0)}
+  .main{margin-left:0;padding:24px 20px}
+  .mobile-menu-btn{display:flex}
+}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:var(--ink2)}
+::-webkit-scrollbar-thumb{background:var(--line2);border-radius:3px}
+a{color:var(--accent)}
+a:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+
+<button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Open menu">☰</button>
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+<!-- SIDEBAR -->
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-brand">
+    <div class="sidebar-brand-name">Janiele Custodio</div>
+    <div class="sidebar-brand-sub">PhD · Quant Finance</div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-label">Menu</div>
+    <a class="nav-link" href="/">
+      <span class="nav-icon">⌂</span> Home
+    </a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-label">Vibing</div>
+    <div class="nav-group">
+      <a class="nav-link active" href="/vibing/">
+        <span class="nav-icon">⚡</span> Vibe Coding
+        <span class="chevron">›</span>
+      </a>
+      <div class="nav-group-children">
+        <a class="nav-link sub" href="/dca-compass/">
+          <span class="nav-icon">🧭</span> DCA Compass
+        </a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<main class="main">
+  <div class="vibing-hero">
+    <div class="vibing-hero-label">Vibe Coding</div>
+    <div class="vibing-hero-title">Side Projects</div>
+    <p class="vibing-hero-desc">Tools and experiments I've built for fun — mostly finance and data adjacent. All vibe-coded.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Projects</div>
+    <a class="project-card" href="/dca-compass/">
+      <div class="project-card-icon">🧭</div>
+      <div class="project-card-body">
+        <div class="project-card-name">DCA Compass</div>
+        <div class="project-card-desc">Portfolio DCA simulator — backtest dollar-cost averaging strategies with real historical data, risk analytics, and multi-asset support.</div>
+      </div>
+      <div class="project-card-arrow">›</div>
+    </a>
+  </div>
+</main>
+
+<script>
+const sidebar  = document.getElementById('sidebar');
+const overlay  = document.getElementById('sidebar-overlay');
+const menuBtn  = document.getElementById('mobile-menu-btn');
+menuBtn.addEventListener('click', () => { sidebar.classList.add('open'); overlay.classList.add('active'); });
+overlay.addEventListener('click', () => { sidebar.classList.remove('open'); overlay.classList.remove('active'); });
+</script>
+</body>
+</html>

@@ -35,436 +35,155 @@ body{
 
 /* ── SIDEBAR ── */
 .sidebar{
-  width:220px;
-  min-width:220px;
+  width:220px;min-width:220px;
   background:var(--ink2);
   border-right:1px solid var(--line);
-  display:flex;
-  flex-direction:column;
-  position:fixed;
-  top:0; left:0;
-  height:100vh;
-  padding:32px 0;
+  display:flex;flex-direction:column;
+  position:fixed;top:0;left:0;
+  height:100vh;padding:32px 0;
   z-index:100;
   transition:transform .25s ease;
+  overflow-y:auto;
 }
 .sidebar-brand{
   padding:0 24px 28px;
   border-bottom:1px solid var(--line);
   margin-bottom:20px;
 }
-.sidebar-brand-name{
-  font-size:16px;
-  font-weight:600;
-  color:var(--head);
-  letter-spacing:.01em;
-  line-height:1.3;
-}
-.sidebar-brand-sub{
-  font-family:'IBM Plex Mono',monospace;
-  font-size:10px;
-  color:var(--muted);
-  margin-top:3px;
-  letter-spacing:.06em;
-}
+.sidebar-brand-name{font-size:16px;font-weight:600;color:var(--head);letter-spacing:.01em;line-height:1.3}
+.sidebar-brand-sub{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);margin-top:3px;letter-spacing:.06em}
 
-/* nav */
-.nav-section{
-  padding:0 16px;
-  margin-bottom:6px;
-}
+.nav-section{padding:0 16px;margin-bottom:6px}
 .nav-section-label{
-  font-family:'IBM Plex Mono',monospace;
-  font-size:9px;
-  font-weight:500;
-  text-transform:uppercase;
-  letter-spacing:.15em;
-  color:var(--muted);
-  padding:0 8px;
-  margin-bottom:4px;
-  display:flex;
-  align-items:center;
-  gap:6px;
+  font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:500;
+  text-transform:uppercase;letter-spacing:.15em;color:var(--muted);
+  padding:0 8px;margin-bottom:4px;
+  display:flex;align-items:center;gap:6px;
 }
-.nav-section-label::after{
-  content:'';flex:1;height:1px;background:var(--line);
-}
+.nav-section-label::after{content:'';flex:1;height:1px;background:var(--line)}
+
 .nav-link{
-  display:flex;
-  align-items:center;
-  gap:9px;
-  padding:7px 10px;
-  border-radius:var(--r);
-  color:var(--muted2);
-  text-decoration:none;
-  font-size:13px;
-  font-weight:400;
-  transition:background .15s, color .15s;
-  cursor:pointer;
-  border:none;
-  background:transparent;
-  width:100%;
-  text-align:left;
+  display:flex;align-items:center;gap:9px;
+  padding:7px 10px;border-radius:var(--r);
+  color:var(--muted2);text-decoration:none;
+  font-size:13px;font-weight:400;
+  transition:background .15s,color .15s;
 }
-.nav-link:hover{background:var(--ink3);color:var(--body)}
+.nav-link:hover{background:var(--ink3);color:var(--body);text-decoration:none}
 .nav-link.active{background:rgba(184,255,87,.08);color:var(--accent);font-weight:500}
-.nav-link.sub{
-  padding-left:28px;
-  font-size:12px;
-}
+.nav-link.sub{padding-left:28px;font-size:12px}
 .nav-icon{font-size:14px;width:16px;text-align:center;flex-shrink:0}
 
-/* vibing sub-section toggle */
-.nav-group{}
-.nav-group-toggle{cursor:pointer}
-.nav-group-children{display:none;padding-left:0}
+/* vibing group */
+.nav-group-children{display:none}
 .nav-group.open .nav-group-children{display:block}
-.nav-group-toggle .chevron{
-  margin-left:auto;
-  font-size:10px;
-  transition:transform .2s;
-  opacity:.5;
-}
+.chevron{margin-left:auto;font-size:10px;transition:transform .2s;opacity:.5}
 .nav-group.open .chevron{transform:rotate(90deg)}
 
 /* ── MAIN CONTENT ── */
-.main{
-  margin-left:220px;
-  flex:1;
-  padding:56px 64px;
-  max-width:860px;
-}
-@media(max-width:900px){
-  .sidebar{transform:translateX(-100%)}
-  .sidebar.open{transform:translateX(0)}
-  .main{margin-left:0;padding:24px 20px}
-  .mobile-menu-btn{display:flex!important}
-}
+.main{margin-left:220px;flex:1;padding:56px 64px;max-width:860px}
 
-/* page sections */
+/* page visibility */
 .page{display:none}
 .page.active{display:block}
 
-/* ── HOME PAGE ── */
-.hero{
-  margin-bottom:48px;
-  padding-bottom:32px;
-  border-bottom:1px solid var(--line);
-}
-.hero-greeting{
-  font-family:'IBM Plex Mono',monospace;
-  font-size:11px;
-  color:var(--accent);
-  letter-spacing:.12em;
-  text-transform:uppercase;
-  margin-bottom:12px;
-}
-.hero-name{
-  font-size:36px;
-  font-weight:600;
-  color:var(--head);
-  line-height:1.15;
-  margin-bottom:8px;
-}
-.hero-role{
-  font-size:16px;
-  color:var(--muted2);
-  font-weight:300;
-  margin-bottom:16px;
-}
-.hero-bio{
-  font-size:14px;
-  color:var(--body);
-  max-width:620px;
-  line-height:1.75;
-}
+/* ── HOME ── */
+.hero{margin-bottom:48px;padding-bottom:32px;border-bottom:1px solid var(--line)}
+.hero-greeting{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--accent);letter-spacing:.12em;text-transform:uppercase;margin-bottom:12px}
+.hero-name{font-size:36px;font-weight:600;color:var(--head);line-height:1.15;margin-bottom:8px}
+.hero-role{font-size:16px;color:var(--muted2);font-weight:300;margin-bottom:16px}
+.hero-bio{font-size:14px;color:var(--body);max-width:620px;line-height:1.75}
 
-/* sections */
 .section{margin-bottom:44px}
 .section-title{
-  font-family:'IBM Plex Mono',monospace;
-  font-size:10px;
-  font-weight:500;
-  text-transform:uppercase;
-  letter-spacing:.15em;
-  color:var(--muted);
-  margin-bottom:16px;
-  display:flex;
-  align-items:center;
-  gap:10px;
+  font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;
+  text-transform:uppercase;letter-spacing:.15em;color:var(--muted);
+  margin-bottom:16px;display:flex;align-items:center;gap:10px;
 }
 .section-title::after{content:'';flex:1;height:1px;background:var(--line)}
-
-h2.inline{
-  font-size:18px;
-  font-weight:600;
-  color:var(--head);
-  margin-bottom:12px;
-}
 
 p{margin-bottom:12px;color:var(--body);font-size:14px}
 p:last-child{margin-bottom:0}
 
-ul.plain{list-style:none;padding:0}
-ul.plain li{
-  font-size:14px;
-  color:var(--body);
-  padding:3px 0;
-  padding-left:16px;
-  position:relative;
-}
-ul.plain li::before{
-  content:'—';
-  position:absolute;left:0;
-  color:var(--muted);
-  font-size:11px;
-  top:5px;
-}
-
 .edu-block{margin-bottom:20px}
-.edu-school{
-  font-size:14px;
-  font-weight:500;
-  color:var(--head);
-  margin-bottom:2px;
-}
-.edu-degree{
-  font-size:13px;
-  color:var(--body);
-  margin-bottom:2px;
-}
-.edu-note{
-  font-size:12px;
-  color:var(--muted2);
-  font-family:'IBM Plex Mono',monospace;
-}
+.edu-school{font-size:14px;font-weight:500;color:var(--head);margin-bottom:2px}
+.edu-degree{font-size:13px;color:var(--body);margin-bottom:2px}
+.edu-note{font-size:12px;color:var(--muted2);font-family:'IBM Plex Mono',monospace}
 .edu-note a{color:var(--muted2);text-decoration:underline;text-underline-offset:2px}
 
+.tag{
+  display:inline-block;background:var(--ink3);border:1px solid var(--line2);
+  border-radius:4px;padding:2px 8px;font-size:11px;
+  font-family:'IBM Plex Mono',monospace;color:var(--muted2);margin:2px 2px 2px 0;
+}
+
 .pub-item{
-  margin-bottom:14px;
-  padding:12px 14px;
-  background:var(--ink2);
-  border:1px solid var(--line);
-  border-radius:var(--r);
-  font-size:13px;
-  line-height:1.6;
+  margin-bottom:14px;padding:12px 14px;
+  background:var(--ink2);border:1px solid var(--line);
+  border-radius:var(--r);font-size:13px;line-height:1.6;
 }
 .pub-item a{color:var(--accent);text-decoration:none;font-size:11px;font-family:'IBM Plex Mono',monospace}
 .pub-item a:hover{text-decoration:underline}
-.pub-venue{
-  font-size:11px;
-  color:var(--muted2);
-  font-family:'IBM Plex Mono',monospace;
-  margin-top:4px;
-}
+.pub-venue{font-size:11px;color:var(--muted2);font-family:'IBM Plex Mono',monospace;margin-top:4px}
 
-.conf-item{
-  font-size:13px;
-  color:var(--body);
-  padding:4px 0;
-  border-bottom:1px solid var(--line);
-  line-height:1.6;
-}
+.conf-item{font-size:13px;color:var(--body);padding:4px 0;border-bottom:1px solid var(--line);line-height:1.6}
 .conf-item:last-child{border-bottom:none}
-.conf-venue{
-  font-size:11px;
-  color:var(--muted);
-  font-family:'IBM Plex Mono',monospace;
-}
+.conf-venue{font-size:11px;color:var(--muted);font-family:'IBM Plex Mono',monospace}
 
-.contact-line{
-  font-family:'IBM Plex Mono',monospace;
-  font-size:13px;
-  color:var(--muted2);
-  padding:8px 0;
-}
-
-.tag{
-  display:inline-block;
-  background:var(--ink3);
-  border:1px solid var(--line2);
-  border-radius:4px;
-  padding:2px 8px;
-  font-size:11px;
-  font-family:'IBM Plex Mono',monospace;
-  color:var(--muted2);
-  margin:2px 2px 2px 0;
-}
-
-/* membership rows */
-.membership-item{
-  display:flex;
-  align-items:baseline;
-  gap:10px;
-  font-size:13px;
-  color:var(--body);
-  padding:5px 0;
-  border-bottom:1px solid var(--line);
-}
+.membership-item{display:flex;align-items:baseline;gap:10px;font-size:13px;color:var(--body);padding:5px 0;border-bottom:1px solid var(--line)}
 .membership-item:last-child{border-bottom:none}
-.membership-year{
-  font-family:'IBM Plex Mono',monospace;
-  font-size:11px;
-  color:var(--muted);
-  flex-shrink:0;
-}
+.membership-year{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);flex-shrink:0}
+
+.contact-line{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--muted2);padding:8px 0}
 
 /* ── VIBING PAGE ── */
-.vibing-hero{
-  margin-bottom:36px;
-  padding-bottom:24px;
-  border-bottom:1px solid var(--line);
-}
-.vibing-hero-label{
-  font-family:'IBM Plex Mono',monospace;
-  font-size:11px;
-  color:var(--accent);
-  letter-spacing:.12em;
-  text-transform:uppercase;
-  margin-bottom:10px;
-}
-.vibing-hero-title{
-  font-size:28px;
-  font-weight:600;
-  color:var(--head);
-  margin-bottom:8px;
-}
-.vibing-hero-desc{
-  font-size:14px;
-  color:var(--muted2);
-  max-width:560px;
-}
+.vibing-hero{margin-bottom:36px;padding-bottom:24px;border-bottom:1px solid var(--line)}
+.vibing-hero-label{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--accent);letter-spacing:.12em;text-transform:uppercase;margin-bottom:10px}
+.vibing-hero-title{font-size:28px;font-weight:600;color:var(--head);margin-bottom:8px}
+.vibing-hero-desc{font-size:14px;color:var(--muted2);max-width:560px}
+
 .project-card{
-  display:flex;
-  align-items:center;
-  gap:16px;
-  padding:18px 20px;
-  background:var(--ink2);
-  border:1px solid var(--line);
-  border-radius:10px;
-  text-decoration:none;
-  color:inherit;
-  transition:border-color .15s, background .15s, transform .1s;
-  margin-bottom:12px;
-  cursor:pointer;
+  display:flex;align-items:center;gap:16px;
+  padding:18px 20px;background:var(--ink2);
+  border:1px solid var(--line);border-radius:10px;
+  text-decoration:none;color:inherit;
+  transition:border-color .15s,background .15s,transform .1s;
+  margin-bottom:12px;cursor:pointer;
 }
-.project-card:hover{
-  border-color:var(--accent);
-  background:rgba(184,255,87,.04);
-  transform:translateY(-1px);
-}
-.project-card-icon{
-  width:44px;height:44px;
-  background:rgba(184,255,87,.1);
-  border:1px solid rgba(184,255,87,.2);
-  border-radius:10px;
-  display:flex;align-items:center;justify-content:center;
-  font-size:22px;
-  flex-shrink:0;
-}
+.project-card:hover{border-color:var(--accent);background:rgba(184,255,87,.04);transform:translateY(-1px);text-decoration:none}
+.project-card-icon{width:44px;height:44px;background:rgba(184,255,87,.1);border:1px solid rgba(184,255,87,.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
 .project-card-body{flex:1}
-.project-card-name{
-  font-size:15px;
-  font-weight:600;
-  color:var(--head);
-  margin-bottom:3px;
-}
-.project-card-desc{
-  font-size:12px;
-  color:var(--muted2);
-  line-height:1.5;
-}
-.project-card-arrow{
-  font-size:18px;
-  color:var(--muted);
-  transition:color .15s, transform .15s;
-}
+.project-card-name{font-size:15px;font-weight:600;color:var(--head);margin-bottom:3px}
+.project-card-desc{font-size:12px;color:var(--muted2);line-height:1.5}
+.project-card-arrow{font-size:18px;color:var(--muted);transition:color .15s,transform .15s}
 .project-card:hover .project-card-arrow{color:var(--accent);transform:translateX(3px)}
 
-/* ── DCA COMPASS IFRAME PAGE ── */
-.iframe-page{
-  position:fixed;
-  top:0;left:220px;right:0;bottom:0;
-  display:none;
-  flex-direction:column;
-}
-.iframe-page.active{display:flex}
-.iframe-page iframe{
-  flex:1;
-  border:none;
-  width:100%;
-  height:100%;
-}
-/* back bar for iframe pages */
-.iframe-topbar{
-  background:var(--ink2);
-  border-bottom:1px solid var(--line);
-  padding:10px 20px;
-  display:flex;
-  align-items:center;
-  gap:14px;
-  flex-shrink:0;
-}
-.btn-back{
-  background:transparent;
-  border:1px solid var(--line2);
-  border-radius:var(--r);
-  color:var(--muted2);
-  font-size:12px;
-  padding:4px 10px;
-  cursor:pointer;
-  font-family:'IBM Plex Mono',monospace;
-  transition:color .15s,border-color .15s;
-}
-.btn-back:hover{color:var(--head);border-color:var(--muted)}
-.iframe-title{
-  font-size:13px;
-  color:var(--body);
-  font-weight:500;
-}
-.iframe-ext{
-  margin-left:auto;
-  font-family:'IBM Plex Mono',monospace;
-  font-size:11px;
-  color:var(--muted);
-  text-decoration:none;
-  transition:color .15s;
-}
-.iframe-ext:hover{color:var(--accent)}
-
-/* ── MOBILE MENU BUTTON ── */
+/* ── MOBILE ── */
 .mobile-menu-btn{
-  display:none;
-  position:fixed;
-  top:14px;left:14px;
-  z-index:200;
-  background:var(--ink2);
-  border:1px solid var(--line2);
-  border-radius:var(--r);
-  width:36px;height:36px;
-  align-items:center;justify-content:center;
-  cursor:pointer;
-  font-size:18px;
-  color:var(--body);
+  display:none;position:fixed;top:14px;left:14px;z-index:200;
+  background:var(--ink2);border:1px solid var(--line2);border-radius:var(--r);
+  width:36px;height:36px;align-items:center;justify-content:center;
+  cursor:pointer;font-size:18px;color:var(--body);
 }
-.sidebar-overlay{
-  display:none;
-  position:fixed;inset:0;
-  background:rgba(0,0,0,.5);
-  z-index:99;
-}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99}
 .sidebar-overlay.active{display:block}
+
+@media(max-width:900px){
+  .sidebar{transform:translateX(-100%)}
+  .sidebar.open{transform:translateX(0)}
+  .main{margin-left:0;padding:24px 20px}
+  .mobile-menu-btn{display:flex}
+}
 
 ::-webkit-scrollbar{width:5px}
 ::-webkit-scrollbar-track{background:var(--ink2)}
 ::-webkit-scrollbar-thumb{background:var(--line2);border-radius:3px}
-a{color:var(--accent);text-decoration:none}
+a{color:var(--accent)}
 a:hover{text-decoration:underline}
 </style>
 </head>
 <body>
 
-<!-- Mobile menu button -->
 <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Open menu">☰</button>
 <div class="sidebar-overlay" id="sidebar-overlay"></div>
 
@@ -477,7 +196,7 @@ a:hover{text-decoration:underline}
 
   <div class="nav-section">
     <div class="nav-section-label">Menu</div>
-    <a class="nav-link active" data-page="home" href="#home">
+    <a class="nav-link" id="nav-home" href="/">
       <span class="nav-icon">⌂</span> Home
     </a>
   </div>
@@ -485,12 +204,12 @@ a:hover{text-decoration:underline}
   <div class="nav-section">
     <div class="nav-section-label">Vibing</div>
     <div class="nav-group" id="nav-group-vibing">
-      <a class="nav-link nav-group-toggle" data-page="vibing" href="#vibing">
+      <a class="nav-link" id="nav-vibing" href="/vibing/">
         <span class="nav-icon">⚡</span> Vibe Coding
         <span class="chevron">›</span>
       </a>
       <div class="nav-group-children">
-        <a class="nav-link sub" data-page="dca-compass" href="#dca-compass">
+        <a class="nav-link sub" id="nav-dca" href="/dca-compass/">
           <span class="nav-icon">🧭</span> DCA Compass
         </a>
       </div>
@@ -499,272 +218,244 @@ a:hover{text-decoration:underline}
 </nav>
 
 <!-- ── PAGES ── -->
+<main class="main" id="main-wrap">
 
-<!-- HOME PAGE -->
-<main class="main page active" id="page-home">
-
-  <div class="hero">
-    <div class="hero-greeting">Welcome</div>
-    <div class="hero-name">Janiele Custodio</div>
-    <div class="hero-role">Quantitative Finance · Morgan Stanley</div>
-    <p class="hero-bio">
-      I am a Quantitative Finance Associate at Morgan Stanley, in the Securitized Products Group.
-      I obtained a PhD in Systems Engineering from the George Washington University, where my research
-      focused on using operations research to solve integer problems that arise in emergency response
-      systems and supply chain networks.
-    </p>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Education</div>
-
-    <div class="edu-block">
-      <div class="edu-school">George Washington University — Washington, DC</div>
-      <div class="edu-degree">PhD in Systems Engineering · Aug 2016 – May 2022</div>
-      <div class="edu-note">Concentration: Operations Research and Management Science</div>
+  <!-- HOME -->
+  <div class="page" id="page-home">
+    <div class="hero">
+      <div class="hero-greeting">Welcome</div>
+      <div class="hero-name">Janiele Custodio</div>
+      <div class="hero-role">Quantitative Finance · Morgan Stanley</div>
+      <p class="hero-bio">
+        I am a Quantitative Finance Associate at Morgan Stanley, in the Securitized Products Group.
+        I obtained a PhD in Systems Engineering from the George Washington University, where my research
+        focused on using operations research to solve integer problems that arise in emergency response
+        systems and supply chain networks.
+      </p>
     </div>
 
-    <div class="edu-block">
-      <div class="edu-school">University of Brasília — Brasília, DF, Brazil</div>
-      <div class="edu-degree">BSc. in Production Engineering · Jul 2010 – Jul 2016</div>
-      <div class="edu-note">Senior Thesis: <em>An analytical method for short-term energy portfolio optimization</em>
-        &nbsp;<a href="http://bdm.unb.br/bitstream/10483/15646/1/2016_JanieleEduardaSilvaCostaCustodio_tcc.pdf" target="_blank">[link]</a>
+    <div class="section">
+      <div class="section-title">Education</div>
+      <div class="edu-block">
+        <div class="edu-school">George Washington University — Washington, DC</div>
+        <div class="edu-degree">PhD in Systems Engineering · Aug 2016 – May 2022</div>
+        <div class="edu-note">Concentration: Operations Research and Management Science</div>
       </div>
-    </div>
-
-    <div class="edu-block">
-      <div class="edu-school">Purdue University — West Lafayette, IN</div>
-      <div class="edu-degree">Visiting Student · School of Industrial Engineering · Aug 2013 – Aug 2014</div>
-    </div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Research</div>
-    <div style="display:flex;gap:24px;flex-wrap:wrap">
-      <div>
-        <p style="font-size:12px;color:var(--muted);font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Methods</p>
-        <div>
-          <span class="tag">Mixed Integer Nonlinear Programming</span>
-          <span class="tag">Stochastic Programming</span>
-          <span class="tag">Queueing Theory</span>
-          <span class="tag">Convex Optimization</span>
-          <span class="tag">Second-order Cone Programming</span>
+      <div class="edu-block">
+        <div class="edu-school">University of Brasília — Brasília, DF, Brazil</div>
+        <div class="edu-degree">BSc. in Production Engineering · Jul 2010 – Jul 2016</div>
+        <div class="edu-note">Senior Thesis: <em>An analytical method for short-term energy portfolio optimization</em>
+          &nbsp;<a href="http://bdm.unb.br/bitstream/10483/15646/1/2016_JanieleEduardaSilvaCostaCustodio_tcc.pdf" target="_blank">[link]</a>
         </div>
       </div>
-      <div>
-        <p style="font-size:12px;color:var(--muted);font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Applications</p>
+      <div class="edu-block">
+        <div class="edu-school">Purdue University — West Lafayette, IN</div>
+        <div class="edu-degree">Visiting Student · School of Industrial Engineering · Aug 2013 – Aug 2014</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Research</div>
+      <div style="display:flex;gap:24px;flex-wrap:wrap">
         <div>
-          <span class="tag">Emergency Medical Services</span>
-          <span class="tag">Drone Delivery</span>
-          <span class="tag">Supply Chain Management</span>
-          <span class="tag">Energy</span>
-          <span class="tag">Transportation</span>
-          <span class="tag">Finance</span>
+          <p style="font-size:12px;color:var(--muted);font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Methods</p>
+          <div>
+            <span class="tag">Mixed Integer Nonlinear Programming</span>
+            <span class="tag">Stochastic Programming</span>
+            <span class="tag">Queueing Theory</span>
+            <span class="tag">Convex Optimization</span>
+            <span class="tag">Second-order Cone Programming</span>
+          </div>
+        </div>
+        <div>
+          <p style="font-size:12px;color:var(--muted);font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Applications</p>
+          <div>
+            <span class="tag">Emergency Medical Services</span>
+            <span class="tag">Drone Delivery</span>
+            <span class="tag">Supply Chain Management</span>
+            <span class="tag">Energy</span>
+            <span class="tag">Transportation</span>
+            <span class="tag">Finance</span>
+          </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <div class="section">
-    <div class="section-title">Publications</div>
-
-    <div class="pub-item">
-      J. Custodio, A. Zavaleta, M. Lejeune — <em>Note on 'A Chance-Constrained Programming Framework to Handle Uncertainties in Radiation Therapy Treatment Planning'</em>
-      <div class="pub-venue">European Journal of Operations Research · v.275, pp.793–794 · Jun 2019
-        &nbsp;<a href="https://doi.org/10.1016/j.ejor.2018.11.071" target="_blank">[link]</a>
+    <div class="section">
+      <div class="section-title">Publications</div>
+      <div class="pub-item">
+        J. Custodio, A. Zavaleta, M. Lejeune — <em>Note on 'A Chance-Constrained Programming Framework to Handle Uncertainties in Radiation Therapy Treatment Planning'</em>
+        <div class="pub-venue">European Journal of Operations Research · v.275, pp.793–794 · Jun 2019
+          &nbsp;<a href="https://doi.org/10.1016/j.ejor.2018.11.071" target="_blank">[link]</a>
+        </div>
+      </div>
+      <div class="pub-item">
+        R. Garcia, J. Contreras, V. Gonzalez and J. Custodio — <em>Applying Modern Portfolio Theory for a Dynamic Energy Portfolio Allocation in Electricity Markets</em>
+        <div class="pub-venue">Electric Power Systems Research · v.150, pp.11–23 · Sep 2017
+          &nbsp;<a href="https://doi.org/10.1016/j.epsr.2017.04.026" target="_blank">[link]</a>
+        </div>
       </div>
     </div>
 
-    <div class="pub-item">
-      R. Garcia, J. Contreras, V. Gonzalez and J. Custodio — <em>Applying Modern Portfolio Theory for a Dynamic Energy Portfolio Allocation in Electricity Markets</em>
-      <div class="pub-venue">Electric Power Systems Research · v.150, pp.11–23 · Sep 2017
-        &nbsp;<a href="https://doi.org/10.1016/j.epsr.2017.04.026" target="_blank">[link]</a>
+    <div class="section">
+      <div class="section-title">Presentations</div>
+      <div class="conf-item">
+        J. Custodio and M. Lejeune — <em>Conic reformulations of chance-constrained stochastic location-allocation problems under exogenous uncertainty: application to drone-aided healthcare delivery</em>
+        <div class="conf-venue">GDRR · Washington, DC · May 2019</div>
+      </div>
+      <div class="conf-item">
+        J. Custodio and M. Lejeune — <em>Conic formulations of a network of drone-aided healthcare delivery with congestion</em>
+        <div class="conf-venue">POMS · Washington, DC · May 2019</div>
+      </div>
+      <div class="conf-item">
+        J. Custodio and E. Shittu — <em>When Agents Trade in Electricity Attributes, Who Benefits?</em>
+        <div class="conf-venue">Industry Studies Conference · DC · May 2017 &nbsp;·&nbsp; INFORMS Annual Meeting · Houston · Oct 2017 &nbsp;·&nbsp; TMP Consortium · The Hague · Jun 2018</div>
+      </div>
+      <div class="conf-item">
+        J. Custodio and E. Shittu — <em>Systems Architecture for a Replicable Mobility System</em>
+        <div class="conf-venue">Industry Studies Conference · Seattle · May 2018</div>
       </div>
     </div>
-  </div>
 
-  <div class="section">
-    <div class="section-title">Presentations</div>
+    <div class="section">
+      <div class="section-title">Professional Memberships</div>
+      <div class="membership-item"><span class="membership-year">2023–present</span>Society of Quantitative Analysts</div>
+      <div class="membership-item"><span class="membership-year">2016–present</span>INFORMS</div>
+    </div>
 
-    <div class="conf-item">
-      J. Custodio and M. Lejeune — <em>Conic reformulations of chance-constrained stochastic location-allocation problems under exogenous uncertainty: application to drone-aided healthcare delivery</em>
-      <div class="conf-venue">GDRR · Washington, DC · May 2019</div>
+    <div class="section">
+      <div class="section-title">Contact</div>
+      <div class="contact-line">janiele at gwu dot edu</div>
+      <div style="margin-top:12px">
+        <a href="https://www.linkedin.com/in/janielecustodio" target="_blank"
+           style="display:inline-flex;align-items:center;gap:7px;font-size:13px;color:var(--muted2);font-family:'IBM Plex Mono',monospace;border:1px solid var(--line2);border-radius:var(--r);padding:6px 12px;transition:color .15s,border-color .15s"
+           onmouseover="this.style.color='var(--head)';this.style.borderColor='var(--muted)'"
+           onmouseout="this.style.color='var(--muted2)';this.style.borderColor='var(--line2)'">
+          <span>in</span> LinkedIn
+        </a>
+      </div>
     </div>
-    <div class="conf-item">
-      J. Custodio and M. Lejeune — <em>Conic formulations of a network of drone-aided healthcare delivery with congestion</em>
-      <div class="conf-venue">POMS · Washington, DC · May 2019</div>
-    </div>
-    <div class="conf-item">
-      J. Custodio and E. Shittu — <em>When Agents Trade in Electricity Attributes, Who Benefits?</em>
-      <div class="conf-venue">Industry Studies Conference · DC · May 2017 &nbsp;·&nbsp; INFORMS Annual Meeting · Houston · Oct 2017 &nbsp;·&nbsp; TMP Consortium · The Hague · Jun 2018</div>
-    </div>
-    <div class="conf-item">
-      J. Custodio and E. Shittu — <em>Systems Architecture for a Replicable Mobility System</em>
-      <div class="conf-venue">Industry Studies Conference · Seattle · May 2018</div>
-    </div>
-  </div>
+  </div><!-- /page-home -->
 
-  <div class="section">
-    <div class="section-title">Professional Memberships</div>
-    <div class="membership-item">
-      <span class="membership-year">2023–present</span>
-      Society of Quantitative Analysts
+  <!-- VIBING -->
+  <div class="page" id="page-vibing">
+    <div class="vibing-hero">
+      <div class="vibing-hero-label">Vibe Coding</div>
+      <div class="vibing-hero-title">Side Projects</div>
+      <p class="vibing-hero-desc">Tools and experiments I've built for fun — mostly finance and data adjacent. All vibe-coded.</p>
     </div>
-    <div class="membership-item">
-      <span class="membership-year">2016–present</span>
-      INFORMS
-    </div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Contact</div>
-    <div class="contact-line">janiele at gwu dot edu</div>
-    <div style="margin-top:12px">
-      <a href="https://www.linkedin.com/in/janielecustodio" target="_blank"
-         style="display:inline-flex;align-items:center;gap:7px;font-size:13px;color:var(--muted2);text-decoration:none;font-family:'IBM Plex Mono',monospace;border:1px solid var(--line2);border-radius:var(--r);padding:6px 12px;transition:color .15s,border-color .15s"
-         onmouseover="this.style.color='var(--head)';this.style.borderColor='var(--muted)'"
-         onmouseout="this.style.color='var(--muted2)';this.style.borderColor='var(--line2)'">
-        <span>in</span> LinkedIn
+    <div class="section">
+      <div class="section-title">Projects</div>
+      <a class="project-card" href="/dca-compass/" id="card-dca">
+        <div class="project-card-icon">🧭</div>
+        <div class="project-card-body">
+          <div class="project-card-name">DCA Compass</div>
+          <div class="project-card-desc">Portfolio DCA simulator — backtest dollar-cost averaging strategies with real historical data, risk analytics, and multi-asset support.</div>
+        </div>
+        <div class="project-card-arrow">›</div>
       </a>
     </div>
-  </div>
+  </div><!-- /page-vibing -->
 
-</main>
-
-<!-- VIBING PAGE -->
-<main class="main page" id="page-vibing">
-  <div class="vibing-hero">
-    <div class="vibing-hero-label">Vibe Coding</div>
-    <div class="vibing-hero-title">Side Projects</div>
-    <p class="vibing-hero-desc">
-      Tools and experiments I've built for fun — mostly finance and data adjacent. All vibe-coded.
-    </p>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Projects</div>
-    <a class="project-card" data-page="dca-compass" href="#dca-compass">
-      <div class="project-card-icon">🧭</div>
-      <div class="project-card-body">
-        <div class="project-card-name">DCA Compass</div>
-        <div class="project-card-desc">Portfolio DCA simulator — backtest dollar-cost averaging strategies with real historical data, risk analytics, and multi-asset support.</div>
-      </div>
-      <div class="project-card-arrow">›</div>
-    </a>
-  </div>
-</main>
-
-<!-- DCA COMPASS IFRAME PAGE -->
-<div class="iframe-page" id="page-dca-compass">
-  <div class="iframe-topbar">
-    <button class="btn-back" data-page="vibing">‹ Back</button>
-    <span class="iframe-title">🧭 DCA Compass</span>
-    <a class="iframe-ext" href="https://janielecustodio.github.io/dca-compass/" target="_blank">↗ open standalone</a>
-  </div>
-  <iframe
-    src="https://janielecustodio.github.io/dca-compass/"
-    title="DCA Compass — Portfolio Simulator"
-    loading="lazy"
-    allow="same-origin"
-  ></iframe>
-</div>
+</main><!-- /main-wrap -->
 
 <script>
-// ── NAVIGATION ──
-const pages = {
-  'home':        { el: document.getElementById('page-home'),        type: 'main' },
-  'vibing':      { el: document.getElementById('page-vibing'),      type: 'main' },
-  'dca-compass': { el: document.getElementById('page-dca-compass'), type: 'iframe' },
+// ─────────────────────────────────────────────
+//  Simple SPA router — real paths via pushState
+//  GitHub Pages 404.html trick handles direct
+//  URL loads for sub-paths
+// ─────────────────────────────────────────────
+
+const ROUTES = {
+  '/':            'home',
+  '/vibing/':     'vibing',
+  '/vibing':      'vibing',
+  '/dca-compass/':'dca-compass',
+  '/dca-compass': 'dca-compass',
 };
 
-function navigate(pageId, pushState = true) {
-  const target = pages[pageId];
-  if (!target) return;
+function currentPage() {
+  const path = window.location.pathname.replace(/^\/~[^/]+/, ''); // strip user prefix if any
+  return ROUTES[path] || ROUTES[path + '/'] || 'home';
+}
 
-  // Hide all pages
-  Object.values(pages).forEach(p => {
-    p.el.classList.remove('active');
-  });
+function activate(pageId) {
+  // Show/hide content pages
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
 
-  // Show target
-  target.el.classList.add('active');
-
-  // Update nav link active state
-  document.querySelectorAll('.nav-link[data-page]').forEach(link => {
-    link.classList.toggle('active', link.dataset.page === pageId);
-  });
-
-  // Open vibing group if navigating to vibing or dca-compass
-  const vibingGroup = document.getElementById('nav-group-vibing');
-  if (pageId === 'vibing' || pageId === 'dca-compass') {
-    vibingGroup.classList.add('open');
+  if (pageId === 'dca-compass') {
+    // Navigate away to the actual DCA Compass page at /dca-compass/
+    // (handled as a real page — see dca-compass/index.html)
+    window.location.href = '/dca-compass/';
+    return;
   }
 
-  // Adjust main layout — iframe pages are fixed, main pages have left margin
-  const mainEl = document.querySelector('.main.active');
-  if (mainEl) {
-    // handled by CSS
-  }
+  const el = document.getElementById('page-' + pageId);
+  if (el) el.classList.add('active');
 
-  // Update URL hash
-  if (pushState) {
-    history.pushState({ page: pageId }, '', '#' + pageId);
-  }
+  // Scroll main back to top on page change
+  window.scrollTo(0, 0);
 
-  // Close mobile sidebar
+  // Sidebar active states
+  document.getElementById('nav-home').classList.toggle('active', pageId === 'home');
+  document.getElementById('nav-vibing').classList.toggle('active', pageId === 'vibing');
+  document.getElementById('nav-dca').classList.toggle('active', pageId === 'dca-compass');
+
+  // Open vibing group when on vibing or dca-compass
+  const group = document.getElementById('nav-group-vibing');
+  group.classList.toggle('open', pageId === 'vibing' || pageId === 'dca-compass');
+
+  // Update document title
+  const titles = { home: 'Janiele Custodio', vibing: 'Vibe Coding — Janiele Custodio' };
+  document.title = titles[pageId] || 'Janiele Custodio';
+}
+
+function navigateTo(path, push = true) {
+  if (push) history.pushState({}, '', path);
+  const pageId = ROUTES[path] || ROUTES[path + '/'] || 'home';
+  activate(pageId);
   closeMobileSidebar();
 }
 
-// ── Wire nav links ──
-document.querySelectorAll('[data-page]').forEach(el => {
-  el.addEventListener('click', e => {
-    e.preventDefault();
-    const pageId = el.dataset.page;
-    navigate(pageId);
-  });
+// Wire sidebar links
+document.getElementById('nav-home').addEventListener('click', e => {
+  e.preventDefault(); navigateTo('/');
 });
-
-// ── Vibing group toggle (clicks on the toggle itself open sub-items) ──
-const vibingToggle = document.querySelector('#nav-group-vibing .nav-group-toggle');
-vibingToggle.addEventListener('click', e => {
+document.getElementById('nav-vibing').addEventListener('click', e => {
   e.preventDefault();
   const group = document.getElementById('nav-group-vibing');
   const isOpen = group.classList.contains('open');
-  if (isOpen) {
+  // If already on vibing and group open, toggle closed → home
+  if (isOpen && currentPage() === 'vibing') {
     group.classList.remove('open');
-    navigate('home'); // collapse to home if closing
+    navigateTo('/');
   } else {
-    group.classList.add('open');
-    navigate('vibing');
+    navigateTo('/vibing/');
   }
 });
-
-// ── Handle browser back/forward ──
-window.addEventListener('popstate', e => {
-  const pageId = e.state?.page || 'home';
-  navigate(pageId, false);
+document.getElementById('nav-dca').addEventListener('click', e => {
+  e.preventDefault(); navigateTo('/dca-compass/');
 });
 
-// ── Initial load from hash ──
-function loadFromHash() {
-  const hash = window.location.hash.replace('#', '') || 'home';
-  navigate(hash, false);
-}
-loadFromHash();
+// Wire project card
+document.getElementById('card-dca').addEventListener('click', e => {
+  e.preventDefault(); navigateTo('/dca-compass/');
+});
+
+// Browser back / forward
+window.addEventListener('popstate', () => {
+  activate(currentPage());
+});
+
+// Initial render
+activate(currentPage());
 
 // ── Mobile sidebar ──
-const sidebar = document.getElementById('sidebar');
-const overlay = document.getElementById('sidebar-overlay');
-const menuBtn = document.getElementById('mobile-menu-btn');
-
-function openMobileSidebar() {
-  sidebar.classList.add('open');
-  overlay.classList.add('active');
-}
-function closeMobileSidebar() {
-  sidebar.classList.remove('open');
-  overlay.classList.remove('active');
-}
+const sidebar  = document.getElementById('sidebar');
+const overlay  = document.getElementById('sidebar-overlay');
+const menuBtn  = document.getElementById('mobile-menu-btn');
+function openMobileSidebar()  { sidebar.classList.add('open');    overlay.classList.add('active'); }
+function closeMobileSidebar() { sidebar.classList.remove('open'); overlay.classList.remove('active'); }
 menuBtn.addEventListener('click', openMobileSidebar);
 overlay.addEventListener('click', closeMobileSidebar);
 </script>
