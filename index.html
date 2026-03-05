@@ -134,6 +134,23 @@ p:last-child{margin-bottom:0}
 
 .contact-line{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--muted2);padding:8px 0}
 
+/* ── WORK EXPERIENCE ── */
+.work-block{margin-bottom:28px;padding-bottom:28px;border-bottom:1px solid var(--line)}
+.work-block:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0}
+.work-company{font-size:15px;font-weight:600;color:var(--head);margin-bottom:10px}
+.work-role{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;flex-wrap:wrap;gap:4px}
+.work-title{font-size:13px;font-weight:500;color:var(--body)}
+.work-dates{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);flex-shrink:0}
+.work-bullets{list-style:none;padding:0;margin-top:6px}
+.work-bullets li{font-size:13px;color:var(--body);padding:3px 0 3px 16px;position:relative;line-height:1.55}
+.work-bullets li::before{content:'·';position:absolute;left:4px;color:var(--accent);font-weight:700}
+.work-bullets li strong{color:var(--head);font-weight:500}
+
+/* ── CERTIFICATIONS ── */
+.cert-item{display:flex;align-items:baseline;gap:10px;font-size:13px;color:var(--body);padding:5px 0;border-bottom:1px solid var(--line)}
+.cert-item:last-child{border-bottom:none}
+.cert-issuer{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);flex-shrink:0;min-width:110px}
+
 /* ── MOBILE ── */
 .mobile-menu-btn{
   display:none;position:fixed;top:14px;left:14px;z-index:200;
@@ -201,12 +218,12 @@ a:hover{text-decoration:underline}
     <div class="hero">
       <div class="hero-greeting">Welcome</div>
       <div class="hero-name">Janiele Custodio</div>
-      <div class="hero-role">Quantitative Finance · Morgan Stanley</div>
+      <div class="hero-role">Vice President, Agency MBS Desk Strategist · Morgan Stanley</div>
       <p class="hero-bio">
-        I am a Quantitative Finance Associate at Morgan Stanley, in the Securitized Products Group.
-        I obtained a PhD in Systems Engineering from the George Washington University, where my research
-        focused on using operations research to solve integer problems that arise in emergency response
-        systems and supply chain networks.
+        I am a Vice President and Agency MBS Desk Strategist at Morgan Stanley in New York, where I build
+        quantitative models, pricing tools, and data infrastructure for the agency mortgage-backed securities
+        desk. I hold a PhD in Systems Engineering from the George Washington University, where my research
+        applied operations research to emergency response, drone logistics, and supply chain optimization.
       </p>
     </div>
 
@@ -216,6 +233,7 @@ a:hover{text-decoration:underline}
         <div class="edu-school">George Washington University — Washington, DC</div>
         <div class="edu-degree">PhD in Systems Engineering · Aug 2016 – May 2022</div>
         <div class="edu-note">Concentration: Operations Research and Management Science</div>
+        <div class="edu-note" style="margin-top:3px">Thesis: <em>Optimization Models to Aid the Reduction of Deforestation in the Brazilian Amazon: Sustainable Diets and Drone-Based Environmental Emergency Response</em></div>
       </div>
       <div class="edu-block">
         <div class="edu-school">University of Brasília — Brasília, DF, Brazil</div>
@@ -231,34 +249,104 @@ a:hover{text-decoration:underline}
     </div>
 
     <div class="section">
-      <div class="section-title">Research</div>
+      <div class="section-title">Skills</div>
       <div style="display:flex;gap:24px;flex-wrap:wrap">
         <div>
-          <p style="font-size:12px;color:var(--muted);font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Methods</p>
+          <p style="font-size:12px;color:var(--muted);font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Languages &amp; Tools</p>
+          <div>
+            <span class="tag">KDB/Q</span>
+            <span class="tag">Python</span>
+            <span class="tag">SQL</span>
+            <span class="tag">Git</span>
+          </div>
+        </div>
+        <div>
+          <p style="font-size:12px;color:var(--muted);font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Quantitative Methods</p>
           <div>
             <span class="tag">Mixed Integer Nonlinear Programming</span>
             <span class="tag">Stochastic Programming</span>
             <span class="tag">Queueing Theory</span>
             <span class="tag">Convex Optimization</span>
-            <span class="tag">Second-order Cone Programming</span>
+            <span class="tag">Machine Learning</span>
+            <span class="tag">Portfolio Optimization</span>
           </div>
         </div>
         <div>
-          <p style="font-size:12px;color:var(--muted);font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Applications</p>
+          <p style="font-size:12px;color:var(--muted);font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Domains</p>
           <div>
-            <span class="tag">Emergency Medical Services</span>
-            <span class="tag">Drone Delivery</span>
-            <span class="tag">Supply Chain Management</span>
+            <span class="tag">Agency MBS</span>
+            <span class="tag">Fixed Income</span>
+            <span class="tag">E-Trading</span>
+            <span class="tag">Risk Management</span>
+            <span class="tag">Emergency Response</span>
             <span class="tag">Energy</span>
-            <span class="tag">Transportation</span>
-            <span class="tag">Finance</span>
           </div>
         </div>
       </div>
     </div>
 
     <div class="section">
+      <div class="section-title">Work Experience</div>
+
+      <div class="work-block">
+        <div class="work-company">Morgan Stanley — Agency MBS Desk Strategist, New York, NY</div>
+
+        <div class="work-role">
+          <span class="work-title">Vice President</span>
+          <span class="work-dates">Jan 2024 – Present</span>
+        </div>
+        <ul class="work-bullets">
+          <li><strong>Spec Pool Pricing:</strong> Refactored and optimized a Neural Network reference pricing library, improving accuracy by 20% across primary and secondary spec pools.</li>
+          <li><strong>Automated E-Trading:</strong> Designed and managed a model-assisted BWIC responder, driving desk P&amp;L by increasing hit rates at tight DTCs.</li>
+          <li><strong>Trading Signals:</strong> Built analytical tools integrating internal/external trading data and market signals to assess client behavior and pricing impacts.</li>
+          <li><strong>Risk Management:</strong> Developed and deployed a hedging model for spec pool inventory, enhancing the desk's risk management framework.</li>
+          <li><strong>Portfolio Optimization:</strong> Developed optimization frameworks to construct high-yield portfolios for CMO deals and ETF creation, maximizing arbitrage opportunities.</li>
+          <li><strong>Data Analytics:</strong> Sourced, structured, and analyzed complex agency MBS data to extract quantitative insights and support trading activity.</li>
+        </ul>
+
+        <div class="work-role" style="margin-top:14px">
+          <span class="work-title">Associate</span>
+          <span class="work-dates">Jun 2021 – Jan 2024</span>
+        </div>
+        <ul class="work-bullets">
+          <li><strong>iNAV:</strong> R&amp;D and implementation of an intraday pricing model for mortgage ETFs.</li>
+          <li><strong>DaaS:</strong> Collected, built, and generated agency MBS trading data products.</li>
+          <li><strong>Trading Color:</strong> Developed a lookup algorithm for high-accuracy trading color on secondary BWICs.</li>
+        </ul>
+
+        <div class="work-role" style="margin-top:14px">
+          <span class="work-title">Summer Associate</span>
+          <span class="work-dates">Jun 2020 – Aug 2020</span>
+        </div>
+      </div>
+
+      <div class="work-block">
+        <div class="work-company">George Washington University — Washington, DC</div>
+        <div class="work-role">
+          <span class="work-title">Graduate Teaching Assistant (Probability &amp; Statistics)</span>
+          <span class="work-dates">Jan 2019 – Jun 2021</span>
+        </div>
+        <div class="work-role" style="margin-top:8px">
+          <span class="work-title">Graduate Research Assistant</span>
+          <span class="work-dates">Sep 2016 – Dec 2018</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
       <div class="section-title">Publications</div>
+      <div class="pub-item">
+        J. Custodio and H. Abeledo — <em>Drone-Based Environmental Emergency Response in the Brazilian Amazon</em>
+        <div class="pub-venue">Drones · 7, 554 · Aug 2023
+          &nbsp;<a href="https://doi.org/10.3390/drones7090554" target="_blank">[link]</a>
+        </div>
+      </div>
+      <div class="pub-item">
+        J. Custodio and M. Lejeune — <em>Spatiotemporal Data Set of Out-of-hospital Cardiac Arrests</em>
+        <div class="pub-venue">INFORMS Journal on Computing · 34(1):4–10 · Jun 2022
+          &nbsp;<a href="https://doi.org/10.1287/ijoc.2021.1112" target="_blank">[link]</a>
+        </div>
+      </div>
       <div class="pub-item">
         J. Custodio, A. Zavaleta, M. Lejeune — <em>Note on 'A Chance-Constrained Programming Framework to Handle Uncertainties in Radiation Therapy Treatment Planning'</em>
         <div class="pub-venue">European Journal of Operations Research · v.275, pp.793–794 · Jun 2019
@@ -270,6 +358,9 @@ a:hover{text-decoration:underline}
         <div class="pub-venue">Electric Power Systems Research · v.150, pp.11–23 · Sep 2017
           &nbsp;<a href="https://doi.org/10.1016/j.epsr.2017.04.026" target="_blank">[link]</a>
         </div>
+      </div>
+      <div style="margin-top:10px;font-size:11px;font-family:'IBM Plex Mono',monospace">
+        <a href="https://scholar.google.com/citations?user=TcP49iYAAAAJ" target="_blank" style="color:var(--muted2)">↗ Google Scholar profile</a>
       </div>
     </div>
 
@@ -300,14 +391,30 @@ a:hover{text-decoration:underline}
     </div>
 
     <div class="section">
+      <div class="section-title">Licenses &amp; Certifications</div>
+      <div class="cert-item"><span class="cert-issuer">FINRA · Mar 2022</span>Series 7, Series 63, SIE</div>
+      <div class="cert-item"><span class="cert-issuer">McKinsey · Mar 2023</span>Business Strategy</div>
+      <div class="cert-item"><span class="cert-issuer">McKinsey · Mar 2023</span>Management Accelerator / Black Leadership Academy</div>
+      <div class="cert-item"><span class="cert-issuer">McKinsey · Jan 2023</span>Problem Solving</div>
+      <div class="cert-item"><span class="cert-issuer">NSF · Apr 2018</span>AccelerateGW I-Corps Program</div>
+      <div class="cert-item"><span class="cert-issuer">CAPES · Aug 2013</span>Brazilian Scientific Mobility Program</div>
+    </div>
+
+    <div class="section">
       <div class="section-title">Contact</div>
-      <div class="contact-line">janiele at gwu dot edu</div>
-      <div style="margin-top:12px">
+      <div class="contact-line">janiele@gwu.edu</div>
+      <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
         <a href="https://www.linkedin.com/in/janielecustodio" target="_blank"
            style="display:inline-flex;align-items:center;gap:7px;font-size:13px;color:var(--muted2);font-family:'IBM Plex Mono',monospace;border:1px solid var(--line2);border-radius:var(--r);padding:6px 12px;transition:color .15s,border-color .15s"
            onmouseover="this.style.color='var(--head)';this.style.borderColor='var(--muted)'"
            onmouseout="this.style.color='var(--muted2)';this.style.borderColor='var(--line2)'">
-          <span>in</span> LinkedIn
+          in&nbsp; LinkedIn
+        </a>
+        <a href="https://scholar.google.com/citations?user=TcP49iYAAAAJ" target="_blank"
+           style="display:inline-flex;align-items:center;gap:7px;font-size:13px;color:var(--muted2);font-family:'IBM Plex Mono',monospace;border:1px solid var(--line2);border-radius:var(--r);padding:6px 12px;transition:color .15s,border-color .15s"
+           onmouseover="this.style.color='var(--head)';this.style.borderColor='var(--muted)'"
+           onmouseout="this.style.color='var(--muted2)';this.style.borderColor='var(--line2)'">
+           Scholar
         </a>
       </div>
     </div>
