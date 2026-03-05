@@ -83,9 +83,7 @@ body{
 /* ── MAIN CONTENT ── */
 .main{margin-left:220px;flex:1;padding:56px 64px;max-width:860px}
 
-/* page visibility */
-.page{display:none}
-.page.active{display:block}
+/* index.html only ever shows the home page — no toggling needed */
 
 /* ── HOME ── */
 .hero{margin-bottom:48px;padding-bottom:32px;border-bottom:1px solid var(--line)}
@@ -136,28 +134,6 @@ p:last-child{margin-bottom:0}
 
 .contact-line{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--muted2);padding:8px 0}
 
-/* ── VIBING PAGE ── */
-.vibing-hero{margin-bottom:36px;padding-bottom:24px;border-bottom:1px solid var(--line)}
-.vibing-hero-label{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--accent);letter-spacing:.12em;text-transform:uppercase;margin-bottom:10px}
-.vibing-hero-title{font-size:28px;font-weight:600;color:var(--head);margin-bottom:8px}
-.vibing-hero-desc{font-size:14px;color:var(--muted2);max-width:560px}
-
-.project-card{
-  display:flex;align-items:center;gap:16px;
-  padding:18px 20px;background:var(--ink2);
-  border:1px solid var(--line);border-radius:10px;
-  text-decoration:none;color:inherit;
-  transition:border-color .15s,background .15s,transform .1s;
-  margin-bottom:12px;cursor:pointer;
-}
-.project-card:hover{border-color:var(--accent);background:rgba(184,255,87,.04);transform:translateY(-1px);text-decoration:none}
-.project-card-icon{width:44px;height:44px;background:rgba(184,255,87,.1);border:1px solid rgba(184,255,87,.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
-.project-card-body{flex:1}
-.project-card-name{font-size:15px;font-weight:600;color:var(--head);margin-bottom:3px}
-.project-card-desc{font-size:12px;color:var(--muted2);line-height:1.5}
-.project-card-arrow{font-size:18px;color:var(--muted);transition:color .15s,transform .15s}
-.project-card:hover .project-card-arrow{color:var(--accent);transform:translateX(3px)}
-
 /* ── MOBILE ── */
 .mobile-menu-btn{
   display:none;position:fixed;top:14px;left:14px;z-index:200;
@@ -196,7 +172,7 @@ a:hover{text-decoration:underline}
 
   <div class="nav-section">
     <div class="nav-section-label">Menu</div>
-    <a class="nav-link" id="nav-home" href="/">
+    <a class="nav-link active" href="/">
       <span class="nav-icon">⌂</span> Home
     </a>
   </div>
@@ -204,12 +180,12 @@ a:hover{text-decoration:underline}
   <div class="nav-section">
     <div class="nav-section-label">Vibing</div>
     <div class="nav-group" id="nav-group-vibing">
-      <a class="nav-link" id="nav-vibing" href="/vibing/">
+      <a class="nav-link" href="/vibing/">
         <span class="nav-icon">⚡</span> Vibe Coding
         <span class="chevron">›</span>
       </a>
       <div class="nav-group-children">
-        <a class="nav-link sub" id="nav-dca" href="/dca-compass/">
+        <a class="nav-link sub" href="/dca-compass/">
           <span class="nav-icon">🧭</span> DCA Compass
         </a>
       </div>
@@ -221,7 +197,7 @@ a:hover{text-decoration:underline}
 <main class="main" id="main-wrap">
 
   <!-- HOME -->
-  <div class="page" id="page-home">
+  <div>
     <div class="hero">
       <div class="hero-greeting">Welcome</div>
       <div class="hero-name">Janiele Custodio</div>
@@ -337,127 +313,19 @@ a:hover{text-decoration:underline}
     </div>
   </div><!-- /page-home -->
 
-  <!-- VIBING -->
-  <div class="page" id="page-vibing">
-    <div class="vibing-hero">
-      <div class="vibing-hero-label">Vibe Coding</div>
-      <div class="vibing-hero-title">Side Projects</div>
-      <p class="vibing-hero-desc">Tools and experiments I've built for fun — mostly finance and data adjacent. All vibe-coded.</p>
-    </div>
-    <div class="section">
-      <div class="section-title">Projects</div>
-      <a class="project-card" href="/dca-compass/" id="card-dca">
-        <div class="project-card-icon">🧭</div>
-        <div class="project-card-body">
-          <div class="project-card-name">DCA Compass</div>
-          <div class="project-card-desc">Portfolio DCA simulator — backtest dollar-cost averaging strategies with real historical data, risk analytics, and multi-asset support.</div>
-        </div>
-        <div class="project-card-arrow">›</div>
-      </a>
-    </div>
-  </div><!-- /page-vibing -->
-
 </main><!-- /main-wrap -->
 
 <script>
-// ─────────────────────────────────────────────
-//  Simple SPA router — real paths via pushState
-//  GitHub Pages 404.html trick handles direct
-//  URL loads for sub-paths
-// ─────────────────────────────────────────────
-
-const ROUTES = {
-  '/':            'home',
-  '/vibing/':     'vibing',
-  '/vibing':      'vibing',
-  '/dca-compass/':'dca-compass',
-  '/dca-compass': 'dca-compass',
-};
-
-function currentPage() {
-  const path = window.location.pathname.replace(/^\/~[^/]+/, ''); // strip user prefix if any
-  return ROUTES[path] || ROUTES[path + '/'] || 'home';
-}
-
-function activate(pageId) {
-  // Show/hide content pages
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-
-  if (pageId === 'dca-compass') {
-    // Navigate away to the actual DCA Compass page at /dca-compass/
-    // (handled as a real page — see dca-compass/index.html)
-    window.location.href = '/dca-compass/';
-    return;
-  }
-
-  const el = document.getElementById('page-' + pageId);
-  if (el) el.classList.add('active');
-
-  // Scroll main back to top on page change
-  window.scrollTo(0, 0);
-
-  // Sidebar active states
-  document.getElementById('nav-home').classList.toggle('active', pageId === 'home');
-  document.getElementById('nav-vibing').classList.toggle('active', pageId === 'vibing');
-  document.getElementById('nav-dca').classList.toggle('active', pageId === 'dca-compass');
-
-  // Open vibing group when on vibing or dca-compass
-  const group = document.getElementById('nav-group-vibing');
-  group.classList.toggle('open', pageId === 'vibing' || pageId === 'dca-compass');
-
-  // Update document title
-  const titles = { home: 'Janiele Custodio', vibing: 'Vibe Coding — Janiele Custodio' };
-  document.title = titles[pageId] || 'Janiele Custodio';
-}
-
-function navigateTo(path, push = true) {
-  if (push) history.pushState({}, '', path);
-  const pageId = ROUTES[path] || ROUTES[path + '/'] || 'home';
-  activate(pageId);
-  closeMobileSidebar();
-}
-
-// Wire sidebar links
-document.getElementById('nav-home').addEventListener('click', e => {
-  e.preventDefault(); navigateTo('/');
+// All navigation is handled by real <a href> links — no JS routing needed.
+// This script only handles the mobile sidebar toggle.
+const sidebar = document.getElementById('sidebar');
+const overlay = document.getElementById('sidebar-overlay');
+document.getElementById('mobile-menu-btn').addEventListener('click', () => {
+  sidebar.classList.add('open'); overlay.classList.add('active');
 });
-document.getElementById('nav-vibing').addEventListener('click', e => {
-  e.preventDefault();
-  const group = document.getElementById('nav-group-vibing');
-  const isOpen = group.classList.contains('open');
-  // If already on vibing and group open, toggle closed → home
-  if (isOpen && currentPage() === 'vibing') {
-    group.classList.remove('open');
-    navigateTo('/');
-  } else {
-    navigateTo('/vibing/');
-  }
+overlay.addEventListener('click', () => {
+  sidebar.classList.remove('open'); overlay.classList.remove('active');
 });
-document.getElementById('nav-dca').addEventListener('click', e => {
-  e.preventDefault(); navigateTo('/dca-compass/');
-});
-
-// Wire project card
-document.getElementById('card-dca').addEventListener('click', e => {
-  e.preventDefault(); navigateTo('/dca-compass/');
-});
-
-// Browser back / forward
-window.addEventListener('popstate', () => {
-  activate(currentPage());
-});
-
-// Initial render
-activate(currentPage());
-
-// ── Mobile sidebar ──
-const sidebar  = document.getElementById('sidebar');
-const overlay  = document.getElementById('sidebar-overlay');
-const menuBtn  = document.getElementById('mobile-menu-btn');
-function openMobileSidebar()  { sidebar.classList.add('open');    overlay.classList.add('active'); }
-function closeMobileSidebar() { sidebar.classList.remove('open'); overlay.classList.remove('active'); }
-menuBtn.addEventListener('click', openMobileSidebar);
-overlay.addEventListener('click', closeMobileSidebar);
 </script>
 </body>
 </html>
