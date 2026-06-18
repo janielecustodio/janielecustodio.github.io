@@ -71,6 +71,7 @@ function MatchRow({ match, ctx, editable, onSave, tz }) {
   const [g2, setG2] = React.useState(match.score ? match.score[1] : 0);
 
   const canEdit = editable && match.team1Resolved && match.team2Resolved;
+  const live = !match.score && window.WC.isLive(match.date, match.time);
 
   function save() {
     onSave(match.id, [Number(g1), Number(g2)]);
@@ -78,7 +79,7 @@ function MatchRow({ match, ctx, editable, onSave, tz }) {
   }
 
   return (
-    <div className={`match-row ${canEdit ? 'editable' : ''}`}>
+    <div className={`match-row ${canEdit ? 'editable' : ''} ${live ? 'is-live' : ''}`}>
       <div className={`match-team ${teamClass(match.team1Resolved, ctx, match.team1Projected)}`}>
         {match.team1Resolved || 'TBD'}{match.team1Projected && <span className="proj-tag">proj.</span>}
       </div>
@@ -92,6 +93,8 @@ function MatchRow({ match, ctx, editable, onSave, tz }) {
           </span>
         ) : match.score ? (
           <span>{match.score[0]} – {match.score[1]}</span>
+        ) : live ? (
+          <span className="live-badge">● LIVE</span>
         ) : (
           <span className="vs">{canEdit ? 'Enter score' : 'vs'}</span>
         )}
@@ -248,6 +251,30 @@ function GroupStageView({ resolved, ctx, editable, onSave, filter, tz }) {
   );
 }
 
+function TodayView({ resolved, ctx, editable, onSave, filter, tz }) {
+  const today = window.WC.todayInTimezone(tz);
+  const matches = resolved.matches
+    .filter(m => {
+      const local = window.WC.formatInTimezone(m.date, m.time, tz);
+      const dateInTz = local ? local.date : m.date;
+      if (dateInTz !== today) return false;
+      if (filter && filter.type === 'team' && !matchInvolvesTeam(m, filter.value)) return false;
+      if (filter && filter.type === 'group' && m.group !== filter.value) return false;
+      return true;
+    })
+    .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+
+  return (
+    <div className="today-view">
+      <div className="section-heading">Today's Matches ({today})</div>
+      {matches.length === 0
+        ? <div className="empty-state">No matches scheduled for today{filter ? ' matching this filter' : ''}.</div>
+        : matches.map(m => <MatchRow key={m.id} match={m} ctx={ctx} editable={editable} onSave={onSave} tz={tz} />)
+      }
+    </div>
+  );
+}
+
 const ROUND_ORDER = ['Round of 32', 'Round of 16', 'Quarter-final', 'Semi-final', 'Final', 'Match for third place'];
 
 function BracketView({ resolved, ctx, editable, onSave, filter, tz }) {
@@ -289,19 +316,26 @@ function App() {
   const [myTeam, setMyTeam] = React.useState(null);
   const [filter, setFilter] = React.useState(null);
   const [tz, setTz] = React.useState(window.WC.DEFAULT_TZ);
+  const [lastFetched, setLastFetched] = React.useState(null);
 
   React.useEffect(() => {
-    window.WC.fetchWorldCupData().then(({ matches, source }) => {
-      setActualMatches(matches);
-      setSimulatedMatches(JSON.parse(JSON.stringify(matches)));
-      setSource(source);
-      setLoading(false);
-    });
+    function refresh() {
+      window.WC.fetchWorldCupData().then(({ matches, source }) => {
+        setActualMatches(matches);
+        setSimulatedMatches(prev => prev.length ? prev : JSON.parse(JSON.stringify(matches)));
+        setSource(source);
+        setLoading(false);
+        setLastFetched(new Date());
+      });
+    }
+    refresh();
+    const poll = setInterval(refresh, 60000); // pick up live score updates automatically
     const saved = window.WC.loadMyTeam();
     if (saved) {
       setMyTeam(saved);
       if (saved.palette) window.WC.applyPalette(saved.palette);
     }
+    return () => clearInterval(poll);
   }, []);
 
   function selectTeam(t) {
@@ -357,6 +391,7 @@ function App() {
 
       <div className="wc-controls">
         <div className="view-tabs">
+          <button className={view === 'today' ? 'active' : ''} onClick={() => setView('today')}>Today's Matches</button>
           <button className={view === 'groups' ? 'active' : ''} onClick={() => setView('groups')}>Group Stage</button>
           <button className={view === 'bracket' ? 'active' : ''} onClick={() => setView('bracket')}>Knockout Bracket</button>
         </div>
@@ -375,16 +410,20 @@ function App() {
       {source === 'fallback' && (
         <div className="data-banner">Live feed unavailable — showing hardcoded fixture schedule (no results yet).</div>
       )}
+      {source !== 'fallback' && mode === 'actual' && (
+        <div className="live-status">
+          ⟳ Auto-refreshing live results every 60s{lastFetched ? ` — last checked ${lastFetched.toLocaleTimeString()}` : ''}
+        </div>
+      )}
       {!resolved.allGroupsDone && (
         <div className="data-banner projected-banner">
           ⚡ Group stage is still in progress — qualifiers and bracket matchups marked <strong>proj.</strong> are projected assuming current group standings hold, and will update automatically as results come in.
         </div>
       )}
 
-      {view === 'groups'
-        ? <GroupStageView resolved={resolved} ctx={ctx} editable={mode === 'simulation'} onSave={saveScore} filter={filter} tz={tz} />
-        : <BracketView resolved={resolved} ctx={ctx} editable={mode === 'simulation'} onSave={saveScore} filter={filter} tz={tz} />
-      }
+      {view === 'today' && <TodayView resolved={resolved} ctx={ctx} editable={mode === 'simulation'} onSave={saveScore} filter={filter} tz={tz} />}
+      {view === 'groups' && <GroupStageView resolved={resolved} ctx={ctx} editable={mode === 'simulation'} onSave={saveScore} filter={filter} tz={tz} />}
+      {view === 'bracket' && <BracketView resolved={resolved} ctx={ctx} editable={mode === 'simulation'} onSave={saveScore} filter={filter} tz={tz} />}
     </div>
   );
 }

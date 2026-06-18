@@ -79,8 +79,26 @@
     };
   }
 
+  // Today's date (YYYY-MM-DD) as seen from the given timezone, computed
+  // from the real current time — used to drive the "Today" matches tab.
+  function todayInTimezone(tz) {
+    var shifted = new Date(Date.now() + (tz.offset || 0) * 3600000);
+    return shifted.getUTCFullYear() + '-' + pad(shifted.getUTCMonth() + 1) + '-' + pad(shifted.getUTCDate());
+  }
+
+  // A match is treated as live from kickoff until ~2h15m later (full
+  // 90 minutes + stoppage/halftime/extra-time buffer) if it has no score yet.
+  function isLive(date, time) {
+    var startMs = toUtcMillis(date, time);
+    if (startMs === null) return false;
+    var nowMs = Date.now();
+    return nowMs >= startMs && nowMs <= startMs + 135 * 60000;
+  }
+
   global.WC = global.WC || {};
   global.WC.TIMEZONES = TIMEZONES;
   global.WC.DEFAULT_TZ = DEFAULT_TZ;
   global.WC.formatInTimezone = formatInTimezone;
+  global.WC.todayInTimezone = todayInTimezone;
+  global.WC.isLive = isLive;
 })(window);
