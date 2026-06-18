@@ -131,7 +131,8 @@ body{
 .match-row.editable .match-score:hover{color:var(--color-accent)}
 .vs{font-size:11px;color:var(--color-muted);font-weight:400}
 .score-edit{display:inline-flex;align-items:center;gap:4px}
-.score-edit input{width:34px;background:var(--color-bg);border:1px solid var(--color-border);color:var(--color-text);border-radius:4px;text-align:center;font-size:13px;padding:2px}
+.score-edit input{width:34px;background:var(--color-bg);border:1px solid var(--color-border);color:var(--color-text);border-radius:4px;text-align:center;font-size:13px;padding:2px;-moz-appearance:textfield}
+.score-edit input::-webkit-outer-spin-button,.score-edit input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 .score-edit button{background:var(--color-good);border:none;color:#fff;border-radius:4px;padding:2px 7px;cursor:pointer}
 
 /* bracket */
