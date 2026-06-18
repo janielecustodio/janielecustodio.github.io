@@ -14,7 +14,7 @@
     { id: 'America/Tijuana', label: 'Tijuana (PT)', offset: -7, region: 'North America' },
     { id: 'America/Monterrey', label: 'Monterrey (CT)', offset: -6, region: 'North America' },
     // South America (incl. Brazil)
-    { id: 'America/Sao_Paulo', label: 'São Paulo (BRT)', offset: -3, region: 'South America' },
+    { id: 'America/Sao_Paulo', label: 'Brasília Time — São Paulo/Rio/Brasília (BRT)', offset: -3, region: 'South America' },
     { id: 'America/Rio_Branco', label: 'Rio Branco, Brazil (ACT)', offset: -5, region: 'South America' },
     { id: 'America/Manaus', label: 'Manaus, Brazil (AMT)', offset: -4, region: 'South America' },
     { id: 'America/Noronha', label: 'Fernando de Noronha, Brazil (FNT)', offset: -2, region: 'South America' },
