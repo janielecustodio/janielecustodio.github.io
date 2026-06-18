@@ -42,11 +42,12 @@ function TeamSelector({ myTeam, onSelect, onClear }) {
   );
 }
 
-function VenueLine({ match }) {
+function VenueLine({ match, tz }) {
   const v = window.WC.venueFor(match.ground);
+  const local = window.WC.formatInTimezone(match.date, match.time, tz);
   return (
     <div className="venue-line">
-      <span className="venue-date">{match.date} · {match.time}</span>
+      <span className="venue-date">{local ? `${local.date} · ${local.time}` : `${match.date} · ${match.time}`}</span>
       <span className="venue-dot">·</span>
       <span>{v.stadium}, {v.city}</span>
       <span className="venue-dot">·</span>
@@ -64,7 +65,7 @@ function teamClass(team, ctx, isProjected) {
   return cls;
 }
 
-function MatchRow({ match, ctx, editable, onSave }) {
+function MatchRow({ match, ctx, editable, onSave, tz }) {
   const [editing, setEditing] = React.useState(false);
   const [g1, setG1] = React.useState(match.score ? match.score[0] : 0);
   const [g2, setG2] = React.useState(match.score ? match.score[1] : 0);
@@ -98,7 +99,7 @@ function MatchRow({ match, ctx, editable, onSave }) {
       <div className={`match-team right ${teamClass(match.team2Resolved, ctx, match.team2Projected)}`}>
         {match.team2Resolved || 'TBD'}{match.team2Projected && <span className="proj-tag">proj.</span>}
       </div>
-      <VenueLine match={match} />
+      <VenueLine match={match} tz={tz} />
     </div>
   );
 }
@@ -133,6 +134,20 @@ function GroupTable({ letter, table, ctx, thirdQualifies, groupDone }) {
         </tbody>
       </table>
     </div>
+  );
+}
+
+function TimezoneSelector({ tz, onChange }) {
+  return (
+    <select
+      className="tz-select"
+      value={tz.id}
+      onChange={e => onChange(window.WC.TIMEZONES.find(t => t.id === e.target.value))}
+    >
+      {window.WC.TIMEZONES.map(t => (
+        <option key={t.id} value={t.id}>{t.label}</option>
+      ))}
+    </select>
   );
 }
 
@@ -191,7 +206,7 @@ function MatchFilter({ filter, onChange }) {
   );
 }
 
-function GroupStageView({ resolved, ctx, editable, onSave, filter }) {
+function GroupStageView({ resolved, ctx, editable, onSave, filter, tz }) {
   const groups = window.WC.GROUPS;
   const thirdQualifies = {};
   resolved.thirdPool.forEach(t => { thirdQualifies[t.team] = true; });
@@ -217,7 +232,7 @@ function GroupStageView({ resolved, ctx, editable, onSave, filter }) {
             <div key={letter} className="fixture-group">
               <div className="fixture-group-title">Group {letter}</div>
               {matches.map(m => (
-                <MatchRow key={m.id} match={m} ctx={ctx} editable={editable} onSave={onSave} />
+                <MatchRow key={m.id} match={m} ctx={ctx} editable={editable} onSave={onSave} tz={tz} />
               ))}
             </div>
           );
@@ -229,7 +244,7 @@ function GroupStageView({ resolved, ctx, editable, onSave, filter }) {
 
 const ROUND_ORDER = ['Round of 32', 'Round of 16', 'Quarter-final', 'Semi-final', 'Final', 'Match for third place'];
 
-function BracketView({ resolved, ctx, editable, onSave, filter }) {
+function BracketView({ resolved, ctx, editable, onSave, filter, tz }) {
   const byRound = {};
   ROUND_ORDER.forEach(r => byRound[r] = []);
   resolved.matches.forEach(m => {
@@ -246,7 +261,7 @@ function BracketView({ resolved, ctx, editable, onSave, filter }) {
           <div className="bracket-col-title">{round}</div>
           {byRound[round].map(m => (
             <div key={m.id} className="bracket-card">
-              <MatchRow match={m} ctx={ctx} editable={editable} onSave={onSave} />
+              <MatchRow match={m} ctx={ctx} editable={editable} onSave={onSave} tz={tz} />
             </div>
           ))}
         </div>
@@ -264,6 +279,7 @@ function App() {
   const [view, setView] = React.useState('groups');
   const [myTeam, setMyTeam] = React.useState(null);
   const [filter, setFilter] = React.useState(null);
+  const [tz, setTz] = React.useState(window.WC.DEFAULT_TZ);
 
   React.useEffect(() => {
     window.WC.fetchWorldCupData().then(({ matches, source }) => {
@@ -324,7 +340,10 @@ function App() {
     <div className="wc-app">
       <div className="wc-topbar">
         <div className="wc-brand">🏆 2026 World Cup Tracker</div>
-        <TeamSelector myTeam={myTeam} onSelect={selectTeam} onClear={clearTeam} />
+        <div className="wc-topbar-right">
+          <TimezoneSelector tz={tz} onChange={setTz} />
+          <TeamSelector myTeam={myTeam} onSelect={selectTeam} onClear={clearTeam} />
+        </div>
       </div>
 
       <div className="wc-controls">
@@ -354,8 +373,8 @@ function App() {
       )}
 
       {view === 'groups'
-        ? <GroupStageView resolved={resolved} ctx={ctx} editable={mode === 'simulation'} onSave={saveScore} filter={filter} />
-        : <BracketView resolved={resolved} ctx={ctx} editable={mode === 'simulation'} onSave={saveScore} filter={filter} />
+        ? <GroupStageView resolved={resolved} ctx={ctx} editable={mode === 'simulation'} onSave={saveScore} filter={filter} tz={tz} />
+        : <BracketView resolved={resolved} ctx={ctx} editable={mode === 'simulation'} onSave={saveScore} filter={filter} tz={tz} />
       }
     </div>
   );
