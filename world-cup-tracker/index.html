@@ -38,6 +38,7 @@ body{
   background:var(--color-card);position:sticky;top:0;z-index:50;
 }
 .page-header-title{font-size:13px;color:var(--color-muted);font-weight:500}
+.build-time{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--color-muted);margin-left:auto;opacity:.7}
 
 /* ── APP SHELL ── */
 .content{min-height:100vh;background:var(--color-bg);color:var(--color-text)}
@@ -169,6 +170,7 @@ body{
 
 <header class="page-header">
   <span class="page-header-title">🏆 World Cup Tracker</span>
+  <span class="build-time" id="build-time"></span>
 </header>
 
 <div class="content">
@@ -197,14 +199,29 @@ body{
 // script tag) then execute them as a single global-scope script.
 (function () {
   var v = Date.now();
-  Promise.all(['src/App.js', 'src/main.js'].map(function (url) {
-    return fetch(url + '?v=' + v, { cache: 'no-store' }).then(function (r) { return r.text(); });
-  })).then(function (sources) {
-    var code = sources.map(function (src) {
-      return Babel.transform(src, { presets: [['react', { runtime: 'classic' }]] }).code;
-    }).join('\n;\n');
-    (0, eval)(code);
-  });
+  fetch('src/version.js?v=' + v, { cache: 'no-store' })
+    .then(function (r) { return r.text(); })
+    .then(function (src) { (0, eval)(src); })
+    .then(function () {
+      var el = document.getElementById('build-time');
+      if (el && window.WC.BUILD_TIME) {
+        var d = new Date(window.WC.BUILD_TIME);
+        el.textContent = 'Last updated: ' + d.toLocaleString('en-US', {
+          month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
+        });
+      }
+    })
+    .then(function () {
+      return Promise.all(['src/App.js', 'src/main.js'].map(function (url) {
+        return fetch(url + '?v=' + v, { cache: 'no-store' }).then(function (r) { return r.text(); });
+      }));
+    })
+    .then(function (sources) {
+      var code = sources.map(function (src) {
+        return Babel.transform(src, { presets: [['react', { runtime: 'classic' }]] }).code;
+      }).join('\n;\n');
+      (0, eval)(code);
+    });
 })();
 </script>
 </body>
