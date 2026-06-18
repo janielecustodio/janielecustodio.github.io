@@ -95,10 +95,19 @@
     return nowMs >= startMs && nowMs <= startMs + 135 * 60000;
   }
 
+  // Whether kickoff has already happened — used to tell a real final score
+  // apart from a score entered ahead of time in simulation mode.
+  function hasKickedOff(date, time) {
+    var startMs = toUtcMillis(date, time);
+    if (startMs === null) return false;
+    return Date.now() >= startMs;
+  }
+
   global.WC = global.WC || {};
   global.WC.TIMEZONES = TIMEZONES;
   global.WC.DEFAULT_TZ = DEFAULT_TZ;
   global.WC.formatInTimezone = formatInTimezone;
   global.WC.todayInTimezone = todayInTimezone;
   global.WC.isLive = isLive;
+  global.WC.hasKickedOff = hasKickedOff;
 })(window);

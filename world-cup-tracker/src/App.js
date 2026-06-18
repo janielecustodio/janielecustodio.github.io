@@ -73,6 +73,7 @@ function MatchRow({ match, ctx, editable, onSave, tz }) {
 
   const canEdit = editable && match.team1Resolved && match.team2Resolved;
   const live = !match.score && window.WC.isLive(match.date, match.time);
+  const ended = match.score && window.WC.hasKickedOff(match.date, match.time) && !live;
 
   function save() {
     onSave(match.id, [Number(g1), Number(g2)]);
@@ -93,7 +94,7 @@ function MatchRow({ match, ctx, editable, onSave, tz }) {
             <button onClick={save}>✓</button>
           </span>
         ) : match.score ? (
-          <span>{match.score[0]} – {match.score[1]}</span>
+          <span>{match.score[0]} – {match.score[1]}{ended && <span className="ft-tag">FT</span>}</span>
         ) : live ? (
           <span className="live-badge">● LIVE</span>
         ) : (
