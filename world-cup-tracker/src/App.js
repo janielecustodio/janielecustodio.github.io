@@ -1,0 +1,276 @@
+function TeamSelector({ myTeam, onSelect, onClear }) {
+  const [open, setOpen] = React.useState(false);
+  const [query, setQuery] = React.useState('');
+  const teams = window.WC.TEAMS;
+  const filtered = teams.filter(t => t.name.toLowerCase().includes(query.toLowerCase()));
+
+  return (
+    <div className="team-selector">
+      <button className="team-selector-btn" onClick={() => setOpen(!open)}>
+        {myTeam ? (
+          <>
+            <img src={`https://flagcdn.com/w40/${myTeam.isoCode}.png`} alt={myTeam.name} className="flag-icon" />
+            <span>{myTeam.name}</span>
+          </>
+        ) : <span>My Team — none selected</span>}
+        <span className="chev">▾</span>
+      </button>
+      {open && (
+        <div className="team-dropdown">
+          <input
+            autoFocus
+            className="team-search"
+            placeholder="Search teams…"
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+          />
+          <div className="team-list">
+            <div className="team-option clear-option" onClick={() => { onClear(); setOpen(false); }}>
+              ✕ Clear (default theme)
+            </div>
+            {filtered.map(t => (
+              <div key={t.name} className="team-option" onClick={() => { onSelect(t); setOpen(false); setQuery(''); }}>
+                <img src={`https://flagcdn.com/w40/${t.iso}.png`} alt={t.name} className="flag-icon" />
+                <span>{t.name}</span>
+                <span className="team-option-group">Grp {t.group}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function VenueLine({ match }) {
+  const v = window.WC.venueFor(match.ground);
+  return (
+    <div className="venue-line">
+      <span className="venue-date">{match.date} · {match.time}</span>
+      <span className="venue-dot">·</span>
+      <span>{v.stadium}, {v.city}</span>
+      <span className="venue-dot">·</span>
+      <span className="venue-country">{v.country}</span>
+    </div>
+  );
+}
+
+function teamClass(team, ctx) {
+  if (!team) return 'tbd';
+  if (ctx.myTeam && ctx.myTeam.name === team) return 'is-my-team';
+  if (ctx.qualified[team]) return 'qualified';
+  if (ctx.eliminatedGroupStage[team]) return 'eliminated';
+  return '';
+}
+
+function MatchRow({ match, ctx, editable, onSave }) {
+  const [editing, setEditing] = React.useState(false);
+  const [g1, setG1] = React.useState(match.score ? match.score[0] : 0);
+  const [g2, setG2] = React.useState(match.score ? match.score[1] : 0);
+
+  const canEdit = editable && match.team1Resolved && match.team2Resolved;
+
+  function save() {
+    onSave(match.id, [Number(g1), Number(g2)]);
+    setEditing(false);
+  }
+
+  return (
+    <div className={`match-row ${canEdit ? 'editable' : ''}`}>
+      <div className={`match-team ${teamClass(match.team1Resolved, ctx)}`}>
+        {match.team1Resolved || 'TBD'}
+      </div>
+      <div className="match-score" onClick={() => canEdit && setEditing(true)}>
+        {editing ? (
+          <span className="score-edit">
+            <input type="number" min="0" value={g1} onChange={e => setG1(e.target.value)} />
+            <span>–</span>
+            <input type="number" min="0" value={g2} onChange={e => setG2(e.target.value)} />
+            <button onClick={save}>✓</button>
+          </span>
+        ) : match.score ? (
+          <span>{match.score[0]} – {match.score[1]}</span>
+        ) : (
+          <span className="vs">{canEdit ? 'Enter score' : 'vs'}</span>
+        )}
+      </div>
+      <div className={`match-team right ${teamClass(match.team2Resolved, ctx)}`}>
+        {match.team2Resolved || 'TBD'}
+      </div>
+      <VenueLine match={match} />
+    </div>
+  );
+}
+
+function GroupTable({ letter, table, ctx, thirdQualifies }) {
+  return (
+    <div className="group-table">
+      <div className="group-table-title">Group {letter}</div>
+      <table>
+        <thead>
+          <tr><th>Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th>Pts</th></tr>
+        </thead>
+        <tbody>
+          {table.map((row, i) => {
+            const qualByRank = i < 2;
+            const qualByThird = i === 2 && thirdQualifies[row.team];
+            const cls = ctx.myTeam && ctx.myTeam.name === row.team ? 'is-my-team'
+              : qualByRank || qualByThird ? 'qualified'
+              : ctx.eliminatedGroupStage[row.team] ? 'eliminated' : '';
+            return (
+              <tr key={row.team} className={cls}>
+                <td>{row.team}</td>
+                <td>{row.played}</td><td>{row.won}</td><td>{row.drawn}</td><td>{row.lost}</td>
+                <td>{row.gf}</td><td>{row.ga}</td><td>{row.gd}</td><td className="pts">{row.points}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function GroupStageView({ resolved, ctx, editable, onSave }) {
+  const groups = window.WC.GROUPS;
+  const thirdQualifies = {};
+  if (resolved.thirdPool) resolved.thirdPool.forEach(t => { thirdQualifies[t.team] = true; });
+
+  return (
+    <div className="group-stage">
+      <div className="groups-grid">
+        {Object.keys(groups).sort().map(letter => (
+          <GroupTable key={letter} letter={letter} table={resolved.tables[letter]} ctx={ctx} thirdQualifies={thirdQualifies} />
+        ))}
+      </div>
+      <div className="fixtures-section">
+        <div className="section-heading">Group Stage Fixtures</div>
+        {Object.keys(groups).sort().map(letter => (
+          <div key={letter} className="fixture-group">
+            <div className="fixture-group-title">Group {letter}</div>
+            {resolved.matches.filter(m => m.group === letter).map(m => (
+              <MatchRow key={m.id} match={m} ctx={ctx} editable={editable} onSave={onSave} />
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const ROUND_ORDER = ['Round of 32', 'Round of 16', 'Quarter-final', 'Semi-final', 'Final', 'Match for third place'];
+
+function BracketView({ resolved, ctx, editable, onSave }) {
+  const byRound = {};
+  ROUND_ORDER.forEach(r => byRound[r] = []);
+  resolved.matches.forEach(m => { if (byRound[m.round]) byRound[m.round].push(m); });
+
+  return (
+    <div className="bracket">
+      {ROUND_ORDER.map(round => (
+        <div key={round} className="bracket-col">
+          <div className="bracket-col-title">{round}</div>
+          {byRound[round].map(m => (
+            <div key={m.id} className="bracket-card">
+              <MatchRow match={m} ctx={ctx} editable={editable} onSave={onSave} />
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function App() {
+  const [loading, setLoading] = React.useState(true);
+  const [source, setSource] = React.useState(null);
+  const [mode, setMode] = React.useState('actual');
+  const [actualMatches, setActualMatches] = React.useState([]);
+  const [simulatedMatches, setSimulatedMatches] = React.useState([]);
+  const [view, setView] = React.useState('groups');
+  const [myTeam, setMyTeam] = React.useState(null);
+
+  React.useEffect(() => {
+    window.WC.fetchWorldCupData().then(({ matches, source }) => {
+      setActualMatches(matches);
+      setSimulatedMatches(JSON.parse(JSON.stringify(matches)));
+      setSource(source);
+      setLoading(false);
+    });
+    const saved = window.WC.loadMyTeam();
+    if (saved) {
+      setMyTeam(saved);
+      if (saved.palette) window.WC.applyPalette(saved.palette);
+    }
+  }, []);
+
+  function selectTeam(t) {
+    const team = { name: t.name, isoCode: t.iso, palette: null };
+    setMyTeam(team);
+    window.WC.saveMyTeam(team);
+    window.WC.extractPaletteFromFlag(t.iso, palette => {
+      if (palette) {
+        window.WC.applyPalette(palette);
+        const withPalette = { ...team, palette };
+        setMyTeam(withPalette);
+        window.WC.saveMyTeam(withPalette);
+      }
+    });
+  }
+
+  function clearTeam() {
+    setMyTeam(null);
+    window.WC.saveMyTeam(null);
+    window.WC.clearPalette();
+  }
+
+  function saveScore(matchId, score) {
+    setSimulatedMatches(prev => prev.map(m => m.id === matchId ? { ...m, score } : m));
+  }
+
+  function resetToActual() {
+    setSimulatedMatches(JSON.parse(JSON.stringify(actualMatches)));
+  }
+
+  if (loading) {
+    return <div className="loading-screen">⚽ Loading 2026 World Cup data…</div>;
+  }
+
+  const activeMatches = mode === 'actual' ? actualMatches : simulatedMatches;
+  const resolved = window.WC.resolveBracket(activeMatches, window.WC.GROUPS);
+  const ctx = { myTeam, qualified: resolved.qualified, eliminatedGroupStage: resolved.eliminatedGroupStage };
+
+  return (
+    <div className="wc-app">
+      <div className="wc-topbar">
+        <div className="wc-brand">🏆 2026 World Cup Tracker</div>
+        <TeamSelector myTeam={myTeam} onSelect={selectTeam} onClear={clearTeam} />
+      </div>
+
+      <div className="wc-controls">
+        <div className="view-tabs">
+          <button className={view === 'groups' ? 'active' : ''} onClick={() => setView('groups')}>Group Stage</button>
+          <button className={view === 'bracket' ? 'active' : ''} onClick={() => setView('bracket')}>Knockout Bracket</button>
+        </div>
+        <div className="mode-controls">
+          <div className="mode-toggle">
+            <button className={mode === 'actual' ? 'active' : ''} onClick={() => setMode('actual')}>Actual</button>
+            <button className={mode === 'simulation' ? 'active' : ''} onClick={() => setMode('simulation')}>Simulation</button>
+          </div>
+          {mode === 'simulation' && (
+            <button className="reset-btn" onClick={resetToActual}>↺ Reset to Actual</button>
+          )}
+        </div>
+      </div>
+
+      {source === 'fallback' && (
+        <div className="data-banner">Live feed unavailable — showing hardcoded fixture schedule (no results yet).</div>
+      )}
+
+      {view === 'groups'
+        ? <GroupStageView resolved={resolved} ctx={ctx} editable={mode === 'simulation'} onSave={saveScore} />
+        : <BracketView resolved={resolved} ctx={ctx} editable={mode === 'simulation'} onSave={saveScore} />
+      }
+    </div>
+  );
+}
