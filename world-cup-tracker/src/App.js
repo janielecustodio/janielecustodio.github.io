@@ -52,6 +52,7 @@ function VenueLine({ match, tz }) {
       <span>{v.stadium}, {v.city}</span>
       <span className="venue-dot">·</span>
       <span className="venue-country">{v.country}</span>
+      {match.group && <React.Fragment><span className="venue-dot">·</span><span className="venue-group">Group {match.group}</span></React.Fragment>}
     </div>
   );
 }
