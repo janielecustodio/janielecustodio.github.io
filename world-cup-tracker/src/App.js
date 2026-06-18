@@ -89,29 +89,31 @@ function MatchRow({ match, ctx, editable, onSave, tz }) {
 
   return (
     <div className={`match-row ${canEdit ? 'editable' : ''} ${live ? 'is-live' : ''}`}>
-      <div className={`match-team ${teamClass(match.team1Resolved, ctx, match.team1Projected)}`}>
-        <TeamFlag name={match.team1Resolved} />
-        <span>{match.team1Resolved || 'TBD'}</span>{match.team1Projected && <span className="proj-tag">proj.</span>}
-      </div>
-      <div className="match-score" onClick={() => canEdit && setEditing(true)}>
-        {editing ? (
-          <span className="score-edit">
-            <input type="number" min="0" value={g1} onChange={e => setG1(e.target.value)} />
-            <span>–</span>
-            <input type="number" min="0" value={g2} onChange={e => setG2(e.target.value)} />
-            <button onClick={save}>✓</button>
-          </span>
-        ) : (
-          <React.Fragment>
-            <span className="score-main">{match.score ? `${match.score[0]} – ${match.score[1]}` : live ? '0 – 0' : '–'}</span>
-            {ended && <span className="ft-tag">FT</span>}
-            {live && <span className="live-badge">● LIVE{minute !== null ? ` ${minute}'` : ''}</span>}
-          </React.Fragment>
-        )}
-      </div>
-      <div className={`match-team right ${teamClass(match.team2Resolved, ctx, match.team2Projected)}`}>
-        <span>{match.team2Resolved || 'TBD'}</span>{match.team2Projected && <span className="proj-tag">proj.</span>}
-        <TeamFlag name={match.team2Resolved} />
+      <div className="match-row-main">
+        <div className={`match-team ${teamClass(match.team1Resolved, ctx, match.team1Projected)}`} title={match.team1Resolved || ''}>
+          <TeamFlag name={match.team1Resolved} />
+          <span>{match.team1Resolved || 'TBD'}</span>{match.team1Projected && <span className="proj-tag">proj.</span>}
+        </div>
+        <div className="match-score" onClick={() => canEdit && setEditing(true)}>
+          {editing ? (
+            <span className="score-edit">
+              <input type="number" min="0" value={g1} onChange={e => setG1(e.target.value)} />
+              <span>–</span>
+              <input type="number" min="0" value={g2} onChange={e => setG2(e.target.value)} />
+              <button onClick={save}>✓</button>
+            </span>
+          ) : (
+            <React.Fragment>
+              <span className="score-main">{match.score ? `${match.score[0]} – ${match.score[1]}` : live ? '0 – 0' : '–'}</span>
+              {ended && <span className="ft-tag">FT</span>}
+              {live && <span className="live-badge">● LIVE{minute !== null ? ` ${minute}'` : ''}</span>}
+            </React.Fragment>
+          )}
+        </div>
+        <div className={`match-team right ${teamClass(match.team2Resolved, ctx, match.team2Projected)}`} title={match.team2Resolved || ''}>
+          <span>{match.team2Resolved || 'TBD'}</span>{match.team2Projected && <span className="proj-tag">proj.</span>}
+          <TeamFlag name={match.team2Resolved} />
+        </div>
       </div>
       <VenueLine match={match} tz={tz} />
     </div>
@@ -357,17 +359,12 @@ function App() {
   }, []);
 
   function selectTeam(t) {
-    const team = { name: t.name, isoCode: t.iso, palette: null };
+    const palette = window.WC.TEAM_PALETTES[t.name] || null;
+    const team = { name: t.name, isoCode: t.iso, palette };
     setMyTeam(team);
     window.WC.saveMyTeam(team);
-    window.WC.extractPaletteFromFlag(t.iso, palette => {
-      if (palette) {
-        window.WC.applyPalette(palette);
-        const withPalette = { ...team, palette };
-        setMyTeam(withPalette);
-        window.WC.saveMyTeam(withPalette);
-      }
-    });
+    if (palette) window.WC.applyPalette(palette);
+    else window.WC.clearPalette();
   }
 
   function clearTeam() {
