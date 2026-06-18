@@ -136,28 +136,92 @@ function GroupTable({ letter, table, ctx, thirdQualifies, groupDone }) {
   );
 }
 
-function GroupStageView({ resolved, ctx, editable, onSave }) {
+function matchInvolvesTeam(m, team) {
+  return m.team1Resolved === team || m.team2Resolved === team || m.team1Ref === team || m.team2Ref === team;
+}
+
+function MatchFilter({ filter, onChange }) {
+  const [open, setOpen] = React.useState(false);
+  const [query, setQuery] = React.useState('');
+  const groups = Object.keys(window.WC.GROUPS).sort();
+  const teams = window.WC.TEAMS;
+  const q = query.toLowerCase();
+  const filteredGroups = groups.filter(g => `group ${g}`.includes(q));
+  const filteredTeams = teams.filter(t => t.name.toLowerCase().includes(q));
+
+  const label = !filter ? 'All teams & groups'
+    : filter.type === 'group' ? `Group ${filter.value}`
+    : filter.value;
+
+  return (
+    <div className="team-selector">
+      <button className="team-selector-btn" onClick={() => setOpen(!open)}>
+        <span>🔎 {label}</span>
+        <span className="chev">▾</span>
+      </button>
+      {open && (
+        <div className="team-dropdown">
+          <input
+            autoFocus
+            className="team-search"
+            placeholder="Search team or group…"
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+          />
+          <div className="team-list">
+            <div className="team-option clear-option" onClick={() => { onChange(null); setOpen(false); setQuery(''); }}>
+              ✕ Clear filter
+            </div>
+            {filteredGroups.map(g => (
+              <div key={`g-${g}`} className="team-option" onClick={() => { onChange({ type: 'group', value: g }); setOpen(false); setQuery(''); }}>
+                <span>Group {g}</span>
+              </div>
+            ))}
+            {filteredTeams.map(t => (
+              <div key={`t-${t.name}`} className="team-option" onClick={() => { onChange({ type: 'team', value: t.name }); setOpen(false); setQuery(''); }}>
+                <img src={`https://flagcdn.com/w40/${t.iso}.png`} alt={t.name} className="flag-icon" />
+                <span>{t.name}</span>
+                <span className="team-option-group">Grp {t.group}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function GroupStageView({ resolved, ctx, editable, onSave, filter }) {
   const groups = window.WC.GROUPS;
   const thirdQualifies = {};
   resolved.thirdPool.forEach(t => { thirdQualifies[t.team] = true; });
 
+  let letters = Object.keys(groups).sort();
+  if (filter && filter.type === 'group') letters = letters.filter(l => l === filter.value);
+  else if (filter && filter.type === 'team') letters = letters.filter(l => groups[l].indexOf(filter.value) !== -1);
+
   return (
     <div className="group-stage">
       <div className="groups-grid">
-        {Object.keys(groups).sort().map(letter => (
+        {letters.map(letter => (
           <GroupTable key={letter} letter={letter} table={resolved.tables[letter]} ctx={ctx} thirdQualifies={thirdQualifies} groupDone={resolved.groupDone[letter]} />
         ))}
       </div>
       <div className="fixtures-section">
         <div className="section-heading">Group Stage Fixtures</div>
-        {Object.keys(groups).sort().map(letter => (
-          <div key={letter} className="fixture-group">
-            <div className="fixture-group-title">Group {letter}</div>
-            {resolved.matches.filter(m => m.group === letter).map(m => (
-              <MatchRow key={m.id} match={m} ctx={ctx} editable={editable} onSave={onSave} />
-            ))}
-          </div>
-        ))}
+        {letters.map(letter => {
+          const matches = resolved.matches.filter(m => m.group === letter
+            && (!filter || filter.type !== 'team' || matchInvolvesTeam(m, filter.value)));
+          if (!matches.length) return null;
+          return (
+            <div key={letter} className="fixture-group">
+              <div className="fixture-group-title">Group {letter}</div>
+              {matches.map(m => (
+                <MatchRow key={m.id} match={m} ctx={ctx} editable={editable} onSave={onSave} />
+              ))}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -165,10 +229,15 @@ function GroupStageView({ resolved, ctx, editable, onSave }) {
 
 const ROUND_ORDER = ['Round of 32', 'Round of 16', 'Quarter-final', 'Semi-final', 'Final', 'Match for third place'];
 
-function BracketView({ resolved, ctx, editable, onSave }) {
+function BracketView({ resolved, ctx, editable, onSave, filter }) {
   const byRound = {};
   ROUND_ORDER.forEach(r => byRound[r] = []);
-  resolved.matches.forEach(m => { if (byRound[m.round]) byRound[m.round].push(m); });
+  resolved.matches.forEach(m => {
+    if (!byRound[m.round]) return;
+    if (filter && filter.type === 'team' && !matchInvolvesTeam(m, filter.value)) return;
+    if (filter && filter.type === 'group' && m.group !== filter.value) return;
+    byRound[m.round].push(m);
+  });
 
   return (
     <div className="bracket">
@@ -194,6 +263,7 @@ function App() {
   const [simulatedMatches, setSimulatedMatches] = React.useState([]);
   const [view, setView] = React.useState('groups');
   const [myTeam, setMyTeam] = React.useState(null);
+  const [filter, setFilter] = React.useState(null);
 
   React.useEffect(() => {
     window.WC.fetchWorldCupData().then(({ matches, source }) => {
@@ -262,6 +332,7 @@ function App() {
           <button className={view === 'groups' ? 'active' : ''} onClick={() => setView('groups')}>Group Stage</button>
           <button className={view === 'bracket' ? 'active' : ''} onClick={() => setView('bracket')}>Knockout Bracket</button>
         </div>
+        <MatchFilter filter={filter} onChange={setFilter} />
         <div className="mode-controls">
           <div className="mode-toggle">
             <button className={mode === 'actual' ? 'active' : ''} onClick={() => setMode('actual')}>Actual</button>
@@ -283,8 +354,8 @@ function App() {
       )}
 
       {view === 'groups'
-        ? <GroupStageView resolved={resolved} ctx={ctx} editable={mode === 'simulation'} onSave={saveScore} />
-        : <BracketView resolved={resolved} ctx={ctx} editable={mode === 'simulation'} onSave={saveScore} />
+        ? <GroupStageView resolved={resolved} ctx={ctx} editable={mode === 'simulation'} onSave={saveScore} filter={filter} />
+        : <BracketView resolved={resolved} ctx={ctx} editable={mode === 'simulation'} onSave={saveScore} filter={filter} />
       }
     </div>
   );
