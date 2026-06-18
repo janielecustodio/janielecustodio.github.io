@@ -138,14 +138,20 @@ function GroupTable({ letter, table, ctx, thirdQualifies, groupDone }) {
 }
 
 function TimezoneSelector({ tz, onChange }) {
+  const regions = [];
+  window.WC.TIMEZONES.forEach(t => { if (regions.indexOf(t.region) === -1) regions.push(t.region); });
   return (
     <select
       className="tz-select"
       value={tz.id}
       onChange={e => onChange(window.WC.TIMEZONES.find(t => t.id === e.target.value))}
     >
-      {window.WC.TIMEZONES.map(t => (
-        <option key={t.id} value={t.id}>{t.label}</option>
+      {regions.map(region => (
+        <optgroup key={region} label={region}>
+          {window.WC.TIMEZONES.filter(t => t.region === region).map(t => (
+            <option key={t.id} value={t.id}>{t.label}</option>
+          ))}
+        </optgroup>
       ))}
     </select>
   );
