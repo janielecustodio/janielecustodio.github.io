@@ -184,8 +184,9 @@ body{
 // (the automatic runtime injects an ES `import`, which fails in a plain
 // script tag) then execute them as a single global-scope script.
 (function () {
+  var v = Date.now();
   Promise.all(['src/App.js', 'src/main.js'].map(function (url) {
-    return fetch(url).then(function (r) { return r.text(); });
+    return fetch(url + '?v=' + v, { cache: 'no-store' }).then(function (r) { return r.text(); });
   })).then(function (sources) {
     var code = sources.map(function (src) {
       return Babel.transform(src, { presets: [['react', { runtime: 'classic' }]] }).code;
