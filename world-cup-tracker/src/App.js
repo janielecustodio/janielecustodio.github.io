@@ -261,7 +261,9 @@ function BracketView({ resolved, ctx, editable, onSave, filter, tz }) {
   });
 
   return (
-    <div className="bracket">
+    <div>
+      <div className="bracket-scroll-hint">← scroll horizontally to see all rounds through the Final →</div>
+      <div className="bracket">
       {ROUND_ORDER.map(round => (
         <div key={round} className="bracket-col">
           <div className="bracket-col-title">{round}</div>
@@ -272,6 +274,7 @@ function BracketView({ resolved, ctx, editable, onSave, filter, tz }) {
           ))}
         </div>
       ))}
+      </div>
     </div>
   );
 }
