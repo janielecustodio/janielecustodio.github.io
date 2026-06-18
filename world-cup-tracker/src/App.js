@@ -336,6 +336,16 @@ function App() {
   }, [colorMode]);
 
   React.useEffect(() => {
+    const el = document.getElementById('live-status-header');
+    if (!el) return;
+    if (source === 'fallback') {
+      el.textContent = '⚠ Live feed unavailable — showing fallback schedule';
+    } else if (lastFetched) {
+      el.textContent = `⟳ Live data refreshed every 60s — last checked ${lastFetched.toLocaleTimeString()}`;
+    }
+  }, [lastFetched, source]);
+
+  React.useEffect(() => {
     function refresh() {
       window.WC.fetchWorldCupData().then(({ matches, source }) => {
         setActualMatches(matches);
@@ -427,14 +437,6 @@ function App() {
         </div>
       </div>
 
-      {source === 'fallback' && (
-        <div className="data-banner">Live feed unavailable — showing hardcoded fixture schedule (no results yet).</div>
-      )}
-      {source !== 'fallback' && mode === 'actual' && (
-        <div className="live-status">
-          ⟳ Auto-refreshing live results every 60s{lastFetched ? ` — last checked ${lastFetched.toLocaleTimeString()}` : ''}
-        </div>
-      )}
       {!resolved.allGroupsDone && (
         <div className="data-banner projected-banner">
           ⚡ Group stage is still in progress — qualifiers and bracket matchups marked <strong>proj.</strong> are projected assuming current group standings hold, and will update automatically as results come in.
