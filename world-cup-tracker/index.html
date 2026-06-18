@@ -48,6 +48,11 @@ body{
 .wc-app{padding:20px 28px 60px;max-width:1280px}
 .wc-topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px;padding-bottom:16px;border-bottom:1px solid var(--color-border)}
 .wc-brand{font-size:20px;font-weight:600;color:var(--color-text)}
+.wc-topbar-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.tz-select{
+  background:var(--color-card);border:1px solid var(--color-border);
+  color:var(--color-text);padding:7px 10px;border-radius:6px;cursor:pointer;font-size:13px;
+}
 
 /* team selector */
 .team-selector{position:relative}
@@ -172,6 +177,7 @@ body{
 <script src="src/utils/standings.js"></script>
 <script src="src/utils/bracket.js"></script>
 <script src="src/utils/theme.js"></script>
+<script src="src/utils/timezone.js"></script>
 <script src="src/services/worldcup.js"></script>
 
 <!-- React + Babel + ColorThief -->
