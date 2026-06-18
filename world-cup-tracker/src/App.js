@@ -66,6 +66,12 @@ function teamClass(team, ctx, isProjected) {
   return cls;
 }
 
+function TeamFlag({ name }) {
+  const iso = name && window.WC.ISO_CODES[name];
+  if (!iso) return null;
+  return <img src={`https://flagcdn.com/w40/${iso}.png`} alt="" className="match-flag" />;
+}
+
 function MatchRow({ match, ctx, editable, onSave, tz }) {
   const [editing, setEditing] = React.useState(false);
   const [g1, setG1] = React.useState(match.score ? match.score[0] : 0);
@@ -74,6 +80,7 @@ function MatchRow({ match, ctx, editable, onSave, tz }) {
   const canEdit = editable && match.team1Resolved && match.team2Resolved;
   const live = !match.score && window.WC.isLive(match.date, match.time);
   const ended = match.score && window.WC.hasKickedOff(match.date, match.time) && !live;
+  const minute = live ? window.WC.liveMinute(match.date, match.time) : null;
 
   function save() {
     onSave(match.id, [Number(g1), Number(g2)]);
@@ -83,6 +90,7 @@ function MatchRow({ match, ctx, editable, onSave, tz }) {
   return (
     <div className={`match-row ${canEdit ? 'editable' : ''} ${live ? 'is-live' : ''}`}>
       <div className={`match-team ${teamClass(match.team1Resolved, ctx, match.team1Projected)}`}>
+        <TeamFlag name={match.team1Resolved} />
         {match.team1Resolved || 'TBD'}{match.team1Projected && <span className="proj-tag">proj.</span>}
       </div>
       <div className="match-score" onClick={() => canEdit && setEditing(true)}>
@@ -93,16 +101,17 @@ function MatchRow({ match, ctx, editable, onSave, tz }) {
             <input type="number" min="0" value={g2} onChange={e => setG2(e.target.value)} />
             <button onClick={save}>✓</button>
           </span>
-        ) : match.score ? (
-          <span>{match.score[0]} – {match.score[1]}{ended && <span className="ft-tag">FT</span>}</span>
-        ) : live ? (
-          <span className="live-badge">● LIVE</span>
         ) : (
-          <span className="vs">{canEdit ? 'Enter score' : 'vs'}</span>
+          <React.Fragment>
+            <span className="score-main">{match.score ? `${match.score[0]} – ${match.score[1]}` : live ? '0 – 0' : '–'}</span>
+            {ended && <span className="ft-tag">FT</span>}
+            {live && <span className="live-badge">● LIVE{minute !== null ? ` ${minute}'` : ''}</span>}
+          </React.Fragment>
         )}
       </div>
       <div className={`match-team right ${teamClass(match.team2Resolved, ctx, match.team2Projected)}`}>
         {match.team2Resolved || 'TBD'}{match.team2Projected && <span className="proj-tag">proj.</span>}
+        <TeamFlag name={match.team2Resolved} />
       </div>
       <VenueLine match={match} tz={tz} />
     </div>
