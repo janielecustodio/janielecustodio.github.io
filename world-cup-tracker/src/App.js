@@ -319,6 +319,12 @@ function App() {
   const [filter, setFilter] = React.useState(null);
   const [tz, setTz] = React.useState(window.WC.DEFAULT_TZ);
   const [lastFetched, setLastFetched] = React.useState(null);
+  const [colorMode, setColorMode] = React.useState(() => localStorage.getItem('wc-color-mode') || 'dark');
+
+  React.useEffect(() => {
+    document.documentElement.setAttribute('data-theme', colorMode);
+    localStorage.setItem('wc-color-mode', colorMode);
+  }, [colorMode]);
 
   React.useEffect(() => {
     function refresh() {
@@ -386,6 +392,9 @@ function App() {
       <div className="wc-topbar">
         <div className="wc-brand">🏆 2026 World Cup Tracker</div>
         <div className="wc-topbar-right">
+          <button className="theme-toggle-btn" onClick={() => setColorMode(m => m === 'dark' ? 'light' : 'dark')}>
+            {colorMode === 'dark' ? '☀️ Light' : '🌙 Dark'}
+          </button>
           <TimezoneSelector tz={tz} onChange={setTz} />
           <TeamSelector myTeam={myTeam} onSelect={selectTeam} onClear={clearTeam} />
         </div>
