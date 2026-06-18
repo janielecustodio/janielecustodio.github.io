@@ -91,7 +91,7 @@ function MatchRow({ match, ctx, editable, onSave, tz }) {
     <div className={`match-row ${canEdit ? 'editable' : ''} ${live ? 'is-live' : ''}`}>
       <div className={`match-team ${teamClass(match.team1Resolved, ctx, match.team1Projected)}`}>
         <TeamFlag name={match.team1Resolved} />
-        {match.team1Resolved || 'TBD'}{match.team1Projected && <span className="proj-tag">proj.</span>}
+        <span>{match.team1Resolved || 'TBD'}</span>{match.team1Projected && <span className="proj-tag">proj.</span>}
       </div>
       <div className="match-score" onClick={() => canEdit && setEditing(true)}>
         {editing ? (
@@ -110,7 +110,7 @@ function MatchRow({ match, ctx, editable, onSave, tz }) {
         )}
       </div>
       <div className={`match-team right ${teamClass(match.team2Resolved, ctx, match.team2Projected)}`}>
-        {match.team2Resolved || 'TBD'}{match.team2Projected && <span className="proj-tag">proj.</span>}
+        <span>{match.team2Resolved || 'TBD'}</span>{match.team2Projected && <span className="proj-tag">proj.</span>}
         <TeamFlag name={match.team2Resolved} />
       </div>
       <VenueLine match={match} tz={tz} />
