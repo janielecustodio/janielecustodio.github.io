@@ -319,7 +319,7 @@ function App() {
   const [filter, setFilter] = React.useState(null);
   const [tz, setTz] = React.useState(window.WC.DEFAULT_TZ);
   const [lastFetched, setLastFetched] = React.useState(null);
-  const [colorMode, setColorMode] = React.useState(() => localStorage.getItem('wc-color-mode') || 'dark');
+  const [colorMode, setColorMode] = React.useState(() => localStorage.getItem('wc-color-mode') || 'light');
 
   React.useEffect(() => {
     document.documentElement.setAttribute('data-theme', colorMode);
