@@ -8,16 +8,9 @@
 <link rel="canonical" href="https://janielecustodio.com/world-cup-tracker/">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-<script>document.documentElement.setAttribute('data-theme',localStorage.getItem('jc_theme')||'dark')</script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --ink:#111318;--ink2:#16191f;--ink3:#1c2029;
-  --line:#22273a;--line2:#2c3248;
-  --muted:#505775;--muted2:#7a8299;
-  --body:#b2bace;--head:#e2e6f2;
-  --accent:#8c9eff;--r:5px;
-
   /* World Cup tracker theme — overridden by My Team palette */
   --color-primary:#0b3d2e;
   --color-secondary:#13734f;
@@ -31,79 +24,29 @@
   --color-good:#2ecc71;
   --color-bad:#7a8290;
 }
-[data-theme="light"]{
-  --ink:#f7f8fc;--ink2:#eef0f7;--ink3:#e6e8f2;
-  --line:#d8dce8;--line2:#c4c9da;
-  --muted:#9299b0;--muted2:#626882;
-  --body:#474e68;--head:#1a1d2e;
-  --accent:#4a5cf0;
-}
 html,body{height:100%}
 body{
-  background:var(--ink);color:var(--body);
+  background:var(--color-bg);color:var(--color-text);
   font-family:'IBM Plex Sans',sans-serif;
-  display:flex;-webkit-font-smoothing:antialiased;
+  -webkit-font-smoothing:antialiased;
 }
 
-/* ── SIDEBAR (shared site chrome) ── */
-.sidebar{
-  width:210px;min-width:210px;
-  background:var(--ink2);border-right:1px solid var(--line);
-  display:flex;flex-direction:column;
-  height:100vh;padding:28px 0 0;
-  flex-shrink:0;overflow-y:auto;
-  transition:transform .25s ease;
-  position:fixed;top:0;left:0;z-index:100;
+/* ── STANDALONE PAGE HEADER ── */
+.page-header{
+  display:flex;align-items:center;gap:14px;
+  padding:12px 24px;border-bottom:1px solid var(--color-border);
+  background:var(--color-card);position:sticky;top:0;z-index:50;
 }
-.sidebar-brand{padding:0 22px 22px;border-bottom:1px solid var(--line);margin-bottom:16px}
-.sidebar-brand-name{font-size:15px;font-weight:600;color:var(--head);letter-spacing:.01em;line-height:1.3}
-.sidebar-brand-sub{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);margin-top:3px;letter-spacing:.05em}
-.nav-section{padding:0 14px;margin-bottom:4px}
-.nav-section-label{
-  font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:500;
-  text-transform:uppercase;letter-spacing:.14em;color:var(--muted);
-  padding:0 8px;margin-bottom:3px;display:flex;align-items:center;gap:6px;
+.back-link{
+  color:var(--color-muted);text-decoration:none;font-size:12px;
+  border:1px solid var(--color-border);border-radius:6px;padding:5px 11px;
+  font-family:'IBM Plex Mono',monospace;transition:color .15s,border-color .15s;
 }
-.nav-section-label::after{content:'';flex:1;height:1px;background:var(--line)}
-.nav-link{
-  display:flex;align-items:center;gap:9px;
-  padding:6px 10px;border-radius:var(--r);
-  color:var(--muted2);text-decoration:none;
-  font-size:13px;font-weight:400;transition:background .15s,color .15s;
-}
-.nav-link:hover{background:var(--ink3);color:var(--body);text-decoration:none}
-.nav-link.active{background:rgba(140,158,255,.1);color:var(--accent);font-weight:500}
-.nav-link.sub{padding-left:26px;font-size:12px}
-.nav-icon{font-size:13px;width:16px;text-align:center;flex-shrink:0}
-.nav-group-children{display:block}
-.chevron{margin-left:auto;font-size:10px;opacity:.5;transform:rotate(90deg)}
-.sidebar-footer{margin-top:auto;padding:16px 22px;border-top:1px solid var(--line)}
-.theme-toggle{
-  display:flex;align-items:center;gap:8px;
-  background:none;border:1px solid var(--line2);
-  border-radius:var(--r);padding:5px 10px;
-  color:var(--muted2);font-size:11px;cursor:pointer;
-  font-family:'IBM Plex Mono',monospace;
-  transition:color .15s,border-color .15s;width:100%;
-}
-.theme-toggle:hover{color:var(--body);border-color:var(--muted)}
-.mobile-menu-btn{
-  display:none;position:fixed;top:14px;left:14px;z-index:200;
-  background:var(--ink2);border:1px solid var(--line2);border-radius:var(--r);
-  width:36px;height:36px;align-items:center;justify-content:center;
-  cursor:pointer;font-size:18px;color:var(--body);
-}
-.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99}
-.sidebar-overlay.active{display:block}
-@media(max-width:900px){
-  .sidebar{transform:translateX(-100%)}
-  .sidebar.open{transform:translateX(0)}
-  .mobile-menu-btn{display:flex}
-}
+.back-link:hover{color:var(--color-accent);border-color:var(--color-accent);text-decoration:none}
+.page-header-title{font-size:13px;color:var(--color-muted);font-weight:500}
 
 /* ── APP SHELL ── */
-.content{margin-left:210px;flex:1;min-height:100vh;background:var(--color-bg);color:var(--color-text)}
-@media(max-width:900px){.content{margin-left:0}}
+.content{min-height:100vh;background:var(--color-bg);color:var(--color-text)}
 
 #wc-root{font-family:'IBM Plex Sans',sans-serif}
 .loading-screen{display:flex;align-items:center;justify-content:center;height:100vh;font-size:18px;color:var(--color-muted)}
@@ -148,11 +91,16 @@ body{
 .reset-btn{background:none;border:1px solid var(--color-border);color:var(--color-accent);padding:7px 12px;border-radius:6px;cursor:pointer;font-size:12px}
 .reset-btn:hover{border-color:var(--color-accent)}
 .data-banner{background:rgba(255,209,102,.1);border:1px solid var(--color-accent);color:var(--color-accent);padding:8px 14px;border-radius:6px;font-size:12px;margin-bottom:16px}
+.projected-banner{background:rgba(127,163,146,.1);border-color:var(--color-secondary);color:var(--color-muted)}
+.projected-banner strong{color:var(--color-accent)}
 
 /* group tables */
 .groups-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px;margin-bottom:32px}
 .group-table{background:var(--color-card);border:1px solid var(--color-border);border-radius:8px;padding:12px 14px}
-.group-table-title{font-weight:600;font-size:13px;margin-bottom:8px;color:var(--color-accent)}
+.group-table-title{font-weight:600;font-size:13px;margin-bottom:8px;color:var(--color-accent);display:flex;align-items:center;gap:8px}
+.group-status{font-family:'IBM Plex Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-muted);border:1px solid var(--color-border);border-radius:4px;padding:1px 6px;font-weight:400}
+.group-table tr.qualified.projected td:first-child{color:var(--color-accent)}
+.group-table tr.qualified.projected{outline:1px dashed var(--color-accent);outline-offset:-1px}
 .group-table table{width:100%;font-size:12px;border-collapse:collapse}
 .group-table th{text-align:center;color:var(--color-muted);font-weight:500;padding:4px 2px;font-size:10px}
 .group-table th:first-child{text-align:left}
@@ -183,12 +131,13 @@ body{
 .match-team.eliminated{color:var(--color-bad)}
 .match-team.is-my-team{color:var(--color-accent);font-weight:700}
 .match-team.tbd{color:var(--color-muted);font-style:italic}
+.proj-tag{font-family:'IBM Plex Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-accent);border:1px solid var(--color-accent);border-radius:4px;padding:0 4px;margin-left:6px;font-weight:500;vertical-align:middle}
 .match-score{text-align:center;font-weight:700;font-size:14px;min-width:80px;color:var(--color-text)}
 .match-row.editable .match-score{cursor:pointer}
 .match-row.editable .match-score:hover{color:var(--color-accent)}
 .vs{font-size:11px;color:var(--color-muted);font-weight:400}
 .score-edit{display:inline-flex;align-items:center;gap:4px}
-.score-edit input{width:34px;background:var(--ink);border:1px solid var(--color-border);color:var(--color-text);border-radius:4px;text-align:center;font-size:13px;padding:2px}
+.score-edit input{width:34px;background:var(--color-bg);border:1px solid var(--color-border);color:var(--color-text);border-radius:4px;text-align:center;font-size:13px;padding:2px}
 .score-edit button{background:var(--color-good);border:none;color:#fff;border-radius:4px;padding:2px 7px;cursor:pointer}
 
 /* bracket */
@@ -207,60 +156,20 @@ body{
   .match-score{text-align:left}
 }
 ::-webkit-scrollbar{height:6px;width:6px}
-::-webkit-scrollbar-track{background:var(--ink)}
-::-webkit-scrollbar-thumb{background:var(--line2);border-radius:3px}
+::-webkit-scrollbar-track{background:var(--color-bg)}
+::-webkit-scrollbar-thumb{background:var(--color-border);border-radius:3px}
 </style>
 </head>
 <body>
 
-<button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Open menu">☰</button>
-<div class="sidebar-overlay" id="sidebar-overlay"></div>
-
-<nav class="sidebar" id="sidebar">
-  <div class="sidebar-brand">
-    <div class="sidebar-brand-name">Janiele Custodio</div>
-    <div class="sidebar-brand-sub">PhD · Quant Finance</div>
-  </div>
-  <div class="nav-section">
-    <div class="nav-section-label">Menu</div>
-    <a class="nav-link" href="/"><span class="nav-icon">⌂</span> Home</a>
-  </div>
-  <div class="nav-section">
-    <div class="nav-section-label">Vibing</div>
-    <div class="nav-group">
-      <a class="nav-link" href="/vibing/">
-        <span class="nav-icon">⚡</span> Vibe Coding
-        <span class="chevron">›</span>
-      </a>
-      <div class="nav-group-children">
-        <a class="nav-link sub" href="/dca-compass/"><span class="nav-icon">🧭</span> DCA Compass</a>
-        <a class="nav-link sub active" href="/world-cup-tracker/"><span class="nav-icon">🏆</span> World Cup Tracker</a>
-        <a class="nav-link sub" href="https://janielecustodio.com/podcast-app/" target="_blank" rel="noopener"><span class="nav-icon">🎙️</span> Podcast App</a>
-      </div>
-    </div>
-  </div>
-  <div class="sidebar-footer">
-    <button class="theme-toggle" id="theme-toggle">
-      <span id="theme-icon">☀</span>&nbsp;<span id="theme-label">Light mode</span>
-    </button>
-  </div>
-</nav>
+<header class="page-header">
+  <a class="back-link" href="/vibing/">‹ Back to Vibe Coding</a>
+  <span class="page-header-title">🏆 World Cup Tracker</span>
+</header>
 
 <div class="content">
   <div id="wc-root"></div>
 </div>
-
-<script>
-const sidebar=document.getElementById('sidebar'),overlay=document.getElementById('sidebar-overlay'),menuBtn=document.getElementById('mobile-menu-btn');
-menuBtn.addEventListener('click',()=>{sidebar.classList.add('open');overlay.classList.add('active')});
-overlay.addEventListener('click',()=>{sidebar.classList.remove('open');overlay.classList.remove('active')});
-(function(){
-  const root=document.documentElement,icon=document.getElementById('theme-icon'),lbl=document.getElementById('theme-label');
-  function apply(t){root.setAttribute('data-theme',t);localStorage.setItem('jc_theme',t);icon.textContent=t==='dark'?'☀':'☾';lbl.textContent=t==='dark'?'Light mode':'Dark mode'}
-  apply(localStorage.getItem('jc_theme')||'dark');
-  document.getElementById('theme-toggle').addEventListener('click',()=>apply(root.getAttribute('data-theme')==='dark'?'light':'dark'));
-})();
-</script>
 
 <!-- data + utils -->
 <script src="src/constants/teams.js"></script>

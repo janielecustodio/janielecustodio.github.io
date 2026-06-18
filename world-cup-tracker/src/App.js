@@ -55,12 +55,13 @@ function VenueLine({ match }) {
   );
 }
 
-function teamClass(team, ctx) {
+function teamClass(team, ctx, isProjected) {
   if (!team) return 'tbd';
-  if (ctx.myTeam && ctx.myTeam.name === team) return 'is-my-team';
-  if (ctx.qualified[team]) return 'qualified';
-  if (ctx.eliminatedGroupStage[team]) return 'eliminated';
-  return '';
+  let cls = ctx.myTeam && ctx.myTeam.name === team ? 'is-my-team'
+    : ctx.qualified[team] ? 'qualified'
+    : ctx.eliminatedGroupStage[team] ? 'eliminated' : '';
+  if (isProjected) cls += ' projected';
+  return cls;
 }
 
 function MatchRow({ match, ctx, editable, onSave }) {
@@ -77,8 +78,8 @@ function MatchRow({ match, ctx, editable, onSave }) {
 
   return (
     <div className={`match-row ${canEdit ? 'editable' : ''}`}>
-      <div className={`match-team ${teamClass(match.team1Resolved, ctx)}`}>
-        {match.team1Resolved || 'TBD'}
+      <div className={`match-team ${teamClass(match.team1Resolved, ctx, match.team1Projected)}`}>
+        {match.team1Resolved || 'TBD'}{match.team1Projected && <span className="proj-tag">proj.</span>}
       </div>
       <div className="match-score" onClick={() => canEdit && setEditing(true)}>
         {editing ? (
@@ -94,18 +95,21 @@ function MatchRow({ match, ctx, editable, onSave }) {
           <span className="vs">{canEdit ? 'Enter score' : 'vs'}</span>
         )}
       </div>
-      <div className={`match-team right ${teamClass(match.team2Resolved, ctx)}`}>
-        {match.team2Resolved || 'TBD'}
+      <div className={`match-team right ${teamClass(match.team2Resolved, ctx, match.team2Projected)}`}>
+        {match.team2Resolved || 'TBD'}{match.team2Projected && <span className="proj-tag">proj.</span>}
       </div>
       <VenueLine match={match} />
     </div>
   );
 }
 
-function GroupTable({ letter, table, ctx, thirdQualifies }) {
+function GroupTable({ letter, table, ctx, thirdQualifies, groupDone }) {
   return (
     <div className="group-table">
-      <div className="group-table-title">Group {letter}</div>
+      <div className="group-table-title">
+        Group {letter}
+        {!groupDone && <span className="group-status">projected</span>}
+      </div>
       <table>
         <thead>
           <tr><th>Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th>Pts</th></tr>
@@ -114,8 +118,9 @@ function GroupTable({ letter, table, ctx, thirdQualifies }) {
           {table.map((row, i) => {
             const qualByRank = i < 2;
             const qualByThird = i === 2 && thirdQualifies[row.team];
+            const isQualified = qualByRank || qualByThird;
             const cls = ctx.myTeam && ctx.myTeam.name === row.team ? 'is-my-team'
-              : qualByRank || qualByThird ? 'qualified'
+              : isQualified ? (groupDone ? 'qualified' : 'qualified projected')
               : ctx.eliminatedGroupStage[row.team] ? 'eliminated' : '';
             return (
               <tr key={row.team} className={cls}>
@@ -134,13 +139,13 @@ function GroupTable({ letter, table, ctx, thirdQualifies }) {
 function GroupStageView({ resolved, ctx, editable, onSave }) {
   const groups = window.WC.GROUPS;
   const thirdQualifies = {};
-  if (resolved.thirdPool) resolved.thirdPool.forEach(t => { thirdQualifies[t.team] = true; });
+  resolved.thirdPool.forEach(t => { thirdQualifies[t.team] = true; });
 
   return (
     <div className="group-stage">
       <div className="groups-grid">
         {Object.keys(groups).sort().map(letter => (
-          <GroupTable key={letter} letter={letter} table={resolved.tables[letter]} ctx={ctx} thirdQualifies={thirdQualifies} />
+          <GroupTable key={letter} letter={letter} table={resolved.tables[letter]} ctx={ctx} thirdQualifies={thirdQualifies} groupDone={resolved.groupDone[letter]} />
         ))}
       </div>
       <div className="fixtures-section">
@@ -238,7 +243,12 @@ function App() {
 
   const activeMatches = mode === 'actual' ? actualMatches : simulatedMatches;
   const resolved = window.WC.resolveBracket(activeMatches, window.WC.GROUPS);
-  const ctx = { myTeam, qualified: resolved.qualified, eliminatedGroupStage: resolved.eliminatedGroupStage };
+  const ctx = {
+    myTeam,
+    qualified: resolved.qualified,
+    projectedQualified: resolved.projectedQualified,
+    eliminatedGroupStage: resolved.eliminatedGroupStage
+  };
 
   return (
     <div className="wc-app">
@@ -265,6 +275,11 @@ function App() {
 
       {source === 'fallback' && (
         <div className="data-banner">Live feed unavailable — showing hardcoded fixture schedule (no results yet).</div>
+      )}
+      {!resolved.allGroupsDone && (
+        <div className="data-banner projected-banner">
+          ⚡ Group stage is still in progress — qualifiers and bracket matchups marked <strong>proj.</strong> are projected assuming current group standings hold, and will update automatically as results come in.
+        </div>
       )}
 
       {view === 'groups'
