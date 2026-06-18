@@ -103,6 +103,20 @@
     return Date.now() >= startMs;
   }
 
+  // Rough estimate of the match clock from elapsed real time since kickoff —
+  // the data source has no real live-minute feed, so this assumes a 15min
+  // halftime break after 45 simulated minutes. Approximate, not authoritative.
+  function liveMinute(date, time) {
+    var startMs = toUtcMillis(date, time);
+    if (startMs === null) return null;
+    var mins = Math.floor((Date.now() - startMs) / 60000);
+    if (mins < 0) return null;
+    if (mins <= 45) return mins;
+    if (mins <= 60) return 45; // halftime break
+    var secondHalf = mins - 60 + 45;
+    return secondHalf <= 90 ? secondHalf : 90;
+  }
+
   global.WC = global.WC || {};
   global.WC.TIMEZONES = TIMEZONES;
   global.WC.DEFAULT_TZ = DEFAULT_TZ;
@@ -110,4 +124,5 @@
   global.WC.todayInTimezone = todayInTimezone;
   global.WC.isLive = isLive;
   global.WC.hasKickedOff = hasKickedOff;
+  global.WC.liveMinute = liveMinute;
 })(window);

@@ -112,8 +112,8 @@ body{
 .projected-banner{background:rgba(127,163,146,.1);border-color:var(--color-secondary);color:var(--color-muted)}
 .projected-banner strong{color:var(--color-accent)}
 .live-status{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--color-muted);margin-bottom:16px}
-.live-badge{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;color:#ff5c5c;letter-spacing:.04em}
-.ft-tag{font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;color:var(--color-muted);border:1px solid var(--color-border);border-radius:4px;padding:0 4px;margin-left:6px;vertical-align:middle}
+.live-badge{font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;color:#ff5c5c;letter-spacing:.03em;white-space:nowrap}
+.ft-tag{font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;color:var(--color-muted);border:1px solid var(--color-border);border-radius:4px;padding:0 4px}
 .match-row.is-live{outline:1px solid #ff5c5c}
 .empty-state{color:var(--color-muted);font-size:13px;padding:20px 0}
 
@@ -150,17 +150,18 @@ body{
 .venue-dot{opacity:.5}
 .venue-country{color:var(--color-accent)}
 .venue-group{color:var(--color-secondary);font-weight:600}
-.match-team{font-size:13px;font-weight:500;color:var(--color-text);text-align:right}
-.match-team.right{text-align:left}
+.match-team{font-size:13px;font-weight:500;color:var(--color-text);text-align:right;display:flex;align-items:center;gap:6px;justify-content:flex-end}
+.match-team.right{text-align:left;justify-content:flex-start}
+.match-flag{width:18px;height:auto;border-radius:2px;flex-shrink:0}
 .match-team.qualified{color:var(--color-good)}
 .match-team.eliminated{color:var(--color-bad)}
 .match-team.is-my-team{color:var(--color-accent);font-weight:700}
 .match-team.tbd{color:var(--color-muted);font-style:italic}
 .proj-tag{font-family:'IBM Plex Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-accent);border:1px solid var(--color-accent);border-radius:4px;padding:0 4px;margin-left:6px;font-weight:500;vertical-align:middle}
-.match-score{text-align:center;font-weight:700;font-size:14px;min-width:60px;color:var(--color-text)}
+.match-score{display:flex;flex-direction:column;align-items:center;gap:2px;text-align:center;font-weight:700;font-size:14px;width:74px;flex-shrink:0;color:var(--color-text)}
+.score-main{min-width:1em}
 .match-row.editable .match-score{cursor:pointer}
-.match-row.editable .match-score:hover{color:var(--color-accent)}
-.vs{font-size:11px;color:var(--color-muted);font-weight:400}
+.match-row.editable .match-score:hover .score-main{color:var(--color-accent)}
 .score-edit{display:inline-flex;align-items:center;gap:4px}
 .score-edit input{width:34px;background:var(--color-bg);border:1px solid var(--color-border);color:var(--color-text);border-radius:4px;text-align:center;font-size:13px;padding:2px;-moz-appearance:textfield}
 .score-edit input::-webkit-outer-spin-button,.score-edit input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
@@ -173,17 +174,18 @@ body{
 .bracket-col-title{font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-accent);margin-bottom:10px;text-align:center;white-space:nowrap}
 .bracket-card .match-row{margin-bottom:8px;padding:7px 10px;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:4px}
 .bracket-card .match-team{font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.bracket-card .match-score{min-width:42px;font-size:12px}
+.bracket-card .match-score{width:48px;font-size:12px}
+.bracket-card .match-flag{width:14px}
 .bracket-card .venue-line{font-size:10px}
 
 @media(max-width:640px){
   .wc-app{padding:16px}
   .groups-grid{grid-template-columns:1fr}
-  .fixtures-section{max-width:100%}
-  .match-row{grid-template-columns:1fr;gap:4px}
-  .match-team{font-size:13px;white-space:normal;text-align:left}
-  .match-team.right{text-align:left}
-  .match-score{text-align:left;min-width:0}
+  .fixtures-section,.today-view{max-width:100%}
+  .match-row{grid-template-columns:1fr;gap:4px;justify-content:start}
+  .match-team{font-size:13px;white-space:normal;text-align:left;justify-content:flex-start}
+  .match-team.right{text-align:left;justify-content:flex-start}
+  .match-score{flex-direction:row;justify-content:flex-start;width:auto;text-align:left}
 }
 ::-webkit-scrollbar{height:6px;width:6px}
 ::-webkit-scrollbar-track{background:var(--color-bg)}
