@@ -125,8 +125,8 @@ body{
 .match-row .venue-line{grid-column:1/-1;font-size:11px;color:var(--color-muted);display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;font-family:'IBM Plex Mono',monospace}
 .venue-dot{opacity:.5}
 .venue-country{color:var(--color-accent)}
-.match-team{font-size:13px;font-weight:500;color:var(--color-text)}
-.match-team.right{text-align:right}
+.match-team{font-size:13px;font-weight:500;color:var(--color-text);text-align:right}
+.match-team.right{text-align:left}
 .match-team.qualified{color:var(--color-good)}
 .match-team.eliminated{color:var(--color-bad)}
 .match-team.is-my-team{color:var(--color-accent);font-weight:700}
@@ -143,7 +143,7 @@ body{
 
 /* bracket */
 .bracket-scroll-hint{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--color-muted);margin-bottom:8px}
-.bracket{display:flex;gap:10px;overflow-x:auto;padding-bottom:20px}
+.bracket{display:flex;gap:10px;overflow:auto;max-height:72vh;padding-bottom:8px}
 .bracket-col{min-width:220px;flex-shrink:0}
 .bracket-col-title{font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-accent);margin-bottom:10px;text-align:center;white-space:nowrap}
 .bracket-card .match-row{margin-bottom:8px;padding:7px 10px;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:4px}
@@ -156,7 +156,7 @@ body{
   .groups-grid{grid-template-columns:1fr}
   .fixtures-section{max-width:100%}
   .match-row{grid-template-columns:1fr;gap:4px}
-  .match-team{font-size:13px;white-space:normal}
+  .match-team{font-size:13px;white-space:normal;text-align:left}
   .match-team.right{text-align:left}
   .match-score{text-align:left;min-width:0}
 }
