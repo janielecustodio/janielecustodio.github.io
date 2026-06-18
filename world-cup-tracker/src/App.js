@@ -335,15 +335,6 @@ function App() {
     localStorage.setItem('wc-color-mode', colorMode);
   }, [colorMode]);
 
-  React.useEffect(() => {
-    const el = document.getElementById('live-status-header');
-    if (!el) return;
-    if (source === 'fallback') {
-      el.textContent = '⚠ Live feed unavailable — showing fallback schedule';
-    } else if (lastFetched) {
-      el.textContent = `⟳ Live data refreshed every 60s — last checked ${lastFetched.toLocaleTimeString()}`;
-    }
-  }, [lastFetched, source]);
 
   React.useEffect(() => {
     function refresh() {
@@ -409,7 +400,14 @@ function App() {
   return (
     <div className="wc-app">
       <div className="wc-topbar">
-        <div className="wc-brand">🏆 2026 World Cup Tracker</div>
+        <div className="wc-brand-block">
+          <div className="wc-brand">🏆 2026 World Cup Tracker</div>
+          <div className="wc-live-status">
+            {source === 'fallback'
+              ? '⚠ Live feed unavailable — showing fallback schedule'
+              : lastFetched ? `⟳ Live data refreshed every 60s — last checked ${lastFetched.toLocaleTimeString()}` : ''}
+          </div>
+        </div>
         <div className="wc-topbar-right">
           <button className="theme-toggle-btn" onClick={() => setColorMode(m => m === 'dark' ? 'light' : 'dark')}>
             {colorMode === 'dark' ? '☀️ Light' : '🌙 Dark'}
