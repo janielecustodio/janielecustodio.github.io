@@ -57,6 +57,22 @@ function VenueLine({ match, tz }) {
   );
 }
 
+function formatScorers(goals) {
+  return goals.map(function (g) { return `${g.name} ${g.minute}'${g.penalty ? ' (pen)' : ''}`; }).join(', ');
+}
+
+function GoalsLine({ match }) {
+  const goals1 = match.goals1 || [];
+  const goals2 = match.goals2 || [];
+  if (!goals1.length && !goals2.length) return null;
+  return (
+    <div className="goals-line">
+      {goals1.length > 0 && <div className="goals-line-team"><span className="goals-team-name">{match.team1Resolved}</span> ⚽ {formatScorers(goals1)}</div>}
+      {goals2.length > 0 && <div className="goals-line-team right"><span className="goals-team-name">{match.team2Resolved}</span> ⚽ {formatScorers(goals2)}</div>}
+    </div>
+  );
+}
+
 function teamClass(team, ctx, isProjected) {
   if (!team) return 'tbd';
   let cls = ctx.myTeam && ctx.myTeam.name === team ? 'is-my-team'
@@ -115,6 +131,7 @@ function MatchRow({ match, ctx, editable, onSave, tz }) {
           <TeamFlag name={match.team2Resolved} />
         </div>
       </div>
+      <GoalsLine match={match} />
       <VenueLine match={match} tz={tz} />
     </div>
   );
@@ -330,7 +347,9 @@ function App() {
   const [filter, setFilter] = React.useState(null);
   const [tz, setTz] = React.useState(window.WC.DEFAULT_TZ);
   const [lastFetched, setLastFetched] = React.useState(null);
+  const [refreshing, setRefreshing] = React.useState(false);
   const [colorMode, setColorMode] = React.useState(() => localStorage.getItem('wc-color-mode') || 'light');
+  const refreshRef = React.useRef(null);
 
   React.useEffect(() => {
     document.documentElement.setAttribute('data-theme', colorMode);
@@ -340,14 +359,17 @@ function App() {
 
   React.useEffect(() => {
     function refresh() {
-      window.WC.fetchWorldCupData().then(({ matches, source }) => {
+      setRefreshing(true);
+      return window.WC.fetchWorldCupData().then(({ matches, source }) => {
         setActualMatches(matches);
         setSimulatedMatches(prev => prev.length ? prev : JSON.parse(JSON.stringify(matches)));
         setSource(source);
         setLoading(false);
         setLastFetched(new Date());
+        setRefreshing(false);
       });
     }
+    refreshRef.current = refresh;
     refresh();
     const poll = setInterval(refresh, 60000); // pick up live score updates automatically
     const saved = window.WC.loadMyTeam();
@@ -409,6 +431,10 @@ function App() {
             {source === 'fallback'
               ? '⚠ Live feed unavailable — showing fallback schedule'
               : lastFetched ? `⟳ Live data refreshed every 60s — last checked ${lastFetched.toLocaleTimeString()}` : ''}
+            {' '}
+            <button className="refresh-now-btn" disabled={refreshing} onClick={() => refreshRef.current && refreshRef.current()}>
+              {refreshing ? '⟳ Refreshing…' : '⟳ Refresh now'}
+            </button>
           </div>
         </div>
         <div className="wc-topbar-right">

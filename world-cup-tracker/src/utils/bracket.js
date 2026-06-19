@@ -82,6 +82,7 @@
         team1Resolved: team1Resolved, team2Resolved: team2Resolved,
         team1Projected: team1Projected, team2Projected: team2Projected,
         score: m.score || null, penalties: m.penalties || null,
+        goals1: m.goals1 || [], goals2: m.goals2 || [],
         winner: null, loser: null,
         projected: (team1Projected || team2Projected) || !m.score
       };

@@ -16,7 +16,9 @@
       ground: m.ground || null,
       group: group,
       score: m.score && m.score.ft ? m.score.ft : null,
-      penalties: m.score && m.score.p ? m.score.p : null
+      penalties: m.score && m.score.p ? m.score.p : null,
+      goals1: m.goals1 || [],
+      goals2: m.goals2 || []
     };
   }
 
