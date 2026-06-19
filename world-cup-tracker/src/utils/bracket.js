@@ -24,9 +24,19 @@
     return g1 > g2 ? m.team1Resolved : m.team2Resolved;
   }
 
-  function resolveAll(rawMatches, groups) {
+  function resolveAll(rawMatches, groups, liveScores) {
     var WC = global.WC;
-    var tables = WC.computeAllGroupTables(rawMatches, groups);
+    // "Current" standings shown to the user include any in-progress score
+    // we have from the live overlay (see services/liveScores.js) — purely
+    // provisional, since the match can still change. Confirmed-results-only
+    // tables are kept separately for anything that needs to NOT move until
+    // a result is actually final (the mathematical "clinched" check below).
+    var liveAugmented = rawMatches.map(function (m) {
+      var live = !m.score && liveScores && liveScores[m.id];
+      return live ? Object.assign({}, m, { score: live.score }) : m;
+    });
+    var tables = WC.computeAllGroupTables(liveAugmented, groups);
+    var confirmedTables = WC.computeAllGroupTables(rawMatches, groups);
     var groupDone = {};
     Object.keys(groups).forEach(function (g) { groupDone[g] = WC.groupComplete(rawMatches, g); });
     var allGroupsDone = Object.keys(groups).every(function (g) { return groupDone[g]; });
@@ -126,7 +136,7 @@
     var clinched = {};
     Object.keys(groups).forEach(function (g) {
       if (groupDone[g]) return;
-      var rows = WC.clinchedTop2(tables[g]);
+      var rows = WC.clinchedTop2(confirmedTables[g]);
       Object.keys(rows).forEach(function (team) { if (rows[team]) clinched[team] = true; });
     });
 

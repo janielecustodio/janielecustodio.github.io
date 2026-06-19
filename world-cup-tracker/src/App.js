@@ -488,7 +488,7 @@ function App() {
   }
 
   const activeMatches = mode === 'actual' ? actualMatches : simulatedMatches;
-  const resolved = window.WC.resolveBracket(activeMatches, window.WC.GROUPS);
+  const resolved = window.WC.resolveBracket(activeMatches, window.WC.GROUPS, liveScores);
   const ctx = {
     myTeam,
     qualified: resolved.qualified,
