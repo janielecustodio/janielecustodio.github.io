@@ -199,14 +199,14 @@ body{
   .match-row-main{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:6px}
   .match-team{font-size:12px;min-width:0}
   .match-score{width:auto;flex-shrink:0}
-  .wc-topbar-right{flex-direction:row;flex-wrap:wrap;align-items:stretch;width:100%}
+  .wc-topbar-right{flex-direction:row;flex-wrap:nowrap;align-items:stretch;width:100%;gap:6px}
   .wc-topbar-right>*{width:auto}
   .wc-topbar-right>.theme-toggle-btn{order:-1}
-  .wc-topbar-right>.tz-select{flex:1 1 auto;min-width:0;max-width:calc(100% - 46px)}
-  .wc-topbar-right>.team-selector{width:100%}
-  .tz-select{font-size:12px;padding:6px 8px}
-  .team-selector-btn{width:100%;justify-content:space-between}
-  .team-dropdown{left:0;right:0;width:auto}
+  .wc-topbar-right>.tz-select{flex:1 1 0;min-width:0;max-width:none}
+  .wc-topbar-right>.team-selector{flex:1 1 0;min-width:0}
+  .tz-select{font-size:12px;padding:6px 8px;max-width:none}
+  .team-selector-btn{width:100%;max-width:none;justify-content:space-between}
+  .team-dropdown{left:auto;right:0;width:220px}
   .wc-controls .team-selector{width:100%}
   .team-option-name-full{display:none}
   .team-option-name-short{display:inline}
