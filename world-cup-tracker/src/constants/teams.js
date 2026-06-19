@@ -87,6 +87,22 @@
     Panama: ['#0050a4', '#d21034', '#ffffff']
   };
 
+  // 3-letter acronyms used in compact contexts (e.g. the knockout bracket).
+  var SHORT_CODES = {
+    Mexico: 'MEX', 'South Africa': 'RSA', 'South Korea': 'KOR', 'Czech Republic': 'CZE',
+    Canada: 'CAN', 'Bosnia & Herzegovina': 'BIH', Qatar: 'QAT', Switzerland: 'SUI',
+    Brazil: 'BRA', Haiti: 'HAI', Morocco: 'MAR', Scotland: 'SCO',
+    USA: 'USA', Australia: 'AUS', Paraguay: 'PAR', Turkey: 'TUR',
+    Germany: 'GER', 'Curaçao': 'CUW', Ecuador: 'ECU', 'Ivory Coast': 'CIV',
+    Netherlands: 'NED', Japan: 'JPN', Sweden: 'SWE', Tunisia: 'TUN',
+    Belgium: 'BEL', Egypt: 'EGY', Iran: 'IRN', 'New Zealand': 'NZL',
+    Spain: 'ESP', 'Cape Verde': 'CPV', 'Saudi Arabia': 'KSA', Uruguay: 'URU',
+    France: 'FRA', Iraq: 'IRQ', Norway: 'NOR', Senegal: 'SEN',
+    Argentina: 'ARG', Algeria: 'ALG', Austria: 'AUT', Jordan: 'JOR',
+    Portugal: 'POR', Colombia: 'COL', 'DR Congo': 'COD', Uzbekistan: 'UZB',
+    England: 'ENG', Croatia: 'CRO', Ghana: 'GHA', Panama: 'PAN'
+  };
+
   var TEAMS = [];
   Object.keys(GROUPS).forEach(function (g) {
     GROUPS[g].forEach(function (name) {
@@ -98,6 +114,7 @@
   global.WC = global.WC || {};
   global.WC.GROUPS = GROUPS;
   global.WC.ISO_CODES = ISO_CODES;
+  global.WC.SHORT_CODES = SHORT_CODES;
   global.WC.TEAMS = TEAMS;
   global.WC.TEAM_PALETTES = TEAM_PALETTES;
 })(window);

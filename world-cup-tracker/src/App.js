@@ -95,7 +95,13 @@ function TeamFlag({ name }) {
   return <img src={`https://flagcdn.com/w40/${iso}.png`} alt="" className="match-flag" />;
 }
 
-function MatchRow({ match, ctx, editable, onSave, tz }) {
+function teamLabel(name, compact) {
+  if (!name) return 'TBD';
+  if (compact) return window.WC.SHORT_CODES[name] || name;
+  return name;
+}
+
+function MatchRow({ match, ctx, editable, onSave, tz, compact }) {
   const [editing, setEditing] = React.useState(false);
   const [g1, setG1] = React.useState(match.score ? match.score[0] : 0);
   const [g2, setG2] = React.useState(match.score ? match.score[1] : 0);
@@ -115,7 +121,7 @@ function MatchRow({ match, ctx, editable, onSave, tz }) {
     <div className={`match-row ${canEdit ? 'editable' : ''} ${live ? 'is-live' : ''}`}>
       <div className="match-row-main">
         <div className={`match-team ${teamClass(match.team1Resolved, ctx, match.team1Projected)}`} title={match.team1Resolved || ''}>
-          <span>{match.team1Resolved || 'TBD'}</span>{match.team1Projected && <span className="proj-tag">proj.</span>}
+          <span>{teamLabel(match.team1Resolved, compact)}</span>{!compact && match.team1Projected && <span className="proj-tag">proj.</span>}
           <TeamFlag name={match.team1Resolved} />
         </div>
         <div className="match-score" onClick={() => canEdit && setEditing(true)}>
@@ -136,11 +142,11 @@ function MatchRow({ match, ctx, editable, onSave, tz }) {
         </div>
         <div className={`match-team right ${teamClass(match.team2Resolved, ctx, match.team2Projected)}`} title={match.team2Resolved || ''}>
           <TeamFlag name={match.team2Resolved} />
-          <span>{match.team2Resolved || 'TBD'}</span>{match.team2Projected && <span className="proj-tag">proj.</span>}
+          <span>{teamLabel(match.team2Resolved, compact)}</span>{!compact && match.team2Projected && <span className="proj-tag">proj.</span>}
         </div>
       </div>
-      <VenueLine match={match} tz={tz} />
-      <GoalsLine match={match} show={showGoals} onToggle={() => setShowGoals(s => !s)} />
+      {!compact && <VenueLine match={match} tz={tz} />}
+      {!compact && <GoalsLine match={match} show={showGoals} onToggle={() => setShowGoals(s => !s)} />}
     </div>
   );
 }
@@ -334,7 +340,7 @@ function BracketView({ resolved, ctx, editable, onSave, filter, tz }) {
           <div className="bracket-col-title">{round}</div>
           {byRound[round].map(m => (
             <div key={m.id} className="bracket-card">
-              <MatchRow match={m} ctx={ctx} editable={editable} onSave={onSave} tz={tz} />
+              <MatchRow match={m} ctx={ctx} editable={editable} onSave={onSave} tz={tz} compact />
             </div>
           ))}
         </div>
