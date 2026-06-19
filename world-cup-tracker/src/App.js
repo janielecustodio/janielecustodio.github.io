@@ -64,9 +64,7 @@ function formatScorers(goals) {
   return goals.map(function (g) { return `${g.name} ${g.minute}'${g.penalty ? ' (pen)' : ''}`; }).join(', ');
 }
 
-function GoalsToggle({ match, show, onToggle }) {
-  const goals1 = match.goals1 || [];
-  const goals2 = match.goals2 || [];
+function GoalsToggle({ goals1, goals2, show, onToggle }) {
   if (!goals1.length && !goals2.length) return null;
   return (
     <button className="goals-toggle-btn" onClick={onToggle}>
@@ -75,9 +73,7 @@ function GoalsToggle({ match, show, onToggle }) {
   );
 }
 
-function GoalsLine({ match, show }) {
-  const goals1 = match.goals1 || [];
-  const goals2 = match.goals2 || [];
+function GoalsLine({ match, goals1, goals2, show }) {
   if (!show || (!goals1.length && !goals2.length)) return null;
   return (
     <div className="goals-line">
@@ -120,6 +116,10 @@ function MatchRow({ match, ctx, editable, onSave, tz, compact, liveData }) {
   // ESPN overlay only applies while we have no real openfootball result yet.
   const espnScore = live && liveData ? liveData.score : null;
   const liveMinuteText = (live && liveData && liveData.minute) || (clockMinute !== null ? `${clockMinute}'` : '');
+  // Openfootball only has scorers once a match is final; while it's live,
+  // fall back to ESPN's play-by-play scorer data if it has any.
+  const goals1 = (match.goals1 && match.goals1.length) ? match.goals1 : ((live && liveData && liveData.goals1) || []);
+  const goals2 = (match.goals2 && match.goals2.length) ? match.goals2 : ((live && liveData && liveData.goals2) || []);
 
   function save() {
     onSave(match.id, [Number(g1), Number(g2)]);
@@ -162,9 +162,9 @@ function MatchRow({ match, ctx, editable, onSave, tz, compact, liveData }) {
       <VenueLine
         match={match}
         tz={tz}
-        goalsToggle={!compact ? <GoalsToggle match={match} show={showGoals} onToggle={() => setShowGoals(s => !s)} /> : null}
+        goalsToggle={!compact ? <GoalsToggle goals1={goals1} goals2={goals2} show={showGoals} onToggle={() => setShowGoals(s => !s)} /> : null}
       />
-      {!compact && <GoalsLine match={match} show={showGoals} />}
+      {!compact && <GoalsLine match={match} goals1={goals1} goals2={goals2} show={showGoals} />}
     </div>
   );
 }
