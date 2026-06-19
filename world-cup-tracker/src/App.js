@@ -52,7 +52,6 @@ function VenueLine({ match, tz }) {
       </div>
       <div className="venue-line-row">
         <span>{v.stadium}, {v.city}</span>
-        {match.group && <React.Fragment><span className="venue-dot">·</span><span className="venue-group">Group {match.group}</span></React.Fragment>}
       </div>
     </div>
   );
@@ -96,10 +95,9 @@ function TeamFlag({ name }) {
   return <img src={`https://flagcdn.com/w40/${iso}.png`} alt="" className="match-flag" />;
 }
 
-function teamLabel(name, compact) {
+function teamLabel(name) {
   if (!name) return 'TBD';
-  if (compact) return window.WC.SHORT_CODES[name] || name;
-  return name;
+  return window.WC.SHORT_CODES[name] || name;
 }
 
 function MatchRow({ match, ctx, editable, onSave, tz, compact }) {
@@ -120,9 +118,10 @@ function MatchRow({ match, ctx, editable, onSave, tz, compact }) {
 
   return (
     <div className={`match-row ${canEdit ? 'editable' : ''} ${live ? 'is-live' : ''}`}>
+      {match.group && <span className="match-group-badge">Group {match.group}</span>}
       <div className="match-row-main">
         <div className={`match-team ${teamClass(match.team1Resolved, ctx, match.team1Projected)}`} title={match.team1Resolved || ''}>
-          <span>{teamLabel(match.team1Resolved, compact)}</span>{!compact && match.team1Projected && <span className="proj-tag">proj.</span>}
+          <span>{teamLabel(match.team1Resolved)}</span>{!compact && match.team1Projected && <span className="proj-tag">proj.</span>}
           <TeamFlag name={match.team1Resolved} />
         </div>
         <div className="match-score" onClick={() => canEdit && setEditing(true)}>
@@ -143,7 +142,7 @@ function MatchRow({ match, ctx, editable, onSave, tz, compact }) {
         </div>
         <div className={`match-team right ${teamClass(match.team2Resolved, ctx, match.team2Projected)}`} title={match.team2Resolved || ''}>
           <TeamFlag name={match.team2Resolved} />
-          <span>{teamLabel(match.team2Resolved, compact)}</span>{!compact && match.team2Projected && <span className="proj-tag">proj.</span>}
+          <span>{teamLabel(match.team2Resolved)}</span>{!compact && match.team2Projected && <span className="proj-tag">proj.</span>}
         </div>
       </div>
       <VenueLine match={match} tz={tz} />
@@ -173,7 +172,7 @@ function GroupTable({ letter, table, ctx, thirdQualifies, groupDone }) {
               : ctx.eliminatedGroupStage[row.team] ? 'eliminated' : '';
             return (
               <tr key={row.team} className={cls}>
-                <td>{row.team}</td>
+                <td title={row.team}><TeamFlag name={row.team} /> {teamLabel(row.team)}</td>
                 <td>{row.played}</td><td>{row.won}</td><td>{row.drawn}</td><td>{row.lost}</td>
                 <td>{row.gf}</td><td>{row.ga}</td><td>{row.gd}</td><td className="pts">{row.points}</td>
               </tr>
@@ -357,7 +356,7 @@ function App() {
   const [mode, setMode] = React.useState('actual');
   const [actualMatches, setActualMatches] = React.useState([]);
   const [simulatedMatches, setSimulatedMatches] = React.useState([]);
-  const [view, setView] = React.useState('today');
+  const [view, setView] = React.useState(() => localStorage.getItem('wc-view') || 'today');
   const [myTeam, setMyTeam] = React.useState(null);
   const [filter, setFilter] = React.useState(null);
   const [tz, setTz] = React.useState(window.WC.DEFAULT_TZ);
@@ -370,6 +369,10 @@ function App() {
     document.documentElement.setAttribute('data-theme', colorMode);
     localStorage.setItem('wc-color-mode', colorMode);
   }, [colorMode]);
+
+  React.useEffect(() => {
+    localStorage.setItem('wc-view', view);
+  }, [view]);
 
 
   React.useEffect(() => {
