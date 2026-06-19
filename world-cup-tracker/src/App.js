@@ -141,7 +141,7 @@ function MatchRow({ match, ctx, editable, onSave, tz, compact }) {
             </span>
           ) : (
             <React.Fragment>
-              <span className="score-main">{match.score ? `${match.score[0]} – ${match.score[1]}` : live ? '0 – 0' : '–'}</span>
+              <span className="score-main">{match.score ? `${match.score[0]} – ${match.score[1]}` : '–'}</span>
               {ended && <span className="ft-tag">FT</span>}
               {live && <span className="live-badge">● LIVE{minute !== null ? ` ${minute}'` : ''}</span>}
             </React.Fragment>
