@@ -31,7 +31,8 @@ function TeamSelector({ myTeam, onSelect, onClear }) {
             {filtered.map(t => (
               <div key={t.name} className="team-option" onClick={() => { onSelect(t); setOpen(false); setQuery(''); }}>
                 <img src={`https://flagcdn.com/w40/${t.iso}.png`} alt={t.name} className="flag-icon" />
-                <span>{t.name}</span>
+                <span className="team-option-name-full">{t.name}</span>
+                <span className="team-option-name-short">{teamLabel(t.name)}</span>
                 <span className="team-option-group">Grp {t.group}</span>
               </div>
             ))}
@@ -258,7 +259,8 @@ function MatchFilter({ filter, onChange }) {
             {filteredTeams.map(t => (
               <div key={`t-${t.name}`} className="team-option" onClick={() => { onChange({ type: 'team', value: t.name }); setOpen(false); setQuery(''); }}>
                 <img src={`https://flagcdn.com/w40/${t.iso}.png`} alt={t.name} className="flag-icon" />
-                <span>{t.name}</span>
+                <span className="team-option-name-full">{t.name}</span>
+                <span className="team-option-name-short">{teamLabel(t.name)}</span>
                 <span className="team-option-group">Grp {t.group}</span>
               </div>
             ))}
