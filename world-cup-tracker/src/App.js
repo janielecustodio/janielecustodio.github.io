@@ -107,7 +107,7 @@ function teamLabel(name) {
   return window.WC.SHORT_CODES[name] || name;
 }
 
-function MatchRow({ match, ctx, editable, onSave, tz, compact }) {
+function MatchRow({ match, ctx, editable, onSave, tz, compact, liveData }) {
   const [editing, setEditing] = React.useState(false);
   const [g1, setG1] = React.useState(match.score ? match.score[0] : 0);
   const [g2, setG2] = React.useState(match.score ? match.score[1] : 0);
@@ -116,7 +116,10 @@ function MatchRow({ match, ctx, editable, onSave, tz, compact }) {
   const canEdit = editable && match.team1Resolved && match.team2Resolved;
   const live = !match.score && window.WC.isLive(match.date, match.time);
   const ended = match.score && window.WC.hasKickedOff(match.date, match.time) && !live;
-  const minute = live ? window.WC.liveMinute(match.date, match.time) : null;
+  const clockMinute = live ? window.WC.liveMinute(match.date, match.time) : null;
+  // ESPN overlay only applies while we have no real openfootball result yet.
+  const espnScore = live && liveData ? liveData.score : null;
+  const liveMinuteText = (live && liveData && liveData.minute) || (clockMinute !== null ? `${clockMinute}'` : '');
 
   function save() {
     onSave(match.id, [Number(g1), Number(g2)]);
@@ -141,9 +144,13 @@ function MatchRow({ match, ctx, editable, onSave, tz, compact }) {
             </span>
           ) : (
             <React.Fragment>
-              <span className="score-main">{match.score ? `${match.score[0]} – ${match.score[1]}` : '–'}</span>
+              <span className="score-main">
+                {match.score ? `${match.score[0]} – ${match.score[1]}`
+                  : espnScore ? `${espnScore[0]} – ${espnScore[1]}`
+                  : '–'}
+              </span>
               {ended && <span className="ft-tag">FT</span>}
-              {live && <span className="live-badge">● LIVE{minute !== null ? ` ${minute}'` : ''}</span>}
+              {live && <span className="live-badge">● LIVE{liveMinuteText ? ` ${liveMinuteText}` : ''}</span>}
             </React.Fragment>
           )}
         </div>
@@ -271,7 +278,7 @@ function MatchFilter({ filter, onChange }) {
   );
 }
 
-function GroupStageView({ resolved, ctx, editable, onSave, filter, tz }) {
+function GroupStageView({ resolved, ctx, editable, onSave, filter, tz, liveScores }) {
   const groups = window.WC.GROUPS;
   const thirdQualifies = {};
   resolved.thirdPool.forEach(t => { thirdQualifies[t.team] = true; });
@@ -297,7 +304,7 @@ function GroupStageView({ resolved, ctx, editable, onSave, filter, tz }) {
             <div key={letter} className="fixture-group">
               <div className="fixture-group-title">Group {letter}</div>
               {matches.map(m => (
-                <MatchRow key={m.id} match={m} ctx={ctx} editable={editable} onSave={onSave} tz={tz} />
+                <MatchRow key={m.id} match={m} ctx={ctx} editable={editable} onSave={onSave} tz={tz} liveData={liveScores[m.id]} />
               ))}
             </div>
           );
@@ -307,7 +314,7 @@ function GroupStageView({ resolved, ctx, editable, onSave, filter, tz }) {
   );
 }
 
-function TodayView({ resolved, ctx, editable, onSave, filter, tz }) {
+function TodayView({ resolved, ctx, editable, onSave, filter, tz, liveScores }) {
   const today = window.WC.todayInTimezone(tz);
   const matches = resolved.matches
     .filter(m => {
@@ -325,7 +332,7 @@ function TodayView({ resolved, ctx, editable, onSave, filter, tz }) {
       <div className="section-heading">Today's Matches ({today})</div>
       {matches.length === 0
         ? <div className="empty-state">No matches scheduled for today{filter ? ' matching this filter' : ''}.</div>
-        : matches.map(m => <MatchRow key={m.id} match={m} ctx={ctx} editable={editable} onSave={onSave} tz={tz} />)
+        : matches.map(m => <MatchRow key={m.id} match={m} ctx={ctx} editable={editable} onSave={onSave} tz={tz} liveData={liveScores[m.id]} />)
       }
     </div>
   );
@@ -333,7 +340,7 @@ function TodayView({ resolved, ctx, editable, onSave, filter, tz }) {
 
 const ROUND_ORDER = ['Round of 32', 'Round of 16', 'Quarter-final', 'Semi-final', 'Final', 'Match for third place'];
 
-function BracketView({ resolved, ctx, editable, onSave, filter, tz }) {
+function BracketView({ resolved, ctx, editable, onSave, filter, tz, liveScores }) {
   const byRound = {};
   ROUND_ORDER.forEach(r => byRound[r] = []);
   resolved.matches.forEach(m => {
@@ -352,7 +359,7 @@ function BracketView({ resolved, ctx, editable, onSave, filter, tz }) {
           <div className="bracket-col-title">{round}</div>
           {byRound[round].map(m => (
             <div key={m.id} className="bracket-card">
-              <MatchRow match={m} ctx={ctx} editable={editable} onSave={onSave} tz={tz} compact />
+              <MatchRow match={m} ctx={ctx} editable={editable} onSave={onSave} tz={tz} liveData={liveScores[m.id]} compact />
             </div>
           ))}
         </div>
@@ -375,6 +382,7 @@ function App() {
   const [lastFetched, setLastFetched] = React.useState(null);
   const [refreshing, setRefreshing] = React.useState(false);
   const [colorMode, setColorMode] = React.useState(() => localStorage.getItem('wc-color-mode') || 'light');
+  const [liveScores, setLiveScores] = React.useState({});
   const refreshRef = React.useRef(null);
 
   React.useEffect(() => {
@@ -415,6 +423,32 @@ function App() {
     }
     return () => clearInterval(poll);
   }, []);
+
+  // ESPN overlay: openfootball has no partial score while a match is in
+  // progress, only a final result once it ends. While the schedule says a
+  // match should currently be live and openfootball hasn't posted a score
+  // for it yet, poll ESPN's free scoreboard for the live score/clock. As
+  // soon as openfootball reports the real result, that match stops needing
+  // (and stops getting) the overlay — see MatchRow's `espnScore` guard.
+  React.useEffect(() => {
+    function pollLive() {
+      const liveMatches = actualMatches.filter(m => !m.score && window.WC.isLive(m.date, m.time));
+      if (!liveMatches.length) return;
+      window.WC.fetchEspnEvents().then(events => {
+        const updates = {};
+        liveMatches.forEach(m => {
+          const found = window.WC.findEspnLiveScore(events, m.team1, m.team2);
+          if (found) updates[m.id] = found;
+        });
+        if (Object.keys(updates).length) {
+          setLiveScores(prev => ({ ...prev, ...updates }));
+        }
+      });
+    }
+    pollLive();
+    const t = setInterval(pollLive, 20000);
+    return () => clearInterval(t);
+  }, [actualMatches]);
 
   function selectTeam(t) {
     const palette = window.WC.TEAM_PALETTES[t.name] || null;
@@ -505,9 +539,9 @@ function App() {
         </div>
       )}
 
-      {view === 'today' && <TodayView resolved={resolved} ctx={ctx} editable={mode === 'simulation'} onSave={saveScore} filter={filter} tz={tz} />}
-      {view === 'groups' && <GroupStageView resolved={resolved} ctx={ctx} editable={mode === 'simulation'} onSave={saveScore} filter={filter} tz={tz} />}
-      {view === 'bracket' && <BracketView resolved={resolved} ctx={ctx} editable={mode === 'simulation'} onSave={saveScore} filter={filter} tz={tz} />}
+      {view === 'today' && <TodayView resolved={resolved} ctx={ctx} editable={mode === 'simulation'} onSave={saveScore} filter={filter} tz={tz} liveScores={liveScores} />}
+      {view === 'groups' && <GroupStageView resolved={resolved} ctx={ctx} editable={mode === 'simulation'} onSave={saveScore} filter={filter} tz={tz} liveScores={liveScores} />}
+      {view === 'bracket' && <BracketView resolved={resolved} ctx={ctx} editable={mode === 'simulation'} onSave={saveScore} filter={filter} tz={tz} liveScores={liveScores} />}
     </div>
   );
 }
