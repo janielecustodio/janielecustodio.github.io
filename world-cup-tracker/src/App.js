@@ -193,7 +193,7 @@ function GroupTable({ letter, table, ctx, thirdQualifies, groupDone }) {
               <tr key={row.team} className={cls}>
                 <td title={row.team}>
                   <TeamFlag name={row.team} /> {teamLabel(row.team)}
-                  {isClinched && <span className="clinched-tag" title="Mathematically guaranteed to advance, regardless of remaining results">✓ through</span>}
+                  {isClinched && <span className="clinched-tag" title="Mathematically guaranteed to advance, regardless of remaining results">✓</span>}
                 </td>
                 <td>{row.played}</td><td>{row.won}</td><td>{row.drawn}</td><td>{row.lost}</td>
                 <td>{row.gf}</td><td>{row.ga}</td><td>{row.gd}</td><td className="pts">{row.points}</td>
@@ -291,8 +291,13 @@ function GroupStageView({ resolved, ctx, editable, onSave, filter, tz, liveScore
   if (filter && filter.type === 'group') letters = letters.filter(l => l === filter.value);
   else if (filter && filter.type === 'team') letters = letters.filter(l => groups[l].indexOf(filter.value) !== -1);
 
+  const hasClinched = Object.keys(ctx.clinched || {}).length > 0;
+
   return (
     <div className="group-stage">
+      {hasClinched && (
+        <div className="clinched-legend"><span className="clinched-tag">✓</span> = mathematically confirmed to advance to the next phase</div>
+      )}
       <div className="groups-grid">
         {letters.map(letter => (
           <GroupTable key={letter} letter={letter} table={resolved.tables[letter]} ctx={ctx} thirdQualifies={thirdQualifies} groupDone={resolved.groupDone[letter]} />
