@@ -120,6 +120,7 @@
   global.WC = global.WC || {};
   global.WC.TIMEZONES = TIMEZONES;
   global.WC.DEFAULT_TZ = DEFAULT_TZ;
+  global.WC.toUtcMillis = toUtcMillis;
   global.WC.formatInTimezone = formatInTimezone;
   global.WC.todayInTimezone = todayInTimezone;
   global.WC.isLive = isLive;

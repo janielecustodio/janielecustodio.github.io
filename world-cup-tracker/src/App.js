@@ -307,7 +307,8 @@ function GroupStageView({ resolved, ctx, editable, onSave, filter, tz, liveScore
         <div className="section-heading">Group Stage Fixtures</div>
         {letters.map(letter => {
           const matches = resolved.matches.filter(m => m.group === letter
-            && (!filter || filter.type !== 'team' || matchInvolvesTeam(m, filter.value)));
+            && (!filter || filter.type !== 'team' || matchInvolvesTeam(m, filter.value)))
+            .sort((a, b) => window.WC.toUtcMillis(a.date, a.time) - window.WC.toUtcMillis(b.date, b.time));
           if (!matches.length) return null;
           return (
             <div key={letter} className="fixture-group">
@@ -334,7 +335,7 @@ function TodayView({ resolved, ctx, editable, onSave, filter, tz, liveScores }) 
       if (filter && filter.type === 'group' && m.group !== filter.value) return false;
       return true;
     })
-    .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+    .sort((a, b) => window.WC.toUtcMillis(a.date, a.time) - window.WC.toUtcMillis(b.date, b.time));
 
   return (
     <div className="today-view">
