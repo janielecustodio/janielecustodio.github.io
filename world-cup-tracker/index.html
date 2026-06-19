@@ -172,17 +172,21 @@ body{
 .score-edit button{background:var(--color-good);border:none;color:#fff;border-radius:4px;padding:2px 7px;cursor:pointer}
 
 /* bracket */
-.bracket-scroll-hint{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--color-muted);margin-bottom:8px}
-.bracket{display:flex;gap:10px;overflow-x:auto;overflow-y:visible;padding-bottom:8px}
-.bracket-col{min-width:260px;flex-shrink:0}
-.bracket-col-title{font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-accent);margin-bottom:10px;text-align:center;white-space:nowrap}
-.bracket-card .match-row{margin-bottom:8px;padding:7px 10px;width:100%}
-.bracket-card .match-row-main{grid-template-columns:100px auto 100px;gap:4px}
-.bracket-card .match-team{font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.bracket-card .match-score{width:48px;font-size:12px}
-.bracket-card .match-flag{width:14px}
-.bracket-card .venue-line{font-size:10px}
-.bracket-card .goals-line{font-size:9px}
+.bracket-scroll-hint{display:none;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--color-muted);margin-bottom:8px}
+.bracket{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;overflow:visible}
+.bracket-col{min-width:0}
+.bracket-col-title{font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-accent);margin-bottom:10px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bracket-card .match-row{margin-bottom:8px;padding:6px 8px;width:100%}
+.bracket-card .match-row-main{grid-template-columns:1fr auto 1fr;gap:4px}
+.bracket-card .match-team{font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.bracket-card .match-score{width:auto;min-width:40px;font-size:12px}
+.bracket-card .match-flag{width:14px;flex-shrink:0}
+
+@media(max-width:900px){
+  .bracket-scroll-hint{display:block}
+  .bracket{display:flex;grid-template-columns:none;gap:10px;overflow-x:auto;overflow-y:visible;padding-bottom:8px}
+  .bracket-col{min-width:160px;flex-shrink:0}
+}
 
 @media(max-width:640px){
   .wc-app{padding:16px}
