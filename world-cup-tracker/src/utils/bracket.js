@@ -24,19 +24,18 @@
     return g1 > g2 ? m.team1Resolved : m.team2Resolved;
   }
 
-  function resolveAll(rawMatches, groups, liveScores) {
+  function resolveAll(rawMatches, groups, liveScores, includeLive) {
     var WC = global.WC;
     // "Current" standings shown to the user include any in-progress score
     // we have from the live overlay (see services/liveScores.js) — purely
-    // provisional, since the match can still change. Confirmed-results-only
-    // tables are kept separately for anything that needs to NOT move until
-    // a result is actually final (the mathematical "clinched" check below).
-    var liveAugmented = rawMatches.map(function (m) {
+    // provisional, since the match can still change. Callers can opt out
+    // (includeLive === false) to see the picture based on finished results
+    // only, e.g. via a "live vs finished" toggle in the UI.
+    var liveAugmented = includeLive === false ? rawMatches : rawMatches.map(function (m) {
       var live = !m.score && liveScores && liveScores[m.id];
       return live ? Object.assign({}, m, { score: live.score }) : m;
     });
     var tables = WC.computeAllGroupTables(liveAugmented, groups);
-    var confirmedTables = WC.computeAllGroupTables(rawMatches, groups);
     var groupDone = {};
     Object.keys(groups).forEach(function (g) { groupDone[g] = WC.groupComplete(rawMatches, g); });
     var allGroupsDone = Object.keys(groups).every(function (g) { return groupDone[g]; });
@@ -130,13 +129,16 @@
     });
 
     // clinched: mathematically guaranteed a top-2 spot already, even with
-    // games still to play (see standings.js#clinchedTop2). Only meaningful
-    // while the group is still in progress — once it's done, "qualified"
-    // already says the same thing.
+    // games still to play (see standings.js#clinchedTop2). Computed off the
+    // same current standings shown to the user (including any live score),
+    // since the question being answered is "given right now, is this locked
+    // in" — not "given only finished matches". Only meaningful while the
+    // group is still in progress — once it's done, "qualified" already says
+    // the same thing.
     var clinched = {};
     Object.keys(groups).forEach(function (g) {
       if (groupDone[g]) return;
-      var rows = WC.clinchedTop2(confirmedTables[g]);
+      var rows = WC.clinchedTop2(tables[g]);
       Object.keys(rows).forEach(function (team) { if (rows[team]) clinched[team] = true; });
     });
 

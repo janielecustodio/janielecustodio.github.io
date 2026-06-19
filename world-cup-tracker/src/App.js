@@ -393,6 +393,7 @@ function App() {
   const [refreshing, setRefreshing] = React.useState(false);
   const [colorMode, setColorMode] = React.useState(() => localStorage.getItem('wc-color-mode') || 'light');
   const [liveScores, setLiveScores] = React.useState({});
+  const [includeLive, setIncludeLive] = React.useState(true);
   const refreshRef = React.useRef(null);
 
   React.useEffect(() => {
@@ -488,7 +489,7 @@ function App() {
   }
 
   const activeMatches = mode === 'actual' ? actualMatches : simulatedMatches;
-  const resolved = window.WC.resolveBracket(activeMatches, window.WC.GROUPS, liveScores);
+  const resolved = window.WC.resolveBracket(activeMatches, window.WC.GROUPS, liveScores, mode === 'actual' ? includeLive : true);
   const ctx = {
     myTeam,
     qualified: resolved.qualified,
@@ -541,6 +542,12 @@ function App() {
             </div>
             {mode === 'simulation' && (
               <button className="reset-btn" onClick={resetToActual}>↺ Reset to Actual</button>
+            )}
+            {mode === 'actual' && (
+              <label className="live-toggle">
+                <input type="checkbox" checked={includeLive} onChange={e => setIncludeLive(e.target.checked)} />
+                Live scores
+              </label>
             )}
           </div>
         </div>
