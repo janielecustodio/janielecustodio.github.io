@@ -532,15 +532,17 @@ function App() {
           <button className={view === 'groups' ? 'active' : ''} onClick={() => setView('groups')}>Group Stage</button>
           <button className={view === 'bracket' ? 'active' : ''} onClick={() => setView('bracket')}>Knockout Bracket</button>
         </div>
-        <MatchFilter filter={filter} onChange={setFilter} />
-        <div className="mode-controls">
-          <div className="mode-toggle">
-            <button className={mode === 'actual' ? 'active' : ''} onClick={() => setMode('actual')}>Actual</button>
-            <button className={mode === 'simulation' ? 'active' : ''} onClick={() => setMode('simulation')}>Simulation</button>
+        <div className="filter-mode-row">
+          <MatchFilter filter={filter} onChange={setFilter} />
+          <div className="mode-controls">
+            <div className="mode-toggle">
+              <button className={mode === 'actual' ? 'active' : ''} onClick={() => setMode('actual')}>Actual</button>
+              <button className={mode === 'simulation' ? 'active' : ''} onClick={() => setMode('simulation')}>Simulation</button>
+            </div>
+            {mode === 'simulation' && (
+              <button className="reset-btn" onClick={resetToActual}>↺ Reset to Actual</button>
+            )}
           </div>
-          {mode === 'simulation' && (
-            <button className="reset-btn" onClick={resetToActual}>↺ Reset to Actual</button>
-          )}
         </div>
       </div>
 

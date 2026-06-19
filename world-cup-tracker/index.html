@@ -76,6 +76,7 @@ body{
   background:var(--color-card);border:1px solid var(--color-border);
   color:var(--color-text);padding:6px 10px;border-radius:6px;cursor:pointer;font-size:12px;max-width:160px;
 }
+.wc-controls .team-selector-btn{max-width:130px}
 .team-selector-btn:hover{border-color:var(--color-secondary)}
 .team-selector-btn span:not(.chev){overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .flag-icon{width:16px;height:auto;border-radius:2px;flex-shrink:0}
@@ -98,6 +99,7 @@ body{
 
 /* controls */
 .wc-controls{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+.filter-mode-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .view-tabs,.mode-toggle{display:flex;gap:4px;background:var(--color-card);border:1px solid var(--color-border);border-radius:8px;padding:3px}
 .view-tabs button,.mode-toggle button{
   background:none;border:none;color:var(--color-muted);padding:7px 14px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:500;
@@ -208,9 +210,11 @@ body{
   .wc-topbar-right>.tz-select{flex:1 1 0;min-width:0;max-width:none}
   .wc-topbar-right>.team-selector{flex:1 1 0;min-width:0}
   .tz-select{font-size:12px;padding:6px 8px;max-width:none}
-  .team-selector-btn{width:100%;max-width:none;justify-content:space-between}
+  .wc-topbar-right .team-selector-btn{width:100%;max-width:none;justify-content:space-between}
   .team-dropdown{left:auto;right:0;width:220px}
-  .wc-controls .team-selector{width:100%}
+  .wc-controls{gap:8px}
+  .wc-controls .team-selector-btn{max-width:130px;justify-content:space-between}
+  .filter-mode-row{gap:8px;flex:1 1 auto}
   .team-option-name-full{display:none}
   .team-option-name-short{display:inline}
 }
