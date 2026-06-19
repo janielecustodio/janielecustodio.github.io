@@ -456,8 +456,13 @@ function App() {
           </div>
         </div>
         <div className="wc-topbar-right">
-          <button className="theme-toggle-btn" onClick={() => setColorMode(m => m === 'dark' ? 'light' : 'dark')}>
-            {colorMode === 'dark' ? '☀️ Light' : '🌙 Dark'}
+          <button
+            className="theme-toggle-btn"
+            title={colorMode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            aria-label={colorMode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            onClick={() => setColorMode(m => m === 'dark' ? 'light' : 'dark')}
+          >
+            {colorMode === 'dark' ? '☀️' : '🌙'}
           </button>
           <TimezoneSelector tz={tz} onChange={setTz} />
           <TeamSelector myTeam={myTeam} onSelect={selectTeam} onClear={clearTeam} />
