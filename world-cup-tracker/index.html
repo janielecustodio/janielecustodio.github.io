@@ -39,13 +39,13 @@
 }
 html,body{height:100%}
 body{
-  background:var(--color-bg);color:var(--color-text);
+  background:var(--color-page-bg, var(--color-bg));color:var(--color-text);
   font-family:'IBM Plex Sans',sans-serif;
   -webkit-font-smoothing:antialiased;
 }
 
 /* ── APP SHELL ── */
-.content{min-height:100vh;background:var(--color-bg);color:var(--color-text)}
+.content{min-height:100vh;background:var(--color-page-bg, var(--color-bg));color:var(--color-text)}
 
 #wc-root{font-family:'IBM Plex Sans',sans-serif}
 .loading-screen{display:flex;align-items:center;justify-content:center;height:100vh;font-size:18px;color:var(--color-muted)}
@@ -117,19 +117,18 @@ body{
 .group-table{background:var(--color-card);border:1px solid var(--color-border);border-radius:8px;padding:12px 14px}
 .group-table-title{font-weight:600;font-size:13px;margin-bottom:8px;color:var(--color-accent);display:flex;align-items:center;gap:8px}
 .group-status{font-family:'IBM Plex Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-muted);border:1px solid var(--color-border);border-radius:4px;padding:1px 6px;font-weight:400}
-.group-table tr.qualified.projected td:first-child{color:var(--color-accent)}
-.group-table tr.qualified.projected{background:color-mix(in srgb, var(--color-accent) 14%, transparent)}
 .group-table table{width:100%;font-size:12px;border-collapse:collapse}
 .group-table th{text-align:center;color:var(--color-muted);font-weight:500;padding:4px 2px;font-size:10px}
 .group-table th:first-child{text-align:left}
-.group-table td{text-align:center;padding:5px 2px;border-top:1px solid var(--color-border)}
+.group-table td{text-align:center;padding:5px 2px;border-top:1px solid var(--color-border);border-left:3px solid transparent}
 .group-table td:first-child{text-align:left;font-weight:500}
 .group-table td.pts{font-weight:700;color:var(--color-accent)}
-.group-table tr.qualified td:first-child{color:var(--color-good)}
-.group-table tr.qualified{background:color-mix(in srgb, var(--color-good) 14%, transparent)}
+.group-table tr.qualified td:first-child,.group-table tr.qualified.projected td:first-child{color:var(--color-accent)}
+.group-table tr.qualified td:first-child,.group-table tr.qualified.projected td:first-child{border-left-color:var(--color-accent)}
+.group-table tr.qualified,.group-table tr.qualified.projected{background:color-mix(in srgb, var(--color-accent) 14%, transparent)}
 .group-table tr.eliminated td:first-child{color:var(--color-bad)}
-.group-table tr.is-my-team td:first-child{color:var(--color-accent);font-weight:700}
-.group-table tr.is-my-team{background:color-mix(in srgb, var(--color-accent) 14%, transparent)}
+.group-table tr.is-my-team td:first-child{color:var(--color-accent);font-weight:700;border-left-color:var(--color-accent)}
+.group-table tr.is-my-team{background:color-mix(in srgb, var(--color-accent) 22%, transparent)}
 
 .section-heading{font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--color-muted);margin-bottom:14px;border-bottom:1px solid var(--color-border);padding-bottom:8px}
 .fixtures-section,.today-view{max-width:520px}
@@ -158,7 +157,7 @@ body{
 .match-team span{overflow:hidden;text-overflow:ellipsis;min-width:0}
 .match-team.right{text-align:left;justify-content:flex-start}
 .match-flag{width:18px;height:auto;border-radius:2px;flex-shrink:0}
-.match-team.qualified{color:var(--color-good)}
+.match-team.qualified{color:var(--color-accent)}
 .match-team.eliminated{color:var(--color-bad)}
 .match-team.is-my-team{color:var(--color-accent);font-weight:700}
 .match-team.tbd{color:var(--color-muted);font-style:italic}
