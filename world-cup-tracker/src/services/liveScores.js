@@ -52,6 +52,26 @@
       .catch(function () { return cache.events || []; });
   }
 
+  // Extracts goal-scorer events from ESPN's play-by-play `details` array
+  // (when present) into our { name, minute, penalty } shape, split by side.
+  function extractGoals(comp, scoringTeamId, conceedingTeamId) {
+    var goalsFor = [], goalsAgainst = [];
+    (comp.details || []).forEach(function (d) {
+      var text = d.type && d.type.text || '';
+      if (text.indexOf('Goal') === -1) return; // "Goal", "Penalty - Scored", "Own Goal"
+      var scorer = d.athletesInvolved && d.athletesInvolved[0];
+      var entry = {
+        name: scorer ? (scorer.shortName || scorer.displayName) : '?',
+        minute: d.clock && d.clock.displayValue ? d.clock.displayValue.replace("'", '') : '',
+        penalty: text.indexOf('Penalty') !== -1
+      };
+      var teamId = d.team && d.team.id;
+      if (teamId === scoringTeamId) goalsFor.push(entry);
+      else if (teamId === conceedingTeamId) goalsAgainst.push(entry);
+    });
+    return [goalsFor, goalsAgainst];
+  }
+
   function findLiveScore(events, team1, team2) {
     for (var i = 0; i < events.length; i++) {
       var comp = events[i].competitions && events[i].competitions[0];
@@ -69,7 +89,10 @@
 
       var status = comp.status || {};
       var state = status.type && status.type.state; // 'pre' | 'in' | 'post'
-      return { score: [score1, score2], minute: status.displayClock || null, state: state };
+      var team1Id = direct ? c0.team && c0.team.id : c1.team && c1.team.id;
+      var team2Id = direct ? c1.team && c1.team.id : c0.team && c0.team.id;
+      var goals = extractGoals(comp, team1Id, team2Id);
+      return { score: [score1, score2], minute: status.displayClock || null, state: state, goals1: goals[0], goals2: goals[1] };
     }
     return null;
   }
