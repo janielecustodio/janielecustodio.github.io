@@ -352,8 +352,14 @@ function App() {
     const poll = setInterval(refresh, 60000); // pick up live score updates automatically
     const saved = window.WC.loadMyTeam();
     if (saved) {
-      setMyTeam(saved);
-      if (saved.palette) window.WC.applyPalette(saved.palette);
+      // Always re-derive the palette from the curated table, even if an
+      // older (unreliable, ColorThief-extracted) palette was persisted.
+      const palette = window.WC.TEAM_PALETTES[saved.name] || null;
+      const team = { ...saved, palette };
+      setMyTeam(team);
+      window.WC.saveMyTeam(team);
+      if (palette) window.WC.applyPalette(palette);
+      else window.WC.clearPalette();
     }
     return () => clearInterval(poll);
   }, []);
