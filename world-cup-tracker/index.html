@@ -102,8 +102,6 @@ body{
 .view-tabs button.active,.mode-toggle button.active{background:var(--color-primary);color:#fff}
 .mode-controls{display:flex;align-items:center;gap:10px}
 .reset-btn{background:none;border:1px solid var(--color-border);color:var(--color-accent);padding:7px 12px;border-radius:6px;cursor:pointer;font-size:12px}
-.goals-toggle-btn{background:none;border:1px solid var(--color-border);color:var(--color-muted);padding:7px 12px;border-radius:6px;cursor:pointer;font-size:12px}
-.goals-toggle-btn.active{border-color:var(--color-secondary);color:var(--color-secondary)}
 .reset-btn:hover{border-color:var(--color-accent)}
 .data-banner{background:rgba(255,209,102,.1);border:1px solid var(--color-accent);color:var(--color-accent);padding:8px 14px;border-radius:6px;font-size:12px;margin-bottom:16px}
 .projected-banner{background:rgba(127,163,146,.1);border-color:var(--color-secondary);color:var(--color-muted)}
@@ -144,7 +142,10 @@ body{
   width:520px;max-width:100%;margin-left:auto;margin-right:auto;
 }
 .match-row-main{display:grid;grid-template-columns:180px auto 180px;justify-content:center;align-items:center;gap:10px}
-.goals-line{font-size:11px;color:var(--color-muted);margin-top:6px;display:flex;flex-direction:column;gap:2px}
+.goals-section{margin-top:6px;text-align:center}
+.goals-toggle-btn{background:none;border:none;color:var(--color-secondary);font-size:10px;font-family:'IBM Plex Mono',monospace;cursor:pointer;padding:2px 6px;border-radius:4px}
+.goals-toggle-btn:hover{text-decoration:underline}
+.goals-line{font-size:11px;color:var(--color-muted);margin-top:4px;display:flex;flex-direction:column;gap:2px}
 .goals-line-team{text-align:left}
 .goals-line-team.right{text-align:right}
 .goals-team-name{font-weight:600;color:var(--color-secondary)}

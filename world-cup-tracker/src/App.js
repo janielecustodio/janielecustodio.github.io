@@ -61,14 +61,21 @@ function formatScorers(goals) {
   return goals.map(function (g) { return `${g.name} ${g.minute}'${g.penalty ? ' (pen)' : ''}`; }).join(', ');
 }
 
-function GoalsLine({ match, show }) {
+function GoalsLine({ match, show, onToggle }) {
   const goals1 = match.goals1 || [];
   const goals2 = match.goals2 || [];
-  if (!show || (!goals1.length && !goals2.length)) return null;
+  if (!goals1.length && !goals2.length) return null;
   return (
-    <div className="goals-line">
-      {goals1.length > 0 && <div className="goals-line-team"><span className="goals-team-name">{match.team1Resolved}</span> ⚽ {formatScorers(goals1)}</div>}
-      {goals2.length > 0 && <div className="goals-line-team right"><span className="goals-team-name">{match.team2Resolved}</span> ⚽ {formatScorers(goals2)}</div>}
+    <div className="goals-section">
+      <button className="goals-toggle-btn" onClick={onToggle}>
+        ⚽ {show ? 'Hide scorers' : 'Show scorers'}
+      </button>
+      {show && (
+        <div className="goals-line">
+          {goals1.length > 0 && <div className="goals-line-team"><span className="goals-team-name">{match.team1Resolved}</span> ⚽ {formatScorers(goals1)}</div>}
+          {goals2.length > 0 && <div className="goals-line-team right"><span className="goals-team-name">{match.team2Resolved}</span> ⚽ {formatScorers(goals2)}</div>}
+        </div>
+      )}
     </div>
   );
 }
@@ -88,10 +95,11 @@ function TeamFlag({ name }) {
   return <img src={`https://flagcdn.com/w40/${iso}.png`} alt="" className="match-flag" />;
 }
 
-function MatchRow({ match, ctx, editable, onSave, tz, showGoals }) {
+function MatchRow({ match, ctx, editable, onSave, tz }) {
   const [editing, setEditing] = React.useState(false);
   const [g1, setG1] = React.useState(match.score ? match.score[0] : 0);
   const [g2, setG2] = React.useState(match.score ? match.score[1] : 0);
+  const [showGoals, setShowGoals] = React.useState(false);
 
   const canEdit = editable && match.team1Resolved && match.team2Resolved;
   const live = !match.score && window.WC.isLive(match.date, match.time);
@@ -131,7 +139,7 @@ function MatchRow({ match, ctx, editable, onSave, tz, showGoals }) {
           <TeamFlag name={match.team2Resolved} />
         </div>
       </div>
-      <GoalsLine match={match} show={showGoals} />
+      <GoalsLine match={match} show={showGoals} onToggle={() => setShowGoals(s => !s)} />
       <VenueLine match={match} tz={tz} />
     </div>
   );
@@ -245,7 +253,7 @@ function MatchFilter({ filter, onChange }) {
   );
 }
 
-function GroupStageView({ resolved, ctx, editable, onSave, filter, tz, showGoals }) {
+function GroupStageView({ resolved, ctx, editable, onSave, filter, tz }) {
   const groups = window.WC.GROUPS;
   const thirdQualifies = {};
   resolved.thirdPool.forEach(t => { thirdQualifies[t.team] = true; });
@@ -271,7 +279,7 @@ function GroupStageView({ resolved, ctx, editable, onSave, filter, tz, showGoals
             <div key={letter} className="fixture-group">
               <div className="fixture-group-title">Group {letter}</div>
               {matches.map(m => (
-                <MatchRow key={m.id} match={m} ctx={ctx} editable={editable} onSave={onSave} tz={tz} showGoals={showGoals} />
+                <MatchRow key={m.id} match={m} ctx={ctx} editable={editable} onSave={onSave} tz={tz} />
               ))}
             </div>
           );
@@ -281,7 +289,7 @@ function GroupStageView({ resolved, ctx, editable, onSave, filter, tz, showGoals
   );
 }
 
-function TodayView({ resolved, ctx, editable, onSave, filter, tz, showGoals }) {
+function TodayView({ resolved, ctx, editable, onSave, filter, tz }) {
   const today = window.WC.todayInTimezone(tz);
   const matches = resolved.matches
     .filter(m => {
@@ -299,7 +307,7 @@ function TodayView({ resolved, ctx, editable, onSave, filter, tz, showGoals }) {
       <div className="section-heading">Today's Matches ({today})</div>
       {matches.length === 0
         ? <div className="empty-state">No matches scheduled for today{filter ? ' matching this filter' : ''}.</div>
-        : matches.map(m => <MatchRow key={m.id} match={m} ctx={ctx} editable={editable} onSave={onSave} tz={tz} showGoals={showGoals} />)
+        : matches.map(m => <MatchRow key={m.id} match={m} ctx={ctx} editable={editable} onSave={onSave} tz={tz} />)
       }
     </div>
   );
@@ -307,7 +315,7 @@ function TodayView({ resolved, ctx, editable, onSave, filter, tz, showGoals }) {
 
 const ROUND_ORDER = ['Round of 32', 'Round of 16', 'Quarter-final', 'Semi-final', 'Final', 'Match for third place'];
 
-function BracketView({ resolved, ctx, editable, onSave, filter, tz, showGoals }) {
+function BracketView({ resolved, ctx, editable, onSave, filter, tz }) {
   const byRound = {};
   ROUND_ORDER.forEach(r => byRound[r] = []);
   resolved.matches.forEach(m => {
@@ -326,7 +334,7 @@ function BracketView({ resolved, ctx, editable, onSave, filter, tz, showGoals })
           <div className="bracket-col-title">{round}</div>
           {byRound[round].map(m => (
             <div key={m.id} className="bracket-card">
-              <MatchRow match={m} ctx={ctx} editable={editable} onSave={onSave} tz={tz} showGoals={showGoals} />
+              <MatchRow match={m} ctx={ctx} editable={editable} onSave={onSave} tz={tz} />
             </div>
           ))}
         </div>
@@ -347,7 +355,6 @@ function App() {
   const [filter, setFilter] = React.useState(null);
   const [tz, setTz] = React.useState(window.WC.DEFAULT_TZ);
   const [lastFetched, setLastFetched] = React.useState(null);
-  const [showGoals, setShowGoals] = React.useState(() => localStorage.getItem('wc-show-goals') !== 'false');
   const [refreshing, setRefreshing] = React.useState(false);
   const [colorMode, setColorMode] = React.useState(() => localStorage.getItem('wc-color-mode') || 'light');
   const refreshRef = React.useRef(null);
@@ -356,10 +363,6 @@ function App() {
     document.documentElement.setAttribute('data-theme', colorMode);
     localStorage.setItem('wc-color-mode', colorMode);
   }, [colorMode]);
-
-  React.useEffect(() => {
-    localStorage.setItem('wc-show-goals', String(showGoals));
-  }, [showGoals]);
 
 
   React.useEffect(() => {
@@ -459,9 +462,6 @@ function App() {
         </div>
         <MatchFilter filter={filter} onChange={setFilter} />
         <div className="mode-controls">
-          <button className={`goals-toggle-btn ${showGoals ? 'active' : ''}`} onClick={() => setShowGoals(s => !s)}>
-            ⚽ {showGoals ? 'Hide scorers' : 'Show scorers'}
-          </button>
           <div className="mode-toggle">
             <button className={mode === 'actual' ? 'active' : ''} onClick={() => setMode('actual')}>Actual</button>
             <button className={mode === 'simulation' ? 'active' : ''} onClick={() => setMode('simulation')}>Simulation</button>
@@ -478,9 +478,9 @@ function App() {
         </div>
       )}
 
-      {view === 'today' && <TodayView resolved={resolved} ctx={ctx} editable={mode === 'simulation'} onSave={saveScore} filter={filter} tz={tz} showGoals={showGoals} />}
-      {view === 'groups' && <GroupStageView resolved={resolved} ctx={ctx} editable={mode === 'simulation'} onSave={saveScore} filter={filter} tz={tz} showGoals={showGoals} />}
-      {view === 'bracket' && <BracketView resolved={resolved} ctx={ctx} editable={mode === 'simulation'} onSave={saveScore} filter={filter} tz={tz} showGoals={showGoals} />}
+      {view === 'today' && <TodayView resolved={resolved} ctx={ctx} editable={mode === 'simulation'} onSave={saveScore} filter={filter} tz={tz} />}
+      {view === 'groups' && <GroupStageView resolved={resolved} ctx={ctx} editable={mode === 'simulation'} onSave={saveScore} filter={filter} tz={tz} />}
+      {view === 'bracket' && <BracketView resolved={resolved} ctx={ctx} editable={mode === 'simulation'} onSave={saveScore} filter={filter} tz={tz} />}
     </div>
   );
 }
