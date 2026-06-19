@@ -60,9 +60,32 @@
     return played >= 6;
   }
 
+  // A team is mathematically clinched for a top-2 (direct qualification)
+  // spot if, even in its worst case (loses every remaining match) and every
+  // rival's best case (wins every remaining match), at most one other team
+  // can reach/tie its points total. Deliberately ignores goal-difference
+  // tiebreaks — that only makes this conservative (it may flag a clinch a
+  // little later than technically possible), never wrong.
+  function clinchedTop2(table) {
+    var result = {};
+    table.forEach(function (row) {
+      var worst = row.points;
+      var threats = 0;
+      table.forEach(function (other) {
+        if (other.team === row.team) return;
+        var otherRemaining = 3 - other.played;
+        var best = other.points + 3 * otherRemaining;
+        if (best >= worst) threats++;
+      });
+      result[row.team] = threats <= 1;
+    });
+    return result;
+  }
+
   global.WC = global.WC || {};
   global.WC.computeGroupTable = computeGroupTable;
   global.WC.computeAllGroupTables = computeAllGroupTables;
   global.WC.bestThirdPlaced = bestThirdPlaced;
   global.WC.groupComplete = groupComplete;
+  global.WC.clinchedTop2 = clinchedTop2;
 })(window);

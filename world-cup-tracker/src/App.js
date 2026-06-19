@@ -185,12 +185,16 @@ function GroupTable({ letter, table, ctx, thirdQualifies, groupDone }) {
             const qualByRank = i < 2;
             const qualByThird = i === 2 && thirdQualifies[row.team];
             const isQualified = qualByRank || qualByThird;
+            const isClinched = !groupDone && ctx.clinched[row.team];
             const cls = ctx.myTeam && ctx.myTeam.name === row.team ? 'is-my-team'
               : isQualified ? (groupDone ? 'qualified' : 'qualified projected')
               : ctx.eliminatedGroupStage[row.team] ? 'eliminated' : '';
             return (
               <tr key={row.team} className={cls}>
-                <td title={row.team}><TeamFlag name={row.team} /> {teamLabel(row.team)}</td>
+                <td title={row.team}>
+                  <TeamFlag name={row.team} /> {teamLabel(row.team)}
+                  {isClinched && <span className="clinched-tag" title="Mathematically guaranteed to advance, regardless of remaining results">✓ through</span>}
+                </td>
                 <td>{row.played}</td><td>{row.won}</td><td>{row.drawn}</td><td>{row.lost}</td>
                 <td>{row.gf}</td><td>{row.ga}</td><td>{row.gd}</td><td className="pts">{row.points}</td>
               </tr>
@@ -483,7 +487,8 @@ function App() {
     myTeam,
     qualified: resolved.qualified,
     projectedQualified: resolved.projectedQualified,
-    eliminatedGroupStage: resolved.eliminatedGroupStage
+    eliminatedGroupStage: resolved.eliminatedGroupStage,
+    clinched: resolved.clinched
   };
 
   return (

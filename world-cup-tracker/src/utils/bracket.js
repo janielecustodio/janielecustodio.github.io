@@ -119,6 +119,17 @@
       });
     });
 
+    // clinched: mathematically guaranteed a top-2 spot already, even with
+    // games still to play (see standings.js#clinchedTop2). Only meaningful
+    // while the group is still in progress — once it's done, "qualified"
+    // already says the same thing.
+    var clinched = {};
+    Object.keys(groups).forEach(function (g) {
+      if (groupDone[g]) return;
+      var rows = WC.clinchedTop2(tables[g]);
+      Object.keys(rows).forEach(function (team) { if (rows[team]) clinched[team] = true; });
+    });
+
     return {
       matches: resolved,
       tables: tables,
@@ -127,7 +138,8 @@
       thirdPool: thirdPool,
       qualified: qualified,
       projectedQualified: projectedQualified,
-      eliminatedGroupStage: eliminatedGroupStage
+      eliminatedGroupStage: eliminatedGroupStage,
+      clinched: clinched
     };
   }
 
