@@ -146,7 +146,7 @@ function MatchRow({ match, ctx, editable, onSave, tz, compact }) {
           <span>{teamLabel(match.team2Resolved, compact)}</span>{!compact && match.team2Projected && <span className="proj-tag">proj.</span>}
         </div>
       </div>
-      {!compact && <VenueLine match={match} tz={tz} />}
+      <VenueLine match={match} tz={tz} />
       {!compact && <GoalsLine match={match} show={showGoals} onToggle={() => setShowGoals(s => !s)} />}
     </div>
   );
