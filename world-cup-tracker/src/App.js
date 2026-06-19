@@ -42,7 +42,7 @@ function TeamSelector({ myTeam, onSelect, onClear }) {
   );
 }
 
-function VenueLine({ match, tz }) {
+function VenueLine({ match, tz, goalsToggle }) {
   const v = window.WC.venueFor(match.ground);
   const local = window.WC.formatInTimezone(match.date, match.time, tz);
   return (
@@ -52,6 +52,8 @@ function VenueLine({ match, tz }) {
       </div>
       <div className="venue-line-row">
         <span>{v.stadium}, {v.city}</span>
+        {goalsToggle && <span className="venue-line-spacer" />}
+        {goalsToggle}
       </div>
     </div>
   );
@@ -61,21 +63,25 @@ function formatScorers(goals) {
   return goals.map(function (g) { return `${g.name} ${g.minute}'${g.penalty ? ' (pen)' : ''}`; }).join(', ');
 }
 
-function GoalsLine({ match, show, onToggle }) {
+function GoalsToggle({ match, show, onToggle }) {
   const goals1 = match.goals1 || [];
   const goals2 = match.goals2 || [];
   if (!goals1.length && !goals2.length) return null;
   return (
-    <div className="goals-section">
-      <button className="goals-toggle-btn" onClick={onToggle}>
-        ⚽ {show ? 'Hide scorers' : 'Show scorers'}
-      </button>
-      {show && (
-        <div className="goals-line">
-          {goals1.length > 0 && <div className="goals-line-team"><TeamFlag name={match.team1Resolved} /> {formatScorers(goals1)}</div>}
-          {goals2.length > 0 && <div className="goals-line-team"><TeamFlag name={match.team2Resolved} /> {formatScorers(goals2)}</div>}
-        </div>
-      )}
+    <button className="goals-toggle-btn" onClick={onToggle}>
+      ⚽ {show ? 'Hide scorers' : 'Show scorers'}
+    </button>
+  );
+}
+
+function GoalsLine({ match, show }) {
+  const goals1 = match.goals1 || [];
+  const goals2 = match.goals2 || [];
+  if (!show || (!goals1.length && !goals2.length)) return null;
+  return (
+    <div className="goals-line">
+      {goals1.length > 0 && <div className="goals-line-team"><TeamFlag name={match.team1Resolved} /> {formatScorers(goals1)}</div>}
+      {goals2.length > 0 && <div className="goals-line-team"><TeamFlag name={match.team2Resolved} /> {formatScorers(goals2)}</div>}
     </div>
   );
 }
@@ -145,8 +151,12 @@ function MatchRow({ match, ctx, editable, onSave, tz, compact }) {
           <span>{teamLabel(match.team2Resolved)}</span>{!compact && match.team2Projected && <span className="proj-tag">proj.</span>}
         </div>
       </div>
-      <VenueLine match={match} tz={tz} />
-      {!compact && <GoalsLine match={match} show={showGoals} onToggle={() => setShowGoals(s => !s)} />}
+      <VenueLine
+        match={match}
+        tz={tz}
+        goalsToggle={!compact ? <GoalsToggle match={match} show={showGoals} onToggle={() => setShowGoals(s => !s)} /> : null}
+      />
+      {!compact && <GoalsLine match={match} show={showGoals} />}
     </div>
   );
 }
