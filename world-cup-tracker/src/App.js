@@ -72,8 +72,8 @@ function GoalsLine({ match, show, onToggle }) {
       </button>
       {show && (
         <div className="goals-line">
-          {goals1.length > 0 && <div className="goals-line-team"><span className="goals-team-name">{match.team1Resolved}</span> ⚽ {formatScorers(goals1)}</div>}
-          {goals2.length > 0 && <div className="goals-line-team right"><span className="goals-team-name">{match.team2Resolved}</span> ⚽ {formatScorers(goals2)}</div>}
+          {goals1.length > 0 && <div className="goals-line-team"><TeamFlag name={match.team1Resolved} /> {formatScorers(goals1)}</div>}
+          {goals2.length > 0 && <div className="goals-line-team"><TeamFlag name={match.team2Resolved} /> {formatScorers(goals2)}</div>}
         </div>
       )}
     </div>
