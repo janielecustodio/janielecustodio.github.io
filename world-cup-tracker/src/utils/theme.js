@@ -7,6 +7,7 @@
     root.style.setProperty('--color-primary', palette[0] || '#0b3d2e');
     root.style.setProperty('--color-secondary', palette[1] || '#13734f');
     root.style.setProperty('--color-accent', palette[2] || '#ffd166');
+    root.style.setProperty('--color-page-bg', 'color-mix(in srgb, ' + (palette[0] || '#0b3d2e') + ' 8%, var(--color-bg))');
   }
 
   function clearPalette() {
@@ -14,6 +15,7 @@
     root.style.removeProperty('--color-primary');
     root.style.removeProperty('--color-secondary');
     root.style.removeProperty('--color-accent');
+    root.style.removeProperty('--color-page-bg');
   }
 
   function saveMyTeam(team) {
