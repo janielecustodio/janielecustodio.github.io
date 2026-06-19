@@ -1,4 +1,4 @@
 // Bumped on every deploy so the UI can show when the app was last updated,
 // and so it's easy to confirm a deploy actually reached the browser.
 window.WC = window.WC || {};
-window.WC.BUILD_TIME = '2026-06-19T19:53:22Z';
+window.WC.BUILD_TIME = '2026-06-19T20:01:08Z';
