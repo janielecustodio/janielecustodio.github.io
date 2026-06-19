@@ -167,7 +167,7 @@ function GroupTable({ letter, table, ctx, thirdQualifies, groupDone }) {
     <div className="group-table">
       <div className="group-table-title">
         Group {letter}
-        {!groupDone && <span className="group-status">projected</span>}
+        {!groupDone && <span className="group-status">current</span>}
       </div>
       <table>
         <thead>
