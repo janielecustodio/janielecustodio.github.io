@@ -47,12 +47,13 @@ function VenueLine({ match, tz }) {
   const local = window.WC.formatInTimezone(match.date, match.time, tz);
   return (
     <div className="venue-line">
-      <span className="venue-date">{local ? `${local.date} · ${local.time}` : `${match.date} · ${match.time}`}</span>
-      <span className="venue-dot">·</span>
-      <span>{v.stadium}, {v.city}</span>
-      <span className="venue-dot">·</span>
-      <span className="venue-country">{v.country}</span>
-      {match.group && <React.Fragment><span className="venue-dot">·</span><span className="venue-group">Group {match.group}</span></React.Fragment>}
+      <div className="venue-line-row">
+        <span className="venue-date">{local ? `${local.date} · ${local.time}` : `${match.date} · ${match.time}`}</span>
+      </div>
+      <div className="venue-line-row">
+        <span>{v.stadium}, {v.city}</span>
+        {match.group && <React.Fragment><span className="venue-dot">·</span><span className="venue-group">Group {match.group}</span></React.Fragment>}
+      </div>
     </div>
   );
 }
