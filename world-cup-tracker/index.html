@@ -213,8 +213,11 @@ body{
 
 /* bracket */
 .bracket-scroll-hint{display:none;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--color-muted);margin-bottom:8px}
-.bracket{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;overflow:visible}
-.bracket-col{min-width:0}
+.bracket{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;overflow:visible;position:relative}
+.bracket-col{min-width:0;position:relative;z-index:1}
+.bracket-lines{position:absolute;top:0;left:0;pointer-events:none;z-index:0}
+.bracket-line{fill:none;stroke:var(--color-accent);stroke-width:1.5;opacity:.55}
+.bracket-arrow-head{fill:var(--color-accent);opacity:.55}
 .bracket-col-title{font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-accent);margin-bottom:10px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bracket-card .match-row{margin-bottom:8px;padding:6px 8px;width:100%}
 .bracket-card .match-row-main{grid-template-columns:1fr auto 1fr;gap:4px}

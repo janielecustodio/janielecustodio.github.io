@@ -469,6 +469,11 @@ function TodayView({ resolved, ctx, editable, onSave, filter, tz, liveScores }) 
 
 const ROUND_ORDER = ['Round of 32', 'Round of 16', 'Quarter-final', 'Semi-final', 'Final', 'Match for third place'];
 
+// Matches a "W<id>" / "L<id>" reference and returns the source match id —
+// used to draw connector lines to the *specific* earlier match a slot comes
+// from, since these ids are not adjacent/sequential across rounds.
+const BRACKET_REF_RE = /^([WL])(\d+)$/;
+
 function BracketView({ resolved, ctx, editable, onSave, filter, tz, liveScores }) {
   const byRound = {};
   ROUND_ORDER.forEach(r => byRound[r] = []);
@@ -479,15 +484,63 @@ function BracketView({ resolved, ctx, editable, onSave, filter, tz, liveScores }
     byRound[m.round].push(m);
   });
 
+  const containerRef = React.useRef(null);
+  const cardRefs = React.useRef({});
+  const [lines, setLines] = React.useState([]);
+  const [size, setSize] = React.useState({ w: 0, h: 0 });
+
+  React.useLayoutEffect(() => {
+    function recompute() {
+      const container = containerRef.current;
+      if (!container) return;
+      const cRect = container.getBoundingClientRect();
+      const newLines = [];
+      resolved.matches.forEach(m => {
+        if (!byRound[m.round]) return;
+        [m.team1Ref, m.team2Ref].forEach(ref => {
+          const wl = BRACKET_REF_RE.exec(ref || '');
+          if (!wl) return;
+          const srcEl = cardRefs.current[Number(wl[2])];
+          const dstEl = cardRefs.current[m.id];
+          if (!srcEl || !dstEl) return;
+          const sRect = srcEl.getBoundingClientRect();
+          const dRect = dstEl.getBoundingClientRect();
+          const x1 = sRect.right - cRect.left + container.scrollLeft;
+          const y1 = sRect.top + sRect.height / 2 - cRect.top + container.scrollTop;
+          const x2 = dRect.left - cRect.left + container.scrollLeft;
+          const y2 = dRect.top + dRect.height / 2 - cRect.top + container.scrollTop;
+          newLines.push({ key: m.id + '-' + wl[2], x1, y1, x2, y2 });
+        });
+      });
+      setLines(newLines);
+      setSize({ w: container.scrollWidth, h: container.scrollHeight });
+    }
+    recompute();
+    window.addEventListener('resize', recompute);
+    return () => window.removeEventListener('resize', recompute);
+  }, [resolved.matches, filter, tz, liveScores]);
+
   return (
     <div>
       <div className="bracket-scroll-hint">← scroll horizontally to see all rounds through the Final →</div>
-      <div className="bracket">
+      <div className="bracket" ref={containerRef}>
+        <svg className="bracket-lines" width={size.w} height={size.h}>
+          <defs>
+            <marker id="bracket-arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+              <path d="M0,0 L8,4 L0,8 Z" className="bracket-arrow-head" />
+            </marker>
+          </defs>
+          {lines.map(l => {
+            const midX = (l.x1 + l.x2) / 2;
+            const path = 'M' + l.x1 + ',' + l.y1 + ' C' + midX + ',' + l.y1 + ' ' + midX + ',' + l.y2 + ' ' + l.x2 + ',' + l.y2;
+            return <path key={l.key} d={path} className="bracket-line" markerEnd="url(#bracket-arrow)" />;
+          })}
+        </svg>
       {ROUND_ORDER.map(round => (
         <div key={round} className="bracket-col">
           <div className="bracket-col-title">{round}</div>
           {byRound[round].map(m => (
-            <div key={m.id} className="bracket-card">
+            <div key={m.id} className="bracket-card" ref={el => { if (el) cardRefs.current[m.id] = el; else delete cardRefs.current[m.id]; }}>
               <MatchRow match={m} ctx={ctx} editable={editable} onSave={onSave} tz={tz} liveData={liveScores[m.id]} compact />
             </div>
           ))}
