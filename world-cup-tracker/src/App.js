@@ -218,7 +218,8 @@ function GroupTable({ letter, table, ctx, thirdQualifies, groupDone }) {
   );
 }
 
-function StandingsModal({ info, resolved, ctx, onClose }) {
+function StandingsModal({ info, resolved, ctx, tz, liveScores, onClose }) {
+  const [showPast, setShowPast] = React.useState(false);
   if (!info) return null;
   const { team, group } = info;
   const table = resolved.tables[group];
@@ -231,6 +232,12 @@ function StandingsModal({ info, resolved, ctx, onClose }) {
   else if (clinched) status = '✅ Mathematically guaranteed to advance, regardless of remaining results';
   else if (qualified) status = '📈 Currently projects to advance based on current group standings — not yet guaranteed';
   else status = 'Currently outside the qualification places';
+
+  const teamMatches = resolved.matches
+    .filter(m => matchInvolvesTeam(m, team))
+    .sort((a, b) => window.WC.toUtcMillis(a.date, a.time) - window.WC.toUtcMillis(b.date, b.time));
+  const upcoming = teamMatches.filter(m => !m.score && !window.WC.hasKickedOff(m.date, m.time));
+  const past = teamMatches.filter(m => m.score || window.WC.hasKickedOff(m.date, m.time));
 
   return (
     <div className="standings-modal-backdrop" onClick={onClose}>
@@ -263,6 +270,26 @@ function StandingsModal({ info, resolved, ctx, onClose }) {
           </tbody>
         </table>
         <div className="standings-modal-status">{status}</div>
+
+        <div className="standings-modal-matches">
+          <div className="standings-modal-matches-heading">
+            Upcoming matches
+            {past.length > 0 && (
+              <button className="standings-modal-past-toggle" onClick={() => setShowPast(s => !s)}>
+                {showPast ? 'Hide past matches' : 'Show past matches'}
+              </button>
+            )}
+          </div>
+          {upcoming.length === 0
+            ? <div className="empty-state">No upcoming matches scheduled.</div>
+            : upcoming.map(m => <MatchRow key={m.id} match={m} ctx={ctx} editable={false} onSave={() => {}} tz={tz} liveData={liveScores[m.id]} compact />)}
+          {showPast && past.length > 0 && (
+            <React.Fragment>
+              <div className="standings-modal-matches-heading">Past matches</div>
+              {past.map(m => <MatchRow key={m.id} match={m} ctx={ctx} editable={false} onSave={() => {}} tz={tz} liveData={liveScores[m.id]} compact />)}
+            </React.Fragment>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -788,7 +815,7 @@ function App() {
       {view === 'today' && <TodayView resolved={resolved} ctx={ctx} editable={mode === 'simulation'} onSave={saveScore} filter={filter} tz={tz} liveScores={liveScores} />}
       {view === 'groups' && <GroupStageView resolved={resolved} ctx={ctx} editable={mode === 'simulation'} onSave={saveScore} filter={filter} tz={tz} liveScores={liveScores} />}
       {view === 'bracket' && <BracketView resolved={resolved} ctx={ctx} editable={mode === 'simulation'} onSave={saveScore} filter={filter} tz={tz} liveScores={liveScores} />}
-      <StandingsModal info={standingsInfo} resolved={resolved} ctx={ctx} onClose={() => setStandingsInfo(null)} />
+      <StandingsModal info={standingsInfo} resolved={resolved} ctx={ctx} tz={tz} liveScores={liveScores} onClose={() => setStandingsInfo(null)} />
     </div>
   );
 }
