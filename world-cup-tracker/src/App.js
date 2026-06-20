@@ -552,7 +552,51 @@ function BracketView({ resolved, ctx, editable, onSave, filter, tz, liveScores }
   const cardRefs = React.useRef({});
   const [lines, setLines] = React.useState([]);
   const [size, setSize] = React.useState({ w: 0, h: 0 });
+  const [positions, setPositions] = React.useState({});
 
+  // Pass 1: vertically center every non-leaf match between the midpoint of
+  // its two feeder matches (recursively, leaf round up to the Final) —
+  // without this, cards just stack in flow order and end up at the wrong
+  // height relative to the matches they actually connect to, even once the
+  // column order itself is correct. Skipped while a filter is active, where
+  // a simpler static stack is good enough and the math (which assumes both
+  // feeders are present) doesn't hold up.
+  React.useLayoutEffect(() => {
+    const container = containerRef.current;
+    if (!container || filter) { setPositions({}); return; }
+    const cRect = container.getBoundingClientRect();
+    const centerY = {};
+    byRound['Round of 32'].forEach(m => {
+      const el = cardRefs.current[m.id];
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      centerY[m.id] = r.top + r.height / 2 - cRect.top + container.scrollTop;
+    });
+    const newPositions = {};
+    ['Round of 16', 'Quarter-final', 'Semi-final', 'Final'].forEach(round => {
+      byRound[round].forEach(m => {
+        const el = cardRefs.current[m.id];
+        if (!el) return;
+        const rect = el.getBoundingClientRect();
+        const colRect = el.parentElement.getBoundingClientRect();
+        const srcYs = [];
+        [m.team1Ref, m.team2Ref].forEach(ref => {
+          const wl = BRACKET_REF_RE.exec(ref || '');
+          if (wl && centerY[Number(wl[2])] !== undefined) srcYs.push(centerY[Number(wl[2])]);
+        });
+        const y = srcYs.length ? (Math.min(...srcYs) + Math.max(...srcYs)) / 2
+          : rect.top + rect.height / 2 - cRect.top + container.scrollTop;
+        centerY[m.id] = y;
+        newPositions[m.id] = y - (colRect.top - cRect.top + container.scrollTop) - rect.height / 2;
+      });
+    });
+    setPositions(newPositions);
+  }, [resolved.matches, filter, tz, liveScores]);
+
+  // Pass 2: once the centering above has been applied to the DOM, measure
+  // real card positions to draw the connector lines — must run after pass 1
+  // so the lines match where the cards actually ended up, not their
+  // pre-centering flow position.
   React.useLayoutEffect(() => {
     function recompute() {
       const container = containerRef.current;
@@ -600,7 +644,7 @@ function BracketView({ resolved, ctx, editable, onSave, filter, tz, liveScores }
     recompute();
     window.addEventListener('resize', recompute);
     return () => window.removeEventListener('resize', recompute);
-  }, [resolved.matches, filter, tz, liveScores]);
+  }, [resolved.matches, filter, tz, liveScores, positions]);
 
   return (
     <div>
@@ -610,10 +654,15 @@ function BracketView({ resolved, ctx, editable, onSave, filter, tz, liveScores }
           {lines.map(l => <path key={l.key} d={l.path} className="bracket-line" />)}
         </svg>
       {ROUND_ORDER.map(round => (
-        <div key={round} className="bracket-col">
+        <div key={round} className="bracket-col" style={round !== 'Round of 32' && round !== 'Match for third place' ? { minHeight: size.h } : null}>
           <div className="bracket-col-title">{round}</div>
           {byRound[round].map(m => (
-            <div key={m.id} className="bracket-card" ref={el => { if (el) cardRefs.current[m.id] = el; else delete cardRefs.current[m.id]; }}>
+            <div
+              key={m.id}
+              className="bracket-card"
+              ref={el => { if (el) cardRefs.current[m.id] = el; else delete cardRefs.current[m.id]; }}
+              style={positions[m.id] !== undefined ? { position: 'absolute', top: positions[m.id], left: 0, right: 0 } : null}
+            >
               <MatchRow match={m} ctx={ctx} editable={editable} onSave={onSave} tz={tz} liveData={liveScores[m.id]} compact />
             </div>
           ))}
