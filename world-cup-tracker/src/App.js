@@ -64,8 +64,15 @@ function formatScorers(goals) {
   return goals.map(function (g) { return `${g.name} ${g.minute}'${g.penalty ? ' (pen)' : ''}`; }).join(', ');
 }
 
-function GoalsToggle({ goals1, goals2, show, onToggle }) {
+function GoalsToggle({ goals1, goals2, show, onToggle, compact }) {
   if (!goals1.length && !goals2.length) return null;
+  if (compact) {
+    return (
+      <button className={`goals-toggle-btn compact ${show ? 'is-open' : ''}`} onClick={onToggle} title={show ? 'Hide scorers' : 'Show scorers'}>
+        ⚽
+      </button>
+    );
+  }
   return (
     <button className="goals-toggle-btn" onClick={onToggle}>
       ⚽ {show ? 'Hide scorers' : 'Show scorers'}
@@ -174,9 +181,9 @@ function MatchRow({ match, ctx, editable, onSave, tz, compact, liveData }) {
       <VenueLine
         match={match}
         tz={tz}
-        goalsToggle={!compact ? <GoalsToggle goals1={goals1} goals2={goals2} show={showGoals} onToggle={() => setShowGoals(s => !s)} /> : null}
+        goalsToggle={<GoalsToggle goals1={goals1} goals2={goals2} show={showGoals} onToggle={() => setShowGoals(s => !s)} compact={compact} />}
       />
-      {!compact && <GoalsLine match={match} goals1={goals1} goals2={goals2} show={showGoals} />}
+      <GoalsLine match={match} goals1={goals1} goals2={goals2} show={showGoals} />
     </div>
   );
 }
