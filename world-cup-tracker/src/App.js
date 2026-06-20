@@ -324,18 +324,41 @@ function GroupStageView({ resolved, ctx, editable, onSave, filter, tz, liveScore
   );
 }
 
+// Groups every match by its local (tz) calendar date, and summarizes what's
+// on each day — which groups are playing their group-stage matchday, or
+// which knockout round is underway — for the date-picker dropdown.
+function buildDayIndex(matches, tz) {
+  const byDate = {};
+  matches.forEach(m => {
+    const local = window.WC.formatInTimezone(m.date, m.time, tz);
+    const dateInTz = local ? local.date : m.date;
+    if (!byDate[dateInTz]) byDate[dateInTz] = { groups: new Set(), rounds: new Set() };
+    if (m.group) byDate[dateInTz].groups.add(m.group);
+    else byDate[dateInTz].rounds.add(m.round);
+  });
+  return Object.keys(byDate).sort().map(date => {
+    const { groups, rounds } = byDate[date];
+    const label = groups.size
+      ? `Group ${Array.from(groups).sort().join('/')}`
+      : Array.from(rounds).join(', ');
+    return { date, label };
+  });
+}
+
 function TodayView({ resolved, ctx, editable, onSave, filter, tz, liveScores }) {
   const today = window.WC.todayInTimezone(tz);
-  const [dayOffset, setDayOffset] = React.useState(0);
+  const [selectedDate, setSelectedDate] = React.useState(today);
+  const [pickerOpen, setPickerOpen] = React.useState(false);
   const touchRef = React.useRef(null);
-  const shownDate = window.WC.addDays(today, dayOffset);
-  const isToday = dayOffset === 0;
+  const isToday = selectedDate === today;
+  const dayIndex = React.useMemo(() => buildDayIndex(resolved.matches, tz), [resolved.matches, tz]);
+  const todayInfo = dayIndex.find(d => d.date === selectedDate);
 
   const matches = resolved.matches
     .filter(m => {
       const local = window.WC.formatInTimezone(m.date, m.time, tz);
       const dateInTz = local ? local.date : m.date;
-      if (dateInTz !== shownDate) return false;
+      if (dateInTz !== selectedDate) return false;
       if (filter && filter.type === 'team' && !matchInvolvesTeam(m, filter.value)) return false;
       if (filter && filter.type === 'group' && m.group !== filter.value) return false;
       return true;
@@ -347,18 +370,37 @@ function TodayView({ resolved, ctx, editable, onSave, filter, tz, liveScores }) 
     if (touchRef.current === null) return;
     const dx = e.changedTouches[0].clientX - touchRef.current;
     touchRef.current = null;
-    if (dx > 50) setDayOffset(o => o - 1); // swipe right -> previous day
-    else if (dx < -50) setDayOffset(o => o + 1); // swipe left -> next day
+    if (dx > 50) setSelectedDate(d => window.WC.addDays(d, -1)); // swipe right -> previous day
+    else if (dx < -50) setSelectedDate(d => window.WC.addDays(d, 1)); // swipe left -> next day
   }
 
   return (
     <div className="today-view" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
       <div className="section-heading day-nav">
-        <button className="day-nav-btn" onClick={() => setDayOffset(o => o - 1)} aria-label="Previous day">‹</button>
-        <span>{isToday ? 'Today\'s Matches' : 'Matches'} ({shownDate})</span>
-        <button className="day-nav-btn" onClick={() => setDayOffset(o => o + 1)} aria-label="Next day">›</button>
-        {!isToday && <button className="day-nav-today" onClick={() => setDayOffset(0)}>Today</button>}
+        <button className="day-nav-btn" onClick={() => setSelectedDate(d => window.WC.addDays(d, -1))} aria-label="Previous day">‹</button>
+        <button className="day-nav-title" onClick={() => setPickerOpen(o => !o)}>
+          {isToday ? 'Today\'s Matches' : 'Matches'} ({selectedDate}) <span className="chev">▾</span>
+        </button>
+        <button className="day-nav-btn" onClick={() => setSelectedDate(d => window.WC.addDays(d, 1))} aria-label="Next day">›</button>
+        {!isToday && <button className="day-nav-today" onClick={() => setSelectedDate(today)}>Today</button>}
       </div>
+      {todayInfo && todayInfo.label && <div className="day-phase-note">{todayInfo.label}</div>}
+      {pickerOpen && (
+        <div className="day-picker-backdrop" onClick={() => setPickerOpen(false)}>
+          <div className="day-picker" onClick={e => e.stopPropagation()}>
+            {dayIndex.map(d => (
+              <div
+                key={d.date}
+                className={'day-picker-option' + (d.date === selectedDate ? ' active' : '')}
+                onClick={() => { setSelectedDate(d.date); setPickerOpen(false); }}
+              >
+                <span className="day-picker-date">{d.date}{d.date === today ? ' (today)' : ''}</span>
+                <span className="day-picker-label">{d.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       {matches.length === 0
         ? <div className="empty-state">No matches scheduled for this day{filter ? ' matching this filter' : ''}.</div>
         : matches.map(m => <MatchRow key={m.id} match={m} ctx={ctx} editable={editable} onSave={onSave} tz={tz} liveData={liveScores[m.id]} />)
