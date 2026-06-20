@@ -560,6 +560,28 @@ function BracketView({ resolved, ctx, editable, onSave, filter, tz, liveScores }
   const [lines, setLines] = React.useState([]);
   const [size, setSize] = React.useState({ w: 0, h: 0 });
   const [positions, setPositions] = React.useState({});
+  const [selectedId, setSelectedId] = React.useState(null);
+
+  // Maps a match id to the id of the later match its *winner* feeds into,
+  // so clicking a card can highlight every connector on that team's
+  // possible path all the way to the Final. "Match for third place" is
+  // excluded since it isn't part of the advancement path.
+  const winnerNext = {};
+  resolved.matches.forEach(m => {
+    if (m.round === 'Match for third place') return;
+    [m.team1Ref, m.team2Ref].forEach(ref => {
+      const wl = BRACKET_REF_RE.exec(ref || '');
+      if (wl && wl[1] === 'W') winnerNext[Number(wl[2])] = m.id;
+    });
+  });
+  const highlightedKeys = new Set();
+  if (selectedId !== null) {
+    let cur = selectedId;
+    while (winnerNext[cur] !== undefined) {
+      highlightedKeys.add(winnerNext[cur]);
+      cur = winnerNext[cur];
+    }
+  }
 
   // Pass 1: vertically center every non-leaf match between the midpoint of
   // its two feeder matches (recursively, leaf round up to the Final) —
@@ -657,7 +679,7 @@ function BracketView({ resolved, ctx, editable, onSave, filter, tz, liveScores }
       <div className="bracket-scroll-hint">← scroll horizontally to see all rounds through the Final →</div>
       <div className="bracket" ref={containerRef}>
         <svg className="bracket-lines" width={size.w} height={size.h}>
-          {lines.map(l => <path key={l.key} d={l.path} className="bracket-line" />)}
+          {lines.map(l => <path key={l.key} d={l.path} className={`bracket-line ${highlightedKeys.has(l.key) ? 'is-highlighted' : ''}`} />)}
         </svg>
       {ROUND_ORDER.map(round => (
         <div key={round} className="bracket-col" style={round !== 'Round of 32' && round !== 'Match for third place' ? { minHeight: size.h } : null}>
@@ -665,9 +687,10 @@ function BracketView({ resolved, ctx, editable, onSave, filter, tz, liveScores }
           {byRound[round].map(m => (
             <div
               key={m.id}
-              className="bracket-card"
+              className={`bracket-card ${selectedId === m.id ? 'is-selected' : ''}`}
               ref={el => { if (el) cardRefs.current[m.id] = el; else delete cardRefs.current[m.id]; }}
               style={positions[m.id] !== undefined ? { position: 'absolute', top: positions[m.id], left: 0, right: 0 } : null}
+              onClick={() => setSelectedId(prev => prev === m.id ? null : m.id)}
             >
               <MatchRow match={m} ctx={ctx} editable={editable} onSave={onSave} tz={tz} liveData={liveScores[m.id]} compact />
               {round === 'Match for third place' && <div className="bracket-card-note">Fed by the losers of both Semi-finals</div>}
