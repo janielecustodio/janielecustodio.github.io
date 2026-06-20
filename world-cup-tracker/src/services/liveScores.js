@@ -54,11 +54,18 @@
 
   // Extracts goal-scorer events from ESPN's play-by-play `details` array
   // (when present) into our { name, minute, penalty } shape, split by side.
+  // Excludes goals that were disallowed/overturned (VAR etc.) — ESPN still
+  // labels those events with "Goal" in the text, but they don't count
+  // toward the actual score, so including them would make the scorer list
+  // disagree with the scoreline.
+  var DISALLOWED_RE = /disallow|cancel|overturn|no goal|var review/i;
   function extractGoals(comp, scoringTeamId, conceedingTeamId) {
     var goalsFor = [], goalsAgainst = [];
     (comp.details || []).forEach(function (d) {
       var text = d.type && d.type.text || '';
       if (text.indexOf('Goal') === -1) return; // "Goal", "Penalty - Scored", "Own Goal"
+      if (d.scoringPlay === false) return;
+      if (DISALLOWED_RE.test(text)) return;
       var scorer = d.athletesInvolved && d.athletesInvolved[0];
       var entry = {
         name: scorer ? (scorer.shortName || scorer.displayName) : '?',
@@ -92,7 +99,11 @@
       var team1Id = direct ? c0.team && c0.team.id : c1.team && c1.team.id;
       var team2Id = direct ? c1.team && c1.team.id : c0.team && c0.team.id;
       var goals = extractGoals(comp, team1Id, team2Id);
-      return { score: [score1, score2], minute: status.displayClock || null, state: state, goals1: goals[0], goals2: goals[1] };
+      // Safety net: never show more scorers than the scoreline has goals,
+      // in case ESPN's event text doesn't catch every disallowed/VAR case.
+      var goals1 = goals[0].slice(0, score1);
+      var goals2 = goals[1].slice(0, score2);
+      return { score: [score1, score2], minute: status.displayClock || null, state: state, goals1: goals1, goals2: goals2 };
     }
     return null;
   }
