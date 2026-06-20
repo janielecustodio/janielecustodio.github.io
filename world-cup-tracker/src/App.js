@@ -129,14 +129,16 @@ function MatchRow({ match, ctx, editable, onSave, tz, compact, liveData }) {
   return (
     <div className={`match-row ${canEdit ? 'editable' : ''} ${live ? 'is-live' : ''}`}>
       {match.group && <span className="match-group-badge">Group {match.group}</span>}
+      {!match.group && !match.team1Projected && !match.team2Projected && match.team1Resolved && match.team2Resolved &&
+        <span className="match-locked-badge" title="Both teams are confirmed for this matchup — this game will happen as shown">✓</span>}
       <div className="match-row-main">
         <div
           className={`match-team ${teamClass(match.team1Resolved, ctx, match.team1Projected)} ${match.team1Resolved ? 'clickable-team' : ''}`}
           title={match.team1Resolved || ''}
           onClick={() => ctx.onTeamClick && ctx.onTeamClick(match.team1Resolved)}
         >
-          <span>{teamLabel(match.team1Resolved)}</span>{!compact && match.team1Projected && <span className="proj-tag">proj.</span>}
           {ctx.clinched && ctx.clinched[match.team1Resolved] && <span className="clinched-tag" title="Mathematically guaranteed to advance, regardless of remaining results">✓</span>}
+          <span>{teamLabel(match.team1Resolved)}</span>{!compact && match.team1Projected && <span className="proj-tag">proj.</span>}
           <TeamFlag name={match.team1Resolved} />
         </div>
         <div className="match-score" onClick={() => canEdit && setEditing(true)}>
@@ -165,8 +167,8 @@ function MatchRow({ match, ctx, editable, onSave, tz, compact, liveData }) {
           onClick={() => ctx.onTeamClick && ctx.onTeamClick(match.team2Resolved)}
         >
           <TeamFlag name={match.team2Resolved} />
-          {ctx.clinched && ctx.clinched[match.team2Resolved] && <span className="clinched-tag" title="Mathematically guaranteed to advance, regardless of remaining results">✓</span>}
           <span>{teamLabel(match.team2Resolved)}</span>{!compact && match.team2Projected && <span className="proj-tag">proj.</span>}
+          {ctx.clinched && ctx.clinched[match.team2Resolved] && <span className="clinched-tag" title="Mathematically guaranteed to advance, regardless of remaining results">✓</span>}
         </div>
       </div>
       <VenueLine
