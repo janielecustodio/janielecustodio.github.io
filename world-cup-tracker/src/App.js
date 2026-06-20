@@ -130,7 +130,11 @@ function MatchRow({ match, ctx, editable, onSave, tz, compact, liveData }) {
     <div className={`match-row ${canEdit ? 'editable' : ''} ${live ? 'is-live' : ''}`}>
       {match.group && <span className="match-group-badge">Group {match.group}</span>}
       <div className="match-row-main">
-        <div className={`match-team ${teamClass(match.team1Resolved, ctx, match.team1Projected)}`} title={match.team1Resolved || ''}>
+        <div
+          className={`match-team ${teamClass(match.team1Resolved, ctx, match.team1Projected)} ${match.team1Resolved ? 'clickable-team' : ''}`}
+          title={match.team1Resolved || ''}
+          onClick={() => ctx.onTeamClick && ctx.onTeamClick(match.team1Resolved)}
+        >
           <span>{teamLabel(match.team1Resolved)}</span>{!compact && match.team1Projected && <span className="proj-tag">proj.</span>}
           <TeamFlag name={match.team1Resolved} />
         </div>
@@ -154,7 +158,11 @@ function MatchRow({ match, ctx, editable, onSave, tz, compact, liveData }) {
             </React.Fragment>
           )}
         </div>
-        <div className={`match-team right ${teamClass(match.team2Resolved, ctx, match.team2Projected)}`} title={match.team2Resolved || ''}>
+        <div
+          className={`match-team right ${teamClass(match.team2Resolved, ctx, match.team2Projected)} ${match.team2Resolved ? 'clickable-team' : ''}`}
+          title={match.team2Resolved || ''}
+          onClick={() => ctx.onTeamClick && ctx.onTeamClick(match.team2Resolved)}
+        >
           <TeamFlag name={match.team2Resolved} />
           <span>{teamLabel(match.team2Resolved)}</span>{!compact && match.team2Projected && <span className="proj-tag">proj.</span>}
         </div>
@@ -191,7 +199,7 @@ function GroupTable({ letter, table, ctx, thirdQualifies, groupDone }) {
               : ctx.eliminatedGroupStage[row.team] ? 'eliminated' : '';
             return (
               <tr key={row.team} className={cls}>
-                <td title={row.team}>
+                <td title={row.team} className="clickable-team" onClick={() => ctx.onTeamClick && ctx.onTeamClick(row.team)}>
                   <TeamFlag name={row.team} /> {teamLabel(row.team)}
                   {isClinched && <span className="clinched-tag" title="Mathematically guaranteed to advance, regardless of remaining results">✓</span>}
                 </td>
@@ -202,6 +210,56 @@ function GroupTable({ letter, table, ctx, thirdQualifies, groupDone }) {
           })}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+function StandingsModal({ info, resolved, ctx, onClose }) {
+  if (!info) return null;
+  const { team, group } = info;
+  const table = resolved.tables[group];
+  const groupDone = resolved.groupDone[group];
+  const clinched = !groupDone && ctx.clinched[team];
+  const qualified = ctx.qualified[team];
+
+  let status;
+  if (groupDone) status = qualified ? '✅ Qualified for the next phase' : '❌ Eliminated in the group stage';
+  else if (clinched) status = '✅ Mathematically guaranteed to advance, regardless of remaining results';
+  else if (qualified) status = '📈 Currently projects to advance based on current group standings — not yet guaranteed';
+  else status = 'Currently outside the qualification places';
+
+  return (
+    <div className="standings-modal-backdrop" onClick={onClose}>
+      <div className="standings-modal" onClick={e => e.stopPropagation()}>
+        <button className="standings-modal-close" onClick={onClose} aria-label="Close">✕</button>
+        <div className="group-table-title">
+          Group {group}
+          {!groupDone && <span className="group-status">current</span>}
+        </div>
+        <table>
+          <thead>
+            <tr><th>Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th>Pts</th></tr>
+          </thead>
+          <tbody>
+            {table.map(row => {
+              const isClinched = !groupDone && ctx.clinched[row.team];
+              const cls = (ctx.qualified[row.team] ? (groupDone ? 'qualified' : 'qualified projected') : ctx.eliminatedGroupStage[row.team] ? 'eliminated' : '')
+                + (row.team === team ? ' is-selected-team' : '');
+              return (
+                <tr key={row.team} className={cls}>
+                  <td title={row.team}>
+                    <TeamFlag name={row.team} /> {teamLabel(row.team)}
+                    {isClinched && <span className="clinched-tag" title="Mathematically guaranteed to advance, regardless of remaining results">✓</span>}
+                  </td>
+                  <td>{row.played}</td><td>{row.won}</td><td>{row.drawn}</td><td>{row.lost}</td>
+                  <td>{row.gf}</td><td>{row.ga}</td><td>{row.gd}</td><td className="pts">{row.points}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+        <div className="standings-modal-status">{status}</div>
+      </div>
     </div>
   );
 }
@@ -455,6 +513,7 @@ function App() {
   const [colorMode, setColorMode] = React.useState(() => localStorage.getItem('wc-color-mode') || 'light');
   const [liveScores, setLiveScores] = React.useState({});
   const [includeLive, setIncludeLive] = React.useState(true);
+  const [standingsInfo, setStandingsInfo] = React.useState(null);
   const refreshRef = React.useRef(null);
 
   React.useEffect(() => {
@@ -551,12 +610,19 @@ function App() {
 
   const activeMatches = mode === 'actual' ? actualMatches : simulatedMatches;
   const resolved = window.WC.resolveBracket(activeMatches, window.WC.GROUPS, liveScores, mode === 'actual' ? includeLive : true);
+  function openStandings(team) {
+    if (!team) return;
+    const group = Object.keys(window.WC.GROUPS).find(g => window.WC.GROUPS[g].indexOf(team) !== -1);
+    if (group) setStandingsInfo({ team, group });
+  }
+
   const ctx = {
     myTeam,
     qualified: resolved.qualified,
     projectedQualified: resolved.projectedQualified,
     eliminatedGroupStage: resolved.eliminatedGroupStage,
-    clinched: resolved.clinched
+    clinched: resolved.clinched,
+    onTeamClick: openStandings
   };
 
   return (
@@ -623,6 +689,7 @@ function App() {
       {view === 'today' && <TodayView resolved={resolved} ctx={ctx} editable={mode === 'simulation'} onSave={saveScore} filter={filter} tz={tz} liveScores={liveScores} />}
       {view === 'groups' && <GroupStageView resolved={resolved} ctx={ctx} editable={mode === 'simulation'} onSave={saveScore} filter={filter} tz={tz} liveScores={liveScores} />}
       {view === 'bracket' && <BracketView resolved={resolved} ctx={ctx} editable={mode === 'simulation'} onSave={saveScore} filter={filter} tz={tz} liveScores={liveScores} />}
+      <StandingsModal info={standingsInfo} resolved={resolved} ctx={ctx} onClose={() => setStandingsInfo(null)} />
     </div>
   );
 }
