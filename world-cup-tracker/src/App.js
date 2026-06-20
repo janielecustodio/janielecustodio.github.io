@@ -43,13 +43,25 @@ function TeamSelector({ myTeam, onSelect, onClear }) {
   );
 }
 
-function VenueLine({ match, tz, goalsToggle }) {
+function VenueLine({ match, tz, goalsToggle, compact }) {
   const v = window.WC.venueFor(match.ground);
   const local = window.WC.formatInTimezone(match.date, match.time, tz);
+  const dateTime = local ? `${local.date} · ${local.time}` : `${match.date} · ${match.time}`;
+  if (compact) {
+    return (
+      <div className="venue-line">
+        <div className="venue-line-row">
+          <span className="venue-date">{dateTime} · {v.stadium}</span>
+          {goalsToggle && <span className="venue-line-spacer" />}
+          {goalsToggle}
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="venue-line">
       <div className="venue-line-row">
-        <span className="venue-date">{local ? `${local.date} · ${local.time}` : `${match.date} · ${match.time}`}</span>
+        <span className="venue-date">{dateTime}</span>
       </div>
       <div className="venue-line-row">
         <span>{v.stadium}, {v.city}</span>
@@ -181,6 +193,7 @@ function MatchRow({ match, ctx, editable, onSave, tz, compact, liveData }) {
       <VenueLine
         match={match}
         tz={tz}
+        compact={compact}
         goalsToggle={<GoalsToggle goals1={goals1} goals2={goals2} show={showGoals} onToggle={() => setShowGoals(s => !s)} compact={compact} />}
       />
       <GoalsLine match={match} goals1={goals1} goals2={goals2} show={showGoals} />
