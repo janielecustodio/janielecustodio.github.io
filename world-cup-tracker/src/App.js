@@ -499,20 +499,38 @@ function BracketView({ resolved, ctx, editable, onSave, filter, tz, liveScores }
       const newLines = [];
       resolved.matches.forEach(m => {
         if (!byRound[m.round]) return;
+        const dstEl = cardRefs.current[m.id];
+        if (!dstEl) return;
+        const dRect = dstEl.getBoundingClientRect();
+        const x2 = dRect.left - cRect.left + container.scrollLeft;
+        const y2 = dRect.top + dRect.height / 2 - cRect.top + container.scrollTop;
+
+        const sources = [];
         [m.team1Ref, m.team2Ref].forEach(ref => {
           const wl = BRACKET_REF_RE.exec(ref || '');
           if (!wl) return;
           const srcEl = cardRefs.current[Number(wl[2])];
-          const dstEl = cardRefs.current[m.id];
-          if (!srcEl || !dstEl) return;
+          if (!srcEl) return;
           const sRect = srcEl.getBoundingClientRect();
-          const dRect = dstEl.getBoundingClientRect();
-          const x1 = sRect.right - cRect.left + container.scrollLeft;
-          const y1 = sRect.top + sRect.height / 2 - cRect.top + container.scrollTop;
-          const x2 = dRect.left - cRect.left + container.scrollLeft;
-          const y2 = dRect.top + dRect.height / 2 - cRect.top + container.scrollTop;
-          newLines.push({ key: m.id + '-' + wl[2], x1, y1, x2, y2 });
+          sources.push({
+            x: sRect.right - cRect.left + container.scrollLeft,
+            y: sRect.top + sRect.height / 2 - cRect.top + container.scrollTop
+          });
         });
+        if (!sources.length) return;
+
+        // Classic bracket elbow connector: each source gets a short
+        // horizontal stub to a shared vertical "bus" line; the bus is then
+        // joined to the destination card by one more horizontal stub. This
+        // reads far more clearly than direct diagonal lines once several
+        // matches in the same round fan out to the same area.
+        const busX = (sources[0].x + x2) / 2;
+        const segments = sources.map(s => 'M' + s.x + ',' + s.y + ' H' + busX);
+        const ys = sources.map(s => s.y);
+        const midY = (Math.min(...ys) + Math.max(...ys)) / 2;
+        if (sources.length > 1) segments.push('M' + busX + ',' + Math.min(...ys) + ' V' + Math.max(...ys));
+        segments.push('M' + busX + ',' + midY + ' H' + x2);
+        newLines.push({ key: m.id, path: segments.join(' ') });
       });
       setLines(newLines);
       setSize({ w: container.scrollWidth, h: container.scrollHeight });
@@ -527,16 +545,7 @@ function BracketView({ resolved, ctx, editable, onSave, filter, tz, liveScores }
       <div className="bracket-scroll-hint">← scroll horizontally to see all rounds through the Final →</div>
       <div className="bracket" ref={containerRef}>
         <svg className="bracket-lines" width={size.w} height={size.h}>
-          <defs>
-            <marker id="bracket-arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
-              <path d="M0,0 L8,4 L0,8 Z" className="bracket-arrow-head" />
-            </marker>
-          </defs>
-          {lines.map(l => {
-            const midX = (l.x1 + l.x2) / 2;
-            const path = 'M' + l.x1 + ',' + l.y1 + ' C' + midX + ',' + l.y1 + ' ' + midX + ',' + l.y2 + ' ' + l.x2 + ',' + l.y2;
-            return <path key={l.key} d={path} className="bracket-line" markerEnd="url(#bracket-arrow)" />;
-          })}
+          {lines.map(l => <path key={l.key} d={l.path} className="bracket-line" />)}
         </svg>
       {ROUND_ORDER.map(round => (
         <div key={round} className="bracket-col">
