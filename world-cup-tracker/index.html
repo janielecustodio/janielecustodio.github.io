@@ -154,6 +154,14 @@ body{
 .standings-modal-close{position:absolute;top:10px;right:10px;background:none;border:none;color:var(--color-muted);font-size:15px;cursor:pointer;padding:4px}
 .standings-modal-close:hover{color:var(--color-text)}
 .standings-modal-status{margin-top:12px;font-size:12px;color:var(--color-secondary);font-weight:600;line-height:1.4}
+.standings-modal{max-height:85vh;overflow-y:auto}
+.standings-modal-matches{margin-top:14px;border-top:1px solid var(--color-border);padding-top:10px;max-height:240px;overflow-y:auto}
+.standings-modal-matches-heading{display:flex;align-items:center;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-muted);margin-bottom:6px}
+.standings-modal-matches-heading:not(:first-child){margin-top:12px}
+.standings-modal-past-toggle{background:none;border:1px solid var(--color-border);color:var(--color-secondary);border-radius:5px;padding:3px 7px;font-size:10px;font-family:'IBM Plex Mono',monospace;cursor:pointer;text-transform:none;letter-spacing:0}
+.standings-modal-matches .match-row{padding:6px 8px;margin-bottom:6px}
+.standings-modal-matches .match-team{font-size:11px}
+.standings-modal-matches .venue-line{font-size:9px}
 
 .section-heading{font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--color-muted);margin-bottom:14px;border-bottom:1px solid var(--color-border);padding-bottom:8px}
 .section-heading.day-nav{display:flex;align-items:center;justify-content:center;gap:10px}

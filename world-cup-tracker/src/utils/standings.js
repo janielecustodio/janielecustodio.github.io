@@ -61,24 +61,54 @@
   }
 
   // A team is mathematically clinched for a top-2 (direct qualification)
-  // spot if, even in its worst case (loses every remaining match) and every
-  // rival's best case (wins every remaining match), at most one other team
-  // can reach/tie its points total. Deliberately ignores goal-difference
-  // tiebreaks — that only makes this conservative (it may flag a clinch a
-  // little later than technically possible), never wrong.
-  function clinchedTop2(table) {
+  // spot if it finishes top-2 on points alone in EVERY possible combination
+  // of results for the group's remaining (unplayed) matches — brute-forced
+  // exactly, since a group has at most 6 matches (3^6 = 729 combinations).
+  // This correctly accounts for head-to-head fixtures still to be played:
+  // e.g. if two rivals still have to play each other, they can't both win,
+  // so they can't both reach their independent "best case" simultaneously
+  // — a flaw the older per-team independent-best-case formula had. Ties on
+  // points are treated pessimistically (assumed lost on tiebreakers), so
+  // this never wrongly flags a clinch, only possibly a little late.
+  function clinchedTop2(matches, groupLetter, teamNames) {
     var result = {};
-    table.forEach(function (row) {
-      var worst = row.points;
-      var threats = 0;
-      table.forEach(function (other) {
-        if (other.team === row.team) return;
-        var otherRemaining = 3 - other.played;
-        var best = other.points + 3 * otherRemaining;
-        if (best >= worst) threats++;
-      });
-      result[row.team] = threats <= 1;
+    teamNames.forEach(function (t) { result[t] = true; });
+
+    var groupMatches = matches.filter(function (m) { return m.group === groupLetter; });
+    var remaining = groupMatches.filter(function (m) { return !m.score; });
+    if (!remaining.length) {
+      teamNames.forEach(function (t) { result[t] = false; });
+      return result;
+    }
+
+    var basePoints = {};
+    teamNames.forEach(function (t) { basePoints[t] = 0; });
+    groupMatches.filter(function (m) { return m.score; }).forEach(function (m) {
+      var g1 = m.score[0], g2 = m.score[1];
+      if (g1 > g2) basePoints[m.team1] += 3;
+      else if (g2 > g1) basePoints[m.team2] += 3;
+      else { basePoints[m.team1] += 1; basePoints[m.team2] += 1; }
     });
+
+    var n = remaining.length;
+    var total = Math.pow(3, n);
+    for (var code = 0; code < total; code++) {
+      var pts = Object.assign({}, basePoints);
+      var c = code;
+      for (var i = 0; i < n; i++) {
+        var d = c % 3; c = Math.floor(c / 3);
+        var m = remaining[i];
+        if (d === 0) pts[m.team1] += 3;
+        else if (d === 1) { pts[m.team1] += 1; pts[m.team2] += 1; }
+        else pts[m.team2] += 3;
+      }
+      teamNames.forEach(function (team) {
+        if (!result[team]) return;
+        var ge = 0;
+        teamNames.forEach(function (t) { if (t !== team && pts[t] >= pts[team]) ge++; });
+        if (ge > 1) result[team] = false;
+      });
+    }
     return result;
   }
 

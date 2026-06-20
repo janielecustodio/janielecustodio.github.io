@@ -138,7 +138,7 @@
     var clinched = {};
     Object.keys(groups).forEach(function (g) {
       if (groupDone[g]) return;
-      var rows = WC.clinchedTop2(tables[g]);
+      var rows = WC.clinchedTop2(liveAugmented, g, groups[g]);
       Object.keys(rows).forEach(function (team) { if (rows[team]) clinched[team] = true; });
     });
 
