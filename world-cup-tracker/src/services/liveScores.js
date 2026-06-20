@@ -99,11 +99,13 @@
       var team1Id = direct ? c0.team && c0.team.id : c1.team && c1.team.id;
       var team2Id = direct ? c1.team && c1.team.id : c0.team && c0.team.id;
       var goals = extractGoals(comp, team1Id, team2Id);
-      // Safety net: never show more scorers than the scoreline has goals,
-      // in case ESPN's event text doesn't catch every disallowed/VAR case.
-      var goals1 = goals[0].slice(0, score1);
-      var goals2 = goals[1].slice(0, score2);
-      return { score: [score1, score2], minute: status.displayClock || null, state: state, goals1: goals1, goals2: goals2 };
+      // The play-by-play `details` feed is the more reliable signal — the
+      // competitor `score` field has been observed lagging behind it. If
+      // ESPN already lists more (real, non-disallowed) goals than the
+      // scoreline shows, trust the goal list and bump the score to match.
+      score1 = Math.max(score1, goals[0].length);
+      score2 = Math.max(score2, goals[1].length);
+      return { score: [score1, score2], minute: status.displayClock || null, state: state, goals1: goals[0], goals2: goals[1] };
     }
     return null;
   }
