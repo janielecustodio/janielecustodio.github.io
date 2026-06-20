@@ -612,6 +612,7 @@ function BracketView({ resolved, ctx, editable, onSave, filter, tz, liveScores }
       const newLines = [];
       resolved.matches.forEach(m => {
         if (!byRound[m.round]) return;
+        if (m.round === 'Match for third place') return;
         const dstEl = cardRefs.current[m.id];
         if (!dstEl) return;
         const dRect = dstEl.getBoundingClientRect();
@@ -671,6 +672,7 @@ function BracketView({ resolved, ctx, editable, onSave, filter, tz, liveScores }
               style={positions[m.id] !== undefined ? { position: 'absolute', top: positions[m.id], left: 0, right: 0 } : null}
             >
               <MatchRow match={m} ctx={ctx} editable={editable} onSave={onSave} tz={tz} liveData={liveScores[m.id]} compact />
+              {round === 'Match for third place' && <div className="bracket-card-note">Fed by the losers of both Semi-finals</div>}
             </div>
           ))}
         </div>
