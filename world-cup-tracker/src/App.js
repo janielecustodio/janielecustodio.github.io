@@ -326,22 +326,41 @@ function GroupStageView({ resolved, ctx, editable, onSave, filter, tz, liveScore
 
 function TodayView({ resolved, ctx, editable, onSave, filter, tz, liveScores }) {
   const today = window.WC.todayInTimezone(tz);
+  const [dayOffset, setDayOffset] = React.useState(0);
+  const touchRef = React.useRef(null);
+  const shownDate = window.WC.addDays(today, dayOffset);
+  const isToday = dayOffset === 0;
+
   const matches = resolved.matches
     .filter(m => {
       const local = window.WC.formatInTimezone(m.date, m.time, tz);
       const dateInTz = local ? local.date : m.date;
-      if (dateInTz !== today) return false;
+      if (dateInTz !== shownDate) return false;
       if (filter && filter.type === 'team' && !matchInvolvesTeam(m, filter.value)) return false;
       if (filter && filter.type === 'group' && m.group !== filter.value) return false;
       return true;
     })
     .sort((a, b) => window.WC.toUtcMillis(a.date, a.time) - window.WC.toUtcMillis(b.date, b.time));
 
+  function onTouchStart(e) { touchRef.current = e.touches[0].clientX; }
+  function onTouchEnd(e) {
+    if (touchRef.current === null) return;
+    const dx = e.changedTouches[0].clientX - touchRef.current;
+    touchRef.current = null;
+    if (dx > 50) setDayOffset(o => o - 1); // swipe right -> previous day
+    else if (dx < -50) setDayOffset(o => o + 1); // swipe left -> next day
+  }
+
   return (
-    <div className="today-view">
-      <div className="section-heading">Today's Matches ({today})</div>
+    <div className="today-view" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+      <div className="section-heading day-nav">
+        <button className="day-nav-btn" onClick={() => setDayOffset(o => o - 1)} aria-label="Previous day">‹</button>
+        <span>{isToday ? 'Today\'s Matches' : 'Matches'} ({shownDate})</span>
+        <button className="day-nav-btn" onClick={() => setDayOffset(o => o + 1)} aria-label="Next day">›</button>
+        {!isToday && <button className="day-nav-today" onClick={() => setDayOffset(0)}>Today</button>}
+      </div>
       {matches.length === 0
-        ? <div className="empty-state">No matches scheduled for today{filter ? ' matching this filter' : ''}.</div>
+        ? <div className="empty-state">No matches scheduled for this day{filter ? ' matching this filter' : ''}.</div>
         : matches.map(m => <MatchRow key={m.id} match={m} ctx={ctx} editable={editable} onSave={onSave} tz={tz} liveData={liveScores[m.id]} />)
       }
     </div>

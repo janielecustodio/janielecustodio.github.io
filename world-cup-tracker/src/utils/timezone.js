@@ -86,6 +86,16 @@
     return shifted.getUTCFullYear() + '-' + pad(shifted.getUTCMonth() + 1) + '-' + pad(shifted.getUTCDate());
   }
 
+  // Adds (or subtracts, for negative n) whole days to a 'YYYY-MM-DD' date
+  // string — used to step through days in the "Today's Matches" view.
+  function addDays(dateStr, n) {
+    var dm = DATE_RE.exec(dateStr || '');
+    if (!dm) return dateStr;
+    var d = new Date(Date.UTC(Number(dm[1]), Number(dm[2]) - 1, Number(dm[3])));
+    d.setUTCDate(d.getUTCDate() + n);
+    return d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1) + '-' + pad(d.getUTCDate());
+  }
+
   // A match is treated as live from kickoff until ~2h15m later (full
   // 90 minutes + stoppage/halftime/extra-time buffer) if it has no score yet.
   function isLive(date, time) {
@@ -123,6 +133,7 @@
   global.WC.toUtcMillis = toUtcMillis;
   global.WC.formatInTimezone = formatInTimezone;
   global.WC.todayInTimezone = todayInTimezone;
+  global.WC.addDays = addDays;
   global.WC.isLive = isLive;
   global.WC.hasKickedOff = hasKickedOff;
   global.WC.liveMinute = liveMinute;
