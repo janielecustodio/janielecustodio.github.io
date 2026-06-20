@@ -49,10 +49,10 @@ function VenueLine({ match, tz, goalsToggle }) {
   return (
     <div className="venue-line">
       <div className="venue-line-row">
-        <span className="venue-date">{local ? `${local.date} · ${local.time}` : `${match.date} · ${match.time}`}</span>
+        <span className="venue-date">{local ? `${local.date} · ${local.time}` : `${match.date} · ${match.time}`} · {v.city}</span>
       </div>
       <div className="venue-line-row">
-        <span>{v.stadium}, {v.city}</span>
+        <span>{v.stadium}</span>
         {goalsToggle && <span className="venue-line-spacer" />}
         {goalsToggle}
       </div>
