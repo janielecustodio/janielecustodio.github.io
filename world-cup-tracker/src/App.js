@@ -633,17 +633,15 @@ function BracketView({ resolved, ctx, editable, onSave, filter, tz, liveScores }
         });
         if (!sources.length) return;
 
-        // Classic bracket elbow connector: each source gets a short
-        // horizontal stub to a shared vertical "bus" line; the bus is then
-        // joined to the destination card by one more horizontal stub. This
-        // reads far more clearly than direct diagonal lines once several
-        // matches in the same round fan out to the same area.
+        // Classic bracket elbow connector: each source runs its own
+        // horizontal-then-vertical-then-horizontal path that bends at a
+        // shared busX and drops straight to the destination's own height,
+        // so both sources visibly converge right at the destination card's
+        // edge rather than at a separate, disconnected-looking midpoint.
         const busX = (sources[0].x + x2) / 2;
-        const segments = sources.map(s => 'M' + s.x + ',' + s.y + ' H' + busX);
-        const ys = sources.map(s => s.y);
-        const midY = (Math.min(...ys) + Math.max(...ys)) / 2;
-        if (sources.length > 1) segments.push('M' + busX + ',' + Math.min(...ys) + ' V' + Math.max(...ys));
-        segments.push('M' + busX + ',' + midY + ' H' + x2);
+        const segments = sources.map(s =>
+          'M' + s.x + ',' + s.y + ' H' + busX + ' V' + y2 + ' H' + x2
+        );
         newLines.push({ key: m.id, path: segments.join(' ') });
       });
       setLines(newLines);
