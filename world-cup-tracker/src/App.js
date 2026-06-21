@@ -61,7 +61,13 @@ function VenueLine({ match, tz, goalsToggle }) {
 }
 
 function formatScorers(goals) {
-  return goals.map(function (g) { return `${g.name} ${g.minute}'${g.penalty ? ' (pen)' : ''}`; }).join(', ');
+  const order = [];
+  const byName = {};
+  goals.forEach(g => {
+    if (!byName[g.name]) { byName[g.name] = []; order.push(g.name); }
+    byName[g.name].push(`${g.minute}'${g.penalty ? ' (pen)' : ''}`);
+  });
+  return order.map(name => `${name} ${byName[name].join(', ')}`).join(', ');
 }
 
 function GoalsToggle({ goals1, goals2, show, onToggle, compact }) {
