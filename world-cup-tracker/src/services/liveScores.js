@@ -79,6 +79,27 @@
     return [goalsFor, goalsAgainst];
   }
 
+  // Extracts yellow/red card events the same way extractGoals pulls scorers.
+  function extractCards(comp, team1Id, team2Id) {
+    var cardsFor = [], cardsAgainst = [];
+    (comp.details || []).forEach(function (d) {
+      var text = d.type && d.type.text || '';
+      var isRed = /red card/i.test(text);
+      var isYellow = /yellow card/i.test(text);
+      if (!isRed && !isYellow) return;
+      var player = d.athletesInvolved && d.athletesInvolved[0];
+      var entry = {
+        name: player ? (player.shortName || player.displayName) : '?',
+        minute: d.clock && d.clock.displayValue ? d.clock.displayValue.replace("'", '') : '',
+        red: isRed
+      };
+      var teamId = d.team && d.team.id;
+      if (teamId === team1Id) cardsFor.push(entry);
+      else if (teamId === team2Id) cardsAgainst.push(entry);
+    });
+    return [cardsFor, cardsAgainst];
+  }
+
   function findLiveScore(events, team1, team2) {
     for (var i = 0; i < events.length; i++) {
       var comp = events[i].competitions && events[i].competitions[0];
@@ -99,13 +120,17 @@
       var team1Id = direct ? c0.team && c0.team.id : c1.team && c1.team.id;
       var team2Id = direct ? c1.team && c1.team.id : c0.team && c0.team.id;
       var goals = extractGoals(comp, team1Id, team2Id);
+      var cards = extractCards(comp, team1Id, team2Id);
       // The play-by-play `details` feed is the more reliable signal — the
       // competitor `score` field has been observed lagging behind it. If
       // ESPN already lists more (real, non-disallowed) goals than the
       // scoreline shows, trust the goal list and bump the score to match.
       score1 = Math.max(score1, goals[0].length);
       score2 = Math.max(score2, goals[1].length);
-      return { score: [score1, score2], minute: status.displayClock || null, state: state, goals1: goals[0], goals2: goals[1] };
+      return {
+        score: [score1, score2], minute: status.displayClock || null, state: state,
+        goals1: goals[0], goals2: goals[1], cards1: cards[0], cards2: cards[1]
+      };
     }
     return null;
   }

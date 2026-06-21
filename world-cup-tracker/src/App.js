@@ -70,28 +70,34 @@ function formatScorers(goals) {
   return order.map(name => `${name} ${byName[name].join(', ')}`).join(', ');
 }
 
-function GoalsToggle({ goals1, goals2, show, onToggle, compact }) {
-  if (!goals1.length && !goals2.length) return null;
+function formatCards(cards) {
+  return cards.map(c => `${c.red ? '🟥' : '🟨'} ${c.name} ${c.minute}'`).join(', ');
+}
+
+function GoalsToggle({ goals1, goals2, cards1, cards2, show, onToggle, compact }) {
+  if (!goals1.length && !goals2.length && !cards1.length && !cards2.length) return null;
   if (compact) {
     return (
-      <button className={`goals-toggle-btn compact ${show ? 'is-open' : ''}`} onClick={onToggle} title={show ? 'Hide scorers' : 'Show scorers'}>
+      <button className={`goals-toggle-btn compact ${show ? 'is-open' : ''}`} onClick={onToggle} title={show ? 'Hide details' : 'Show scorers & cards'}>
         ⚽
       </button>
     );
   }
   return (
     <button className="goals-toggle-btn" onClick={onToggle}>
-      ⚽ {show ? 'Hide scorers' : 'Show scorers'}
+      ⚽ {show ? 'Hide details' : 'Show scorers & cards'}
     </button>
   );
 }
 
-function GoalsLine({ match, goals1, goals2, show }) {
-  if (!show || (!goals1.length && !goals2.length)) return null;
+function GoalsLine({ match, goals1, goals2, cards1, cards2, show }) {
+  if (!show || (!goals1.length && !goals2.length && !cards1.length && !cards2.length)) return null;
   return (
     <div className="goals-line">
       {goals1.length > 0 && <div className="goals-line-team"><TeamFlag name={match.team1Resolved} /> {formatScorers(goals1)}</div>}
       {goals2.length > 0 && <div className="goals-line-team"><TeamFlag name={match.team2Resolved} /> {formatScorers(goals2)}</div>}
+      {cards1.length > 0 && <div className="goals-line-team"><TeamFlag name={match.team1Resolved} /> {formatCards(cards1)}</div>}
+      {cards2.length > 0 && <div className="goals-line-team"><TeamFlag name={match.team2Resolved} /> {formatCards(cards2)}</div>}
     </div>
   );
 }
@@ -133,6 +139,11 @@ function MatchRow({ match, ctx, editable, onSave, tz, compact, liveData }) {
   // fall back to ESPN's play-by-play scorer data if it has any.
   const goals1 = (match.goals1 && match.goals1.length) ? match.goals1 : ((live && liveData && liveData.goals1) || []);
   const goals2 = (match.goals2 && match.goals2.length) ? match.goals2 : ((live && liveData && liveData.goals2) || []);
+  // Openfootball has no card data at all, so cards always come from the
+  // ESPN overlay, whether the match is currently live or already finished
+  // (liveScores keeps the last-seen ESPN data around once a match has it).
+  const cards1 = (liveData && liveData.cards1) || [];
+  const cards2 = (liveData && liveData.cards2) || [];
 
   function save() {
     onSave(match.id, [Number(g1), Number(g2)]);
@@ -189,9 +200,9 @@ function MatchRow({ match, ctx, editable, onSave, tz, compact, liveData }) {
       <VenueLine
         match={match}
         tz={tz}
-        goalsToggle={<GoalsToggle goals1={goals1} goals2={goals2} show={showGoals} onToggle={() => setShowGoals(s => !s)} compact={compact} />}
+        goalsToggle={<GoalsToggle goals1={goals1} goals2={goals2} cards1={cards1} cards2={cards2} show={showGoals} onToggle={() => setShowGoals(s => !s)} compact={compact} />}
       />
-      <GoalsLine match={match} goals1={goals1} goals2={goals2} show={showGoals} />
+      <GoalsLine match={match} goals1={goals1} goals2={goals2} cards1={cards1} cards2={cards2} show={showGoals} />
     </div>
   );
 }
