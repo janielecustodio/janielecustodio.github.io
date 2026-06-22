@@ -35,9 +35,9 @@
   var cache = { events: null, fetchedAt: 0 };
   var dateCache = {}; // dateKey ('YYYYMMDD') -> { events, fetchedAt }
 
-  // Temporary diagnostic so we can see, from the live page, whether ESPN
-  // requests are actually succeeding on a given device/network without
-  // needing the user to open the API URL manually.
+  // Tracks whether the ESPN overlay fetch is succeeding, so the UI can warn
+  // the user (e.g. "check your connection") instead of silently showing no
+  // live scores/cards when the request is blocked on their network.
   var debugInfo = { lastAttempt: null, lastOk: null, lastError: null, lastCount: null };
   function getDebugInfo() { return debugInfo; }
 
