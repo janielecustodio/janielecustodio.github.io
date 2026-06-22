@@ -810,11 +810,17 @@ function App() {
   // started would otherwise never get cards. ESPN keeps full play-by-play
   // for a date long after kickoff, so backfill once per finished match by
   // querying its date directly instead of relying on having polled it live.
+  // Tracked via a ref (not liveScores) because the live poller may have
+  // already stored a liveScores entry for a match with empty cards (e.g. a
+  // card came in right as the match ended and polling stopped) — checking
+  // liveScores presence alone would skip the backfill for that match forever.
+  const cardsBackfilled = React.useRef({});
   React.useEffect(() => {
     const toBackfill = actualMatches.filter(m =>
-      m.score && window.WC.hasKickedOff(m.date, m.time) && !liveScores[m.id]
+      m.score && window.WC.hasKickedOff(m.date, m.time) && !cardsBackfilled.current[m.id]
     );
     if (!toBackfill.length) return;
+    toBackfill.forEach(m => { cardsBackfilled.current[m.id] = true; });
     const byDate = {};
     toBackfill.forEach(m => { (byDate[m.date] = byDate[m.date] || []).push(m); });
     Object.keys(byDate).forEach(date => {
@@ -830,7 +836,7 @@ function App() {
         }
       });
     });
-  }, [actualMatches, liveScores]);
+  }, [actualMatches]);
 
   function selectTeam(t) {
     const palette = window.WC.TEAM_PALETTES[t.name] || null;
