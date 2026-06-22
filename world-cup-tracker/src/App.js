@@ -733,9 +733,9 @@ function App() {
   const [filter, setFilter] = React.useState(null);
   const [tz, setTz] = React.useState(window.WC.DEFAULT_TZ);
   const [lastFetched, setLastFetched] = React.useState(null);
-  // Temporary: surfaces whether the ESPN overlay fetch is actually
-  // succeeding on this device, so we don't have to guess at why live
-  // scores/cards aren't showing up.
+  // Live scores/cards depend entirely on reaching ESPN's API, which can be
+  // blocked by the user's network — surface that as an actionable message
+  // instead of silently showing nothing.
   const [espnDebugTick, setEspnDebugTick] = React.useState(0);
   React.useEffect(() => {
     const t = setInterval(() => setEspnDebugTick(x => x + 1), 5000);
@@ -909,11 +909,10 @@ function App() {
               {refreshing ? '⟳ Refreshing…' : '⟳ Refresh now'}
             </button>
           </div>
-          <div className="wc-live-status" style={{ opacity: 0.6, fontSize: '10px' }} key={espnDebugTick}>
-            espn debug: {espnDebug.lastAttempt
-              ? `attempted ${new Date(espnDebug.lastAttempt).toLocaleTimeString()}, ok=${String(espnDebug.lastOk)}, events=${espnDebug.lastCount}${espnDebug.lastError ? ', error=' + espnDebug.lastError : ''}`
-              : 'no attempt yet'}
-          </div>
+          {espnDebug.lastOk === false &&
+            <div className="wc-live-status" style={{ opacity: 0.8, fontSize: '11px', color: '#b45309' }} key={espnDebugTick}>
+              ⚠ Live scores & cards unavailable — please check your internet connection
+            </div>}
         </div>
         <div className="wc-topbar-right">
           <button
