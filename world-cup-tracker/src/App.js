@@ -805,6 +805,33 @@ function App() {
     return () => clearInterval(t);
   }, [actualMatches]);
 
+  // Card data has no openfootball equivalent at all (only the live ESPN
+  // overlay above has it), so a match that finished before this app session
+  // started would otherwise never get cards. ESPN keeps full play-by-play
+  // for a date long after kickoff, so backfill once per finished match by
+  // querying its date directly instead of relying on having polled it live.
+  React.useEffect(() => {
+    const toBackfill = actualMatches.filter(m =>
+      m.score && window.WC.hasKickedOff(m.date, m.time) && !liveScores[m.id]
+    );
+    if (!toBackfill.length) return;
+    const byDate = {};
+    toBackfill.forEach(m => { (byDate[m.date] = byDate[m.date] || []).push(m); });
+    Object.keys(byDate).forEach(date => {
+      window.WC.fetchEspnEventsForDate(date).then(events => {
+        if (!events.length) return;
+        const updates = {};
+        byDate[date].forEach(m => {
+          const found = window.WC.findEspnLiveScore(events, m.team1, m.team2);
+          if (found && (found.cards1.length || found.cards2.length)) updates[m.id] = found;
+        });
+        if (Object.keys(updates).length) {
+          setLiveScores(prev => ({ ...prev, ...updates }));
+        }
+      });
+    });
+  }, [actualMatches, liveScores]);
+
   function selectTeam(t) {
     const palette = window.WC.TEAM_PALETTES[t.name] || null;
     const team = { name: t.name, isoCode: t.iso, palette };
