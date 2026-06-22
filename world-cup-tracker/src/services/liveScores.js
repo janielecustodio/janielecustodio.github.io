@@ -33,6 +33,7 @@
   }
 
   var cache = { events: null, fetchedAt: 0 };
+  var dateCache = {}; // dateKey ('YYYYMMDD') -> { events, fetchedAt }
 
   function fetchEvents() {
     var now = Date.now();
@@ -50,6 +51,27 @@
         return cache.events;
       })
       .catch(function () { return cache.events || []; });
+  }
+
+  // ESPN keeps the full play-by-play (goals + cards) for a date's matches
+  // long after they finish, so past/already-final matches can be backfilled
+  // by date instead of only catching them while they're live. dateKey is
+  // 'YYYY-MM-DD' (converted to ESPN's 'YYYYMMDD' query format).
+  function fetchEventsForDate(dateKey) {
+    var entry = dateCache[dateKey];
+    if (entry) return Promise.resolve(entry);
+    var espnDate = dateKey.replace(/-/g, '');
+    return fetch(ESPN_URL + '?dates=' + espnDate, { cache: 'no-store' })
+      .then(function (res) {
+        if (!res.ok) throw new Error('espn http ' + res.status);
+        return res.json();
+      })
+      .then(function (json) {
+        var events = json.events || [];
+        dateCache[dateKey] = events;
+        return events;
+      })
+      .catch(function () { return []; });
   }
 
   // Extracts goal-scorer events from ESPN's play-by-play `details` array
@@ -137,5 +159,6 @@
 
   global.WC = global.WC || {};
   global.WC.fetchEspnEvents = fetchEvents;
+  global.WC.fetchEspnEventsForDate = fetchEventsForDate;
   global.WC.findEspnLiveScore = findLiveScore;
 })(window);
