@@ -820,12 +820,16 @@ function App() {
       m.score && window.WC.hasKickedOff(m.date, m.time) && !cardsBackfilled.current[m.id]
     );
     if (!toBackfill.length) return;
-    toBackfill.forEach(m => { cardsBackfilled.current[m.id] = true; });
     const byDate = {};
     toBackfill.forEach(m => { (byDate[m.date] = byDate[m.date] || []).push(m); });
     Object.keys(byDate).forEach(date => {
       window.WC.fetchEspnEventsForDate(date).then(events => {
+        // An empty result means the request itself failed (network/CORS
+        // hiccup) rather than the date genuinely having no events, so leave
+        // these matches unmarked and let the next render's effect retry
+        // instead of permanently locking them out of ever getting cards.
         if (!events.length) return;
+        byDate[date].forEach(m => { cardsBackfilled.current[m.id] = true; });
         const updates = {};
         byDate[date].forEach(m => {
           const found = window.WC.findEspnLiveScore(events, m.team1, m.team2);
