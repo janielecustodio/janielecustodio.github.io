@@ -35,11 +35,18 @@
   var cache = { events: null, fetchedAt: 0 };
   var dateCache = {}; // dateKey ('YYYYMMDD') -> { events, fetchedAt }
 
+  // Temporary diagnostic so we can see, from the live page, whether ESPN
+  // requests are actually succeeding on a given device/network without
+  // needing the user to open the API URL manually.
+  var debugInfo = { lastAttempt: null, lastOk: null, lastError: null, lastCount: null };
+  function getDebugInfo() { return debugInfo; }
+
   function fetchEvents() {
     var now = Date.now();
     if (cache.events && now - cache.fetchedAt < 15000) {
       return Promise.resolve(cache.events);
     }
+    debugInfo.lastAttempt = new Date().toISOString();
     return fetch(ESPN_URL, { cache: 'no-store' })
       .then(function (res) {
         if (!res.ok) throw new Error('espn http ' + res.status);
@@ -48,9 +55,16 @@
       .then(function (json) {
         cache.events = json.events || [];
         cache.fetchedAt = now;
+        debugInfo.lastOk = true;
+        debugInfo.lastError = null;
+        debugInfo.lastCount = cache.events.length;
         return cache.events;
       })
-      .catch(function () { return cache.events || []; });
+      .catch(function (err) {
+        debugInfo.lastOk = false;
+        debugInfo.lastError = String(err && err.message || err);
+        return cache.events || [];
+      });
   }
 
   // ESPN keeps the full play-by-play (goals + cards) for a date's matches
@@ -161,4 +175,5 @@
   global.WC.fetchEspnEvents = fetchEvents;
   global.WC.fetchEspnEventsForDate = fetchEventsForDate;
   global.WC.findEspnLiveScore = findLiveScore;
+  global.WC.getEspnDebugInfo = getDebugInfo;
 })(window);
