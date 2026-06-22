@@ -733,6 +733,15 @@ function App() {
   const [filter, setFilter] = React.useState(null);
   const [tz, setTz] = React.useState(window.WC.DEFAULT_TZ);
   const [lastFetched, setLastFetched] = React.useState(null);
+  // Temporary: surfaces whether the ESPN overlay fetch is actually
+  // succeeding on this device, so we don't have to guess at why live
+  // scores/cards aren't showing up.
+  const [espnDebugTick, setEspnDebugTick] = React.useState(0);
+  React.useEffect(() => {
+    const t = setInterval(() => setEspnDebugTick(x => x + 1), 5000);
+    return () => clearInterval(t);
+  }, []);
+  const espnDebug = window.WC.getEspnDebugInfo();
   const [refreshing, setRefreshing] = React.useState(false);
   const [colorMode, setColorMode] = React.useState(() => localStorage.getItem('wc-color-mode') || 'light');
   const [liveScores, setLiveScores] = React.useState({});
@@ -899,6 +908,11 @@ function App() {
             <button className="refresh-now-btn" disabled={refreshing} onClick={() => refreshRef.current && refreshRef.current()}>
               {refreshing ? '⟳ Refreshing…' : '⟳ Refresh now'}
             </button>
+          </div>
+          <div className="wc-live-status" style={{ opacity: 0.6, fontSize: '10px' }} key={espnDebugTick}>
+            espn debug: {espnDebug.lastAttempt
+              ? `attempted ${new Date(espnDebug.lastAttempt).toLocaleTimeString()}, ok=${String(espnDebug.lastOk)}, events=${espnDebug.lastCount}${espnDebug.lastError ? ', error=' + espnDebug.lastError : ''}`
+              : 'no attempt yet'}
           </div>
         </div>
         <div className="wc-topbar-right">
