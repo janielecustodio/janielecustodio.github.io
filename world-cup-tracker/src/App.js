@@ -43,13 +43,18 @@ function TeamSelector({ myTeam, onSelect, onClear }) {
   );
 }
 
-function VenueLine({ match, tz, goalsToggle }) {
+function VenueLine({ match, tz, goalsToggle, compact }) {
   const v = window.WC.venueFor(match.ground);
   const local = window.WC.formatInTimezone(match.date, match.time, tz);
+  // Bracket cards are narrow enough that "YYYY-MM-DD · HH:MM · City" runs
+  // out of room and the city gets ellipsis-truncated — every match is 2026
+  // anyway, so dropping the year there buys back enough width for the city.
+  const dateStr = (local ? local.date : match.date);
+  const shortDate = compact ? dateStr.replace(/^\d{4}-/, '') : dateStr;
   return (
     <div className="venue-line">
       <div className="venue-line-row">
-        <span className="venue-date">{local ? `${local.date} · ${local.time}` : `${match.date} · ${match.time}`} · {v.city}</span>
+        <span className="venue-date">{shortDate} · {local ? local.time : match.time} · {v.city}</span>
       </div>
       <div className="venue-line-row">
         <span>{v.stadium}</span>
@@ -200,6 +205,7 @@ function MatchRow({ match, ctx, editable, onSave, tz, compact, liveData }) {
       <VenueLine
         match={match}
         tz={tz}
+        compact={compact}
         goalsToggle={<GoalsToggle goals1={goals1} goals2={goals2} cards1={cards1} cards2={cards2} show={showGoals} onToggle={() => setShowGoals(s => !s)} compact={compact} />}
       />
       <GoalsLine match={match} goals1={goals1} goals2={goals2} cards1={cards1} cards2={cards2} show={showGoals} />
