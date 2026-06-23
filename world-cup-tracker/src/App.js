@@ -92,8 +92,8 @@ function GoalsToggle({ goals1, goals2, cards1, cards2, show, onToggle, compact }
     );
   }
   return (
-    <button className="goals-toggle-btn" onClick={onToggle}>
-      ⚽ {show ? 'Hide details' : 'Show scorers & cards'}
+    <button className="goals-toggle-btn" onClick={onToggle} title={show ? 'Hide details' : 'Show scorers & cards'}>
+      ⚽
     </button>
   );
 }
