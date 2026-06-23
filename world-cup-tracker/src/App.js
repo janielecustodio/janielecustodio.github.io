@@ -43,13 +43,21 @@ function TeamSelector({ myTeam, onSelect, onClear }) {
   );
 }
 
+const SHORT_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+function formatShortDate(dateStr) {
+  const m = /^\d{4}-(\d{2})-(\d{2})$/.exec(dateStr || '');
+  if (!m) return dateStr;
+  return `${SHORT_MONTHS[Number(m[1]) - 1]} ${Number(m[2])}`;
+}
+
 function VenueLine({ match, tz, goalsToggle }) {
   const v = window.WC.venueFor(match.ground);
   const local = window.WC.formatInTimezone(match.date, match.time, tz);
+  const dateStr = formatShortDate(local ? local.date : match.date);
   return (
     <div className="venue-line">
       <div className="venue-line-row">
-        <span className="venue-date">{local ? `${local.date} · ${local.time}` : `${match.date} · ${match.time}`} · {v.city}</span>
+        <span className="venue-date">{dateStr} · {local ? local.time : match.time} · {v.city}</span>
       </div>
       <div className="venue-line-row">
         <span>{v.stadium}</span>
@@ -494,7 +502,7 @@ function TodayView({ resolved, ctx, editable, onSave, filter, tz, liveScores }) 
       <div className="section-heading day-nav">
         <button className="day-nav-btn" onClick={() => setSelectedDate(d => window.WC.addDays(d, -1))} aria-label="Previous day">‹</button>
         <button className="day-nav-title" onClick={() => setPickerOpen(o => !o)}>
-          {isToday ? 'Today\'s Matches' : 'Matches'} ({selectedDate}) <span className="chev">▾</span>
+          {isToday ? 'Today\'s Matches' : 'Matches'} ({formatShortDate(selectedDate)}) <span className="chev">▾</span>
         </button>
         <button className="day-nav-btn" onClick={() => setSelectedDate(d => window.WC.addDays(d, 1))} aria-label="Next day">›</button>
         {!isToday && <button className="day-nav-today" onClick={() => setSelectedDate(today)}>Today</button>}
@@ -509,7 +517,7 @@ function TodayView({ resolved, ctx, editable, onSave, filter, tz, liveScores }) 
                 className={'day-picker-option' + (d.date === selectedDate ? ' active' : '')}
                 onClick={() => { setSelectedDate(d.date); setPickerOpen(false); }}
               >
-                <span className="day-picker-date">{d.date}{d.date === today ? ' (today)' : ''}</span>
+                <span className="day-picker-date">{formatShortDate(d.date)}{d.date === today ? ' (today)' : ''}</span>
                 <span className="day-picker-label">{d.label}</span>
               </div>
             ))}
