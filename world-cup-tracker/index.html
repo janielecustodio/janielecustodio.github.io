@@ -257,9 +257,12 @@ body{
 }
 
 @media(max-width:640px){
-  .standings-modal-team-title{display:flex;align-items:center;gap:8px;font-size:16px;font-weight:700;margin-bottom:10px;color:var(--team-secondary,var(--color-text))}
+  .standings-modal-team-title{display:flex;align-items:center;gap:8px;font-size:16px;font-weight:700;margin-bottom:10px;color:var(--color-text)}
   .standings-modal-team-title .match-flag{width:28px;border-radius:3px}
   .standings-modal.is-team-themed{background:color-mix(in srgb, var(--team-primary) 16%, var(--color-card2));border:2px solid var(--team-accent,var(--color-border))}
+  .standings-modal.is-team-themed .group-table-title{color:var(--color-text)}
+  .standings-modal.is-team-themed .group-status{background:color-mix(in srgb, var(--team-primary) 70%, black);color:#fff;border-color:transparent}
+  .standings-modal.is-team-themed .standings-modal-status{color:var(--color-text)}
   .wc-app{padding:16px}
   .groups-grid{grid-template-columns:1fr}
   .fixtures-section,.today-view{max-width:100%}
