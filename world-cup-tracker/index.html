@@ -142,6 +142,7 @@ body{
 .clinched-legend{font-size:11px;color:var(--color-muted);margin-bottom:10px;display:flex;align-items:center;gap:2px}
 .clickable-team{cursor:pointer}
 .clickable-team:hover{text-decoration:underline}
+.standings-modal-team-title{display:none}
 .standings-modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:80;display:flex;align-items:center;justify-content:center;padding:16px}
 .standings-modal{position:relative;background:var(--color-card2);border:1px solid var(--color-border);border-radius:10px;padding:18px 16px 16px;width:340px;max-width:100%;box-shadow:0 20px 48px rgba(0,0,0,.5)}
 .standings-modal table{width:100%;font-size:12px;border-collapse:collapse;margin-top:8px}
@@ -256,6 +257,9 @@ body{
 }
 
 @media(max-width:640px){
+  .standings-modal-team-title{display:flex;align-items:center;gap:8px;font-size:16px;font-weight:700;margin-bottom:10px;color:var(--team-secondary,var(--color-text))}
+  .standings-modal-team-title .match-flag{width:28px;border-radius:3px}
+  .standings-modal.is-team-themed{background:color-mix(in srgb, var(--team-primary) 16%, var(--color-card2));border:2px solid var(--team-accent,var(--color-border))}
   .wc-app{padding:16px}
   .groups-grid{grid-template-columns:1fr}
   .fixtures-section,.today-view{max-width:100%}
