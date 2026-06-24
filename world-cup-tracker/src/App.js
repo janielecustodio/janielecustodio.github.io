@@ -273,10 +273,21 @@ function StandingsModal({ info, resolved, ctx, tz, liveScores, onClose }) {
   const upcoming = teamMatches.filter(m => !m.score && !window.WC.hasKickedOff(m.date, m.time));
   const past = teamMatches.filter(m => m.score || window.WC.hasKickedOff(m.date, m.time));
 
+  // Mobile-only: tint the popout with the team's colours and label it with
+  // their full name/flag — set as CSS vars so desktop (which never reads
+  // them) stays untouched, see the @media(max-width:640px) rules.
+  const palette = window.WC.TEAM_PALETTES[team] || null;
+  const modalStyle = palette ? {
+    '--team-primary': palette[0],
+    '--team-secondary': palette[1],
+    '--team-accent': palette[2]
+  } : undefined;
+
   return (
     <div className="standings-modal-backdrop" onClick={onClose}>
-      <div className="standings-modal" onClick={e => e.stopPropagation()}>
+      <div className={`standings-modal ${palette ? 'is-team-themed' : ''}`} style={modalStyle} onClick={e => e.stopPropagation()}>
         <button className="standings-modal-close" onClick={onClose} aria-label="Close">✕</button>
+        <div className="standings-modal-team-title"><TeamFlag name={team} /> {team}</div>
         <div className="group-table-title">
           Group {group}
           {!groupDone && <span className="group-status">current</span>}
