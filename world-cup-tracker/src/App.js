@@ -158,11 +158,15 @@ function MatchRow({ match, ctx, editable, onSave, tz, compact, liveData }) {
     setEditing(false);
   }
 
+  const team1Confirmed = !!(ctx.confirmedAdvance && ctx.confirmedAdvance[match.team1Resolved]);
+  const team2Confirmed = !!(ctx.confirmedAdvance && ctx.confirmedAdvance[match.team2Resolved]);
+  const bothConfirmed = team1Confirmed && team2Confirmed;
+
   return (
     <div className={`match-row ${canEdit ? 'editable' : ''} ${live ? 'is-live' : ''}`}>
       {match.group && <span className="match-group-badge">Group {match.group}</span>}
-      {!match.group && !match.team1Projected && !match.team2Projected && match.team1Resolved && match.team2Resolved &&
-        <span className="match-locked-badge" title="Both teams are confirmed for this matchup — this game will happen as shown">✓</span>}
+      {!match.group && bothConfirmed &&
+        <span className="match-locked-badge" title="Both teams are confirmed to advance — this matchup is locked in">✓</span>}
       {(match.team1Projected || match.team2Projected) &&
         <span className="match-proj-badge" title="At least one team is still projected based on current standings — this matchup is not yet guaranteed">PROJ</span>}
       <div className="match-row-main">
@@ -171,7 +175,7 @@ function MatchRow({ match, ctx, editable, onSave, tz, compact, liveData }) {
           title={match.team1Resolved || ''}
           onClick={() => ctx.onTeamClick && ctx.onTeamClick(match.team1Resolved)}
         >
-          {ctx.confirmedAdvance && ctx.confirmedAdvance[match.team1Resolved] && <span className="clinched-tag" title="Confirmed to advance to the next phase">✓</span>}
+          {team1Confirmed && !bothConfirmed && <span className="clinched-tag" title="Confirmed to advance to the next phase">✓</span>}
           <span>{teamLabel(match.team1Resolved)}</span>
           <TeamFlag name={match.team1Resolved} />
         </div>
@@ -202,7 +206,7 @@ function MatchRow({ match, ctx, editable, onSave, tz, compact, liveData }) {
         >
           <TeamFlag name={match.team2Resolved} />
           <span>{teamLabel(match.team2Resolved)}</span>
-          {ctx.confirmedAdvance && ctx.confirmedAdvance[match.team2Resolved] && <span className="clinched-tag" title="Confirmed to advance to the next phase">✓</span>}
+          {team2Confirmed && !bothConfirmed && <span className="clinched-tag" title="Confirmed to advance to the next phase">✓</span>}
         </div>
       </div>
       <VenueLine
