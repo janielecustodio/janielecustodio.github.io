@@ -142,6 +142,19 @@
       Object.keys(rows).forEach(function (team) { if (rows[team]) clinched[team] = true; });
     });
 
+    // confirmedAdvance: a team is locked in to the next phase, either
+    // because it's mathematically clinched mid-group, or because its group
+    // has finished and it qualified. Used anywhere (e.g. the bracket view)
+    // that needs a single "this team is definitely advancing" signal,
+    // unlike `clinched` which intentionally goes empty once a group ends
+    // (see comment above) since the per-group table shows "qualified"
+    // styling instead.
+    var confirmedAdvance = Object.assign({}, clinched);
+    Object.keys(groups).forEach(function (g) {
+      if (!groupDone[g]) return;
+      groups[g].forEach(function (team) { if (qualified[team]) confirmedAdvance[team] = true; });
+    });
+
     return {
       matches: resolved,
       tables: tables,
@@ -151,7 +164,8 @@
       qualified: qualified,
       projectedQualified: projectedQualified,
       eliminatedGroupStage: eliminatedGroupStage,
-      clinched: clinched
+      clinched: clinched,
+      confirmedAdvance: confirmedAdvance
     };
   }
 
