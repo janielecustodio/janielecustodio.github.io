@@ -171,7 +171,7 @@ function MatchRow({ match, ctx, editable, onSave, tz, compact, liveData }) {
           title={match.team1Resolved || ''}
           onClick={() => ctx.onTeamClick && ctx.onTeamClick(match.team1Resolved)}
         >
-          {ctx.clinched && ctx.clinched[match.team1Resolved] && <span className="clinched-tag" title="Mathematically guaranteed to advance, regardless of remaining results">✓</span>}
+          {ctx.confirmedAdvance && ctx.confirmedAdvance[match.team1Resolved] && <span className="clinched-tag" title="Confirmed to advance to the next phase">✓</span>}
           <span>{teamLabel(match.team1Resolved)}</span>
           <TeamFlag name={match.team1Resolved} />
         </div>
@@ -202,7 +202,7 @@ function MatchRow({ match, ctx, editable, onSave, tz, compact, liveData }) {
         >
           <TeamFlag name={match.team2Resolved} />
           <span>{teamLabel(match.team2Resolved)}</span>
-          {ctx.clinched && ctx.clinched[match.team2Resolved] && <span className="clinched-tag" title="Mathematically guaranteed to advance, regardless of remaining results">✓</span>}
+          {ctx.confirmedAdvance && ctx.confirmedAdvance[match.team2Resolved] && <span className="clinched-tag" title="Confirmed to advance to the next phase">✓</span>}
         </div>
       </div>
       <VenueLine
@@ -911,6 +911,7 @@ function App() {
     projectedQualified: resolved.projectedQualified,
     eliminatedGroupStage: resolved.eliminatedGroupStage,
     clinched: resolved.clinched,
+    confirmedAdvance: resolved.confirmedAdvance,
     onTeamClick: openStandings
   };
 
