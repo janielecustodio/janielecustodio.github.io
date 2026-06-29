@@ -573,25 +573,13 @@ function BracketView({ resolved, ctx, editable, onSave, filter, tz, liveScores }
   const matchById = {};
   resolved.matches.forEach(m => { matchById[m.id] = m; });
 
-  // Earliest Round-of-32 kickoff within each match's own feeder subtree —
-  // used only to decide which side of a pairing is laid out first, so a
-  // chronologically-earlier matchup (and its descendants) appears above a
-  // later one, while feeder pairs still stay adjacent (short, uncrossed
-  // connector lines). A pure date sort across the whole column instead
-  // breaks that adjacency and produces long, confusing diagonal lines.
-  const minDate = {};
-  ROUND_ORDER.forEach(round => {
-    if (round === 'Match for third place') return;
-    byRound[round].forEach(m => {
-      if (round === 'Round of 32') { minDate[m.id] = window.WC.toUtcMillis(m.date, m.time); return; }
-      const childDates = [];
-      [m.team1Ref, m.team2Ref].forEach(ref => {
-        const wl = BRACKET_REF_RE.exec(ref || '');
-        if (wl && minDate[Number(wl[2])] !== undefined) childDates.push(minDate[Number(wl[2])]);
-      });
-      minDate[m.id] = childDates.length ? Math.min(...childDates) : window.WC.toUtcMillis(m.date, m.time);
-    });
-  });
+  // Round of 32 is the leaf round — sort it by kickoff date so matches
+  // appear in schedule order (earliest first). Later rounds are kept in
+  // tree order (each card is vertically centred between its two feeder
+  // cards via DOM-rect measurement keyed by id, so their display order
+  // inside the column doesn't affect line correctness, only R16+ tree
+  // grouping matters for keeping feeder pairs adjacent and lines short).
+  byRound['Round of 32'].sort((a, b) => window.WC.toUtcMillis(a.date, a.time) - window.WC.toUtcMillis(b.date, b.time));
 
   const treeOrder = {};
   BRACKET_REVERSE_CHAIN.forEach((round, i) => {
@@ -599,24 +587,23 @@ function BracketView({ resolved, ctx, editable, onSave, filter, tz, liveScores }
       treeOrder[round] = byRound[round].map(m => m.id);
       return;
     }
+    if (round === 'Round of 32') return; // already date-sorted above
     const parentRound = BRACKET_REVERSE_CHAIN[i - 1];
     const seq = [];
     (treeOrder[parentRound] || []).forEach(pid => {
       const parent = matchById[pid];
       if (!parent) return;
-      [parent.team1Ref, parent.team2Ref]
-        .map(ref => BRACKET_REF_RE.exec(ref || ''))
-        .filter(Boolean)
-        .map(wl => Number(wl[2]))
-        .sort((a, b) => (minDate[a] || 0) - (minDate[b] || 0))
-        .forEach(id => seq.push(id));
+      [parent.team1Ref, parent.team2Ref].forEach(ref => {
+        const wl = BRACKET_REF_RE.exec(ref || '');
+        if (wl) seq.push(Number(wl[2]));
+      });
     });
     const seqSet = new Set(seq);
-    byRound[round].slice().sort((a, b) => (minDate[a.id] || 0) - (minDate[b.id] || 0))
-      .forEach(m => { if (!seqSet.has(m.id)) seq.push(m.id); });
+    byRound[round].forEach(m => { if (!seqSet.has(m.id)) seq.push(m.id); });
     treeOrder[round] = seq;
   });
   ROUND_ORDER.forEach(round => {
+    if (round === 'Round of 32') return;
     const ord = treeOrder[round];
     if (ord) byRound[round].sort((a, b) => ord.indexOf(a.id) - ord.indexOf(b.id));
   });
