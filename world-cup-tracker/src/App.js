@@ -572,27 +572,6 @@ function BracketView({ resolved, ctx, editable, onSave, filter, tz, liveScores }
 
   const matchById = {};
   resolved.matches.forEach(m => { matchById[m.id] = m; });
-
-  // Earliest Round-of-32 kickoff within each match's own feeder subtree —
-  // used only to decide which side of a pairing is laid out first, so a
-  // chronologically-earlier matchup (and its descendants) appears above a
-  // later one, while feeder pairs still stay adjacent (short, uncrossed
-  // connector lines). A pure date sort across the whole column instead
-  // breaks that adjacency and produces long, confusing diagonal lines.
-  const minDate = {};
-  ROUND_ORDER.forEach(round => {
-    if (round === 'Match for third place') return;
-    byRound[round].forEach(m => {
-      if (round === 'Round of 32') { minDate[m.id] = window.WC.toUtcMillis(m.date, m.time); return; }
-      const childDates = [];
-      [m.team1Ref, m.team2Ref].forEach(ref => {
-        const wl = BRACKET_REF_RE.exec(ref || '');
-        if (wl && minDate[Number(wl[2])] !== undefined) childDates.push(minDate[Number(wl[2])]);
-      });
-      minDate[m.id] = childDates.length ? Math.min(...childDates) : window.WC.toUtcMillis(m.date, m.time);
-    });
-  });
-
   const treeOrder = {};
   BRACKET_REVERSE_CHAIN.forEach((round, i) => {
     if (i === 0) {
@@ -604,16 +583,13 @@ function BracketView({ resolved, ctx, editable, onSave, filter, tz, liveScores }
     (treeOrder[parentRound] || []).forEach(pid => {
       const parent = matchById[pid];
       if (!parent) return;
-      [parent.team1Ref, parent.team2Ref]
-        .map(ref => BRACKET_REF_RE.exec(ref || ''))
-        .filter(Boolean)
-        .map(wl => Number(wl[2]))
-        .sort((a, b) => (minDate[a] || 0) - (minDate[b] || 0))
-        .forEach(id => seq.push(id));
+      [parent.team1Ref, parent.team2Ref].forEach(ref => {
+        const wl = BRACKET_REF_RE.exec(ref || '');
+        if (wl) seq.push(Number(wl[2]));
+      });
     });
     const seqSet = new Set(seq);
-    byRound[round].slice().sort((a, b) => (minDate[a.id] || 0) - (minDate[b.id] || 0))
-      .forEach(m => { if (!seqSet.has(m.id)) seq.push(m.id); });
+    byRound[round].forEach(m => { if (!seqSet.has(m.id)) seq.push(m.id); });
     treeOrder[round] = seq;
   });
   ROUND_ORDER.forEach(round => {
