@@ -572,6 +572,36 @@ function BracketView({ resolved, ctx, editable, onSave, filter, tz, liveScores }
 
   const matchById = {};
   resolved.matches.forEach(m => { matchById[m.id] = m; });
+
+  // Order R32 by grouping pairs that feed the same R16 match, then sorting
+  // pairs chronologically. We derive the grouping from actual runtime refs
+  // in resolved.matches (not hardcoded template ids) so it works regardless
+  // of whether the live feed ids match the fixture template ids.
+  const r32Ids = new Set(byRound['Round of 32'].map(m => m.id));
+  const r32Parent = {}; // r32_match_id → r16_match_id
+  resolved.matches.forEach(m => {
+    [m.team1Ref, m.team2Ref].forEach(ref => {
+      const wl = BRACKET_REF_RE.exec(ref || '');
+      if (wl && wl[1] === 'W' && r32Ids.has(Number(wl[2]))) {
+        r32Parent[Number(wl[2])] = m.id;
+      }
+    });
+  });
+  // Group R32 matches by their R16 parent (or by own id if unmatched)
+  const r32Groups = {}; // r16_id (or 'solo_'+r32_id) → [r32_match, ...]
+  byRound['Round of 32'].forEach(m => {
+    const key = r32Parent[m.id] !== undefined ? r32Parent[m.id] : 'solo_' + m.id;
+    if (!r32Groups[key]) r32Groups[key] = [];
+    r32Groups[key].push(m);
+  });
+  // Sort within each pair by date, sort pairs by earliest date
+  const r32Sorted = Object.values(r32Groups)
+    .map(pair => pair.slice().sort((a, b) => (a.date || '') < (b.date || '') ? -1 : 1))
+    .sort((a, b) => (a[0].date || '') < (b[0].date || '') ? -1 : 1)
+    .flat();
+  byRound['Round of 32'] = r32Sorted;
+
+  // Order R16+ via reverse-chain tree traversal from Final downward.
   const treeOrder = {};
   BRACKET_REVERSE_CHAIN.forEach((round, i) => {
     if (i === 0) {
@@ -592,7 +622,8 @@ function BracketView({ resolved, ctx, editable, onSave, filter, tz, liveScores }
     byRound[round].forEach(m => { if (!seqSet.has(m.id)) seq.push(m.id); });
     treeOrder[round] = seq;
   });
-  ROUND_ORDER.forEach(round => {
+  // Apply treeOrder to R16+ (R32 already sorted above)
+  ['Round of 16', 'Quarter-final', 'Semi-final', 'Final'].forEach(round => {
     const ord = treeOrder[round];
     if (ord) byRound[round].sort((a, b) => ord.indexOf(a.id) - ord.indexOf(b.id));
   });
