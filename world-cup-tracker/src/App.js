@@ -554,6 +554,12 @@ const ROUND_ORDER = ['Round of 32', 'Round of 16', 'Quarter-final', 'Semi-final'
 // from, since these ids are not adjacent/sequential across rounds.
 const BRACKET_REF_RE = /^([WL])(\d+)$/;
 
+// Backward walk from the Final used to lay out each round in actual bracket
+// (tree) order rather than chronological/id order — otherwise a match's two
+// feeder matches can end up far apart within their round's column, forcing
+// long looping connector lines across unrelated cards.
+const BRACKET_REVERSE_CHAIN = ['Final', 'Semi-final', 'Quarter-final', 'Round of 16', 'Round of 32'];
+
 function BracketView({ resolved, ctx, editable, onSave, filter, tz, liveScores }) {
   const byRound = {};
   ROUND_ORDER.forEach(r => byRound[r] = []);
@@ -564,11 +570,31 @@ function BracketView({ resolved, ctx, editable, onSave, filter, tz, liveScores }
     byRound[m.round].push(m);
   });
 
-  // Keep every round in schedule (kickoff time) order — matches that have
-  // already been played must stay where they were scheduled, not get
-  // shuffled around based on which bracket slot they happen to feed.
+  const matchById = {};
+  resolved.matches.forEach(m => { matchById[m.id] = m; });
+  const treeOrder = {};
+  BRACKET_REVERSE_CHAIN.forEach((round, i) => {
+    if (i === 0) {
+      treeOrder[round] = byRound[round].map(m => m.id);
+      return;
+    }
+    const parentRound = BRACKET_REVERSE_CHAIN[i - 1];
+    const seq = [];
+    (treeOrder[parentRound] || []).forEach(pid => {
+      const parent = matchById[pid];
+      if (!parent) return;
+      [parent.team1Ref, parent.team2Ref].forEach(ref => {
+        const wl = BRACKET_REF_RE.exec(ref || '');
+        if (wl) seq.push(Number(wl[2]));
+      });
+    });
+    const seqSet = new Set(seq);
+    byRound[round].forEach(m => { if (!seqSet.has(m.id)) seq.push(m.id); });
+    treeOrder[round] = seq;
+  });
   ROUND_ORDER.forEach(round => {
-    byRound[round].sort((a, b) => window.WC.toUtcMillis(a.date, a.time) - window.WC.toUtcMillis(b.date, b.time));
+    const ord = treeOrder[round];
+    if (ord) byRound[round].sort((a, b) => ord.indexOf(a.id) - ord.indexOf(b.id));
   });
 
   const containerRef = React.useRef(null);
