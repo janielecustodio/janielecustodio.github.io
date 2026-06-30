@@ -124,10 +124,10 @@
     (comp.details || []).forEach(function (d) {
       var periodNum = d.period && (typeof d.period === 'object' ? d.period.number : d.period);
       if (!d.shootout && periodNum !== 5) return;
+      // Include every shootout event; derive scored from scoringPlay (primary)
+      // or type text (fallback). Missing both → treat as missed (safe default).
       var text = d.type && d.type.text || '';
-      var scored = /goal/i.test(text) || d.scoringPlay === true;
-      var missed = /miss|save|post/i.test(text) || d.scoringPlay === false;
-      if (!scored && !missed) return;
+      var scored = d.scoringPlay === true || /goal/i.test(text);
       var player = d.athletesInvolved && d.athletesInvolved[0];
       var entry = {
         name: player ? (player.shortName || player.displayName || '?') : '?',
