@@ -296,7 +296,7 @@ function MatchRow({ match, ctx, editable, onSave, tz, compact, liveData }) {
               tz={tz}
               goalsToggle={<GoalsToggle goals1={goals1} goals2={goals2} cards1={cards1} cards2={cards2} hasPens={hasPens} show={showGoals} onToggle={() => setShowGoals(s => !s)} compact={compact} />}
             />
-            <GoalsLine match={match} goals1={goals1} goals2={goals2} cards1={cards1} cards2={cards2} penInfo={penInfo} shootout={liveData && liveData.shootout} show={showGoals} />
+            <GoalsLine match={match} goals1={goals1} goals2={goals2} cards1={cards1} cards2={cards2} penInfo={penInfo} espnShootout={liveData && liveData.shootout} show={showGoals} />
           </React.Fragment>
         );
       })()}
