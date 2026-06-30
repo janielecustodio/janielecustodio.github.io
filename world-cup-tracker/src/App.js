@@ -98,30 +98,59 @@ function GoalsToggle({ goals1, goals2, cards1, cards2, hasPens, show, onToggle, 
   );
 }
 
-function ShootoutTable({ match, shootout }) {
-  const { scorers1, scorers2 } = shootout;
+function ShootoutTable({ match, kicks, scorers }) {
+  // Full kick-by-kick grid (Sofascore data)
+  if (kicks) {
+    const { kicks1, kicks2 } = kicks;
+    const rounds = Math.max(kicks1.length, kicks2.length);
+    return (
+      <div className="shootout-table">
+        {Array.from({ length: rounds }, (_, i) => {
+          const k1 = kicks1[i], k2 = kicks2[i];
+          return (
+            <div key={i} className="shootout-row">
+              <span className="shootout-name left">{k1 ? k1.name : ''}</span>
+              <span className={`shootout-dot ${k1 ? (k1.scored ? 'scored' : 'missed') : 'empty'}`}>{k1 ? (k1.scored ? '✓' : '✗') : ''}</span>
+              <span className={`shootout-dot ${k2 ? (k2.scored ? 'scored' : 'missed') : 'empty'}`}>{k2 ? (k2.scored ? '✓' : '✗') : ''}</span>
+              <span className="shootout-name right">{k2 ? k2.name : ''}</span>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+  // Fallback: ESPN scorer names only
   return (
     <div className="shootout-table">
-      {scorers1.length > 0 && (
-        <div className="shootout-scorers">
-          <TeamFlag name={match.team1Resolved} />
-          <span>{scorers1.join(', ')}</span>
-        </div>
+      {scorers && scorers.scorers1 && scorers.scorers1.length > 0 && (
+        <div className="shootout-scorers"><TeamFlag name={match.team1Resolved} /><span>{scorers.scorers1.join(', ')}</span></div>
       )}
-      {scorers2.length > 0 && (
-        <div className="shootout-scorers">
-          <TeamFlag name={match.team2Resolved} />
-          <span>{scorers2.join(', ')}</span>
-        </div>
+      {scorers && scorers.scorers2 && scorers.scorers2.length > 0 && (
+        <div className="shootout-scorers"><TeamFlag name={match.team2Resolved} /><span>{scorers.scorers2.join(', ')}</span></div>
       )}
     </div>
   );
 }
 
-function GoalsLine({ match, goals1, goals2, cards1, cards2, penInfo, shootout, show }) {
+function GoalsLine({ match, goals1, goals2, cards1, cards2, penInfo, espnShootout, show }) {
   const [showShootout, setShowShootout] = React.useState(false);
+  const [sofaKicks, setSofaKicks] = React.useState(null);
+  const [sofaLoading, setSofaLoading] = React.useState(false);
+
+  function toggleShootout() {
+    const next = !showShootout;
+    setShowShootout(next);
+    // Lazy-fetch Sofascore kick data on first open
+    if (next && sofaKicks === null && !sofaLoading && match.date && match.team1Resolved && match.team2Resolved) {
+      setSofaLoading(true);
+      window.WC.fetchSofascoreShootout(match.date, match.team1Resolved, match.team2Resolved)
+        .then(function (data) { setSofaKicks(data || false); setSofaLoading(false); });
+    }
+  }
+
   const hasContent = goals1.length || goals2.length || cards1.length || cards2.length || penInfo;
   if (!show || !hasContent) return null;
+  const hasShootoutData = espnShootout || penInfo;
   return (
     <div className="goals-line">
       {goals1.length > 0 && <div className="goals-line-team"><TeamFlag name={match.team1Resolved} /> {formatScorers(goals1)}</div>}
@@ -131,15 +160,19 @@ function GoalsLine({ match, goals1, goals2, cards1, cards2, penInfo, shootout, s
       {penInfo && (
         <div className="goals-line-pens">
           <span>{penInfo}</span>
-          {shootout && (
-            <button className="shootout-toggle" onClick={() => setShowShootout(s => !s)}
+          {hasShootoutData && (
+            <button className="shootout-toggle" onClick={toggleShootout}
               title={showShootout ? 'Hide kicks' : 'Show kicks'}>
-              {showShootout ? '▲' : '▼'}
+              {sofaLoading ? '…' : showShootout ? '▲' : '▼'}
             </button>
           )}
         </div>
       )}
-      {showShootout && shootout && <ShootoutTable match={match} shootout={shootout} />}
+      {showShootout && !sofaLoading && (
+        <ShootoutTable match={match}
+          kicks={sofaKicks || null}
+          scorers={espnShootout} />
+      )}
     </div>
   );
 }
