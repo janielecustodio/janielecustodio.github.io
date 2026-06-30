@@ -144,6 +144,11 @@ function GoalsLine({ match, goals1, goals2, cards1, cards2, penInfo, shootout, s
         </div>
       )}
       {showShootout && shootout && <ShootoutTable match={match} shootout={shootout} />}
+      {showShootout && window._wcShootoutDebug && (
+        <pre style={{fontSize:8,overflowX:'auto',background:'#eee',padding:4,marginTop:4,whiteSpace:'pre-wrap',wordBreak:'break-all'}}>
+          {JSON.stringify(window._wcShootoutDebug, null, 1)}
+        </pre>
+      )}
     </div>
   );
 }
