@@ -25,13 +25,12 @@
   function fromFeed(json) {
     var matches = json.matches.map(function (m, i) { return normalizeFeedMatch(m, i + 1); });
 
-    // Reassign stable template ids so that W<id> bracket refs (e.g. "W73" in
-    // the R16 fixture stubs) always point to the correct match, regardless of
-    // how the live feed orders its entries. Match by UTC kickoff time, which
-    // is unique per fixture and identical between feed and template.
     if (global.WC && global.WC.FIXTURE_TEMPLATE && global.WC.toUtcMillis) {
+      // Step 1: reassign stable template ids by matching UTC kickoff time.
       var templateByUtcMs = {};
+      var templateById = {};
       global.WC.FIXTURE_TEMPLATE.forEach(function (tm) {
+        templateById[tm.id] = tm;
         var ms = global.WC.toUtcMillis(tm.date, tm.time);
         if (ms !== null) templateByUtcMs[ms] = tm.id;
       });
@@ -39,6 +38,20 @@
         var ms = global.WC.toUtcMillis(m.date, m.time);
         if (ms !== null && templateByUtcMs[ms] !== undefined) {
           m.id = templateByUtcMs[ms];
+        }
+      });
+
+      // Step 2: for knockout matches (R16, QF, SF, Final) restore the
+      // template's team1/team2 slot refs (e.g. "W73", "W75"). The live feed
+      // may have already replaced a ref with the actual team name once a
+      // feeder match finishes (e.g. team1="Canada" instead of "W73"), which
+      // breaks the W<id> chain that the bracket connector logic depends on.
+      // Scores and other fields are kept from the live feed.
+      matches.forEach(function (m) {
+        var tmpl = templateById[m.id];
+        if (tmpl && tmpl.group === null && tmpl.round !== 'Round of 32') {
+          m.team1 = tmpl.team1;
+          m.team2 = tmpl.team2;
         }
       });
     }
