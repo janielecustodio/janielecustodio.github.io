@@ -194,7 +194,12 @@ function MatchRow({ match, ctx, editable, onSave, tz, compact, liveData }) {
                   : espnScore ? `${espnScore[0]} – ${espnScore[1]}`
                   : '–'}
               </span>
-              {ended && <span className="ft-tag">FT</span>}
+              {ended && <span className="ft-tag">{match.et ? 'AET' : 'FT'}</span>}
+              {ended && match.penalties && (() => {
+                const [p1, p2] = match.penalties;
+                const penWinner = p1 > p2 ? match.team1Resolved : match.team2Resolved;
+                return <span className="pen-tag">{teamLabel(penWinner)} won {p1 > p2 ? p1 : p2}–{p1 > p2 ? p2 : p1} on pens</span>;
+              })()}
               {live && <span className="live-badge">● LIVE{liveMinuteText ? ` ${liveMinuteText}` : ''}</span>}
             </React.Fragment>
           )}
