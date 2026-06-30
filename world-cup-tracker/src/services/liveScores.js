@@ -116,6 +116,30 @@
   }
 
   // Extracts yellow/red card events the same way extractGoals pulls scorers.
+  // Extracts penalty shootout kick-by-kick data from comp.details.
+  // Kicks are identified by shootout:true or period.number===5, ordered as
+  // they appear in the play-by-play so rounds pair up naturally.
+  function extractShootout(comp, team1Id, team2Id) {
+    var kicks1 = [], kicks2 = [];
+    (comp.details || []).forEach(function (d) {
+      var periodNum = d.period && (typeof d.period === 'object' ? d.period.number : d.period);
+      if (!d.shootout && periodNum !== 5) return;
+      var text = d.type && d.type.text || '';
+      var scored = /goal/i.test(text) || d.scoringPlay === true;
+      var missed = /miss|save|post/i.test(text) || d.scoringPlay === false;
+      if (!scored && !missed) return;
+      var player = d.athletesInvolved && d.athletesInvolved[0];
+      var entry = {
+        name: player ? (player.shortName || player.displayName || '?') : '?',
+        scored: scored
+      };
+      var teamId = String(d.team && d.team.id || '');
+      if (teamId === String(team1Id)) kicks1.push(entry);
+      else if (teamId === String(team2Id)) kicks2.push(entry);
+    });
+    return (kicks1.length || kicks2.length) ? { kicks1: kicks1, kicks2: kicks2 } : null;
+  }
+
   function extractCards(comp, team1Id, team2Id) {
     var cardsFor = [], cardsAgainst = [];
     (comp.details || []).forEach(function (d) {
@@ -160,6 +184,7 @@
       var team2Id = direct ? c1.team && c1.team.id : c0.team && c0.team.id;
       var goals = extractGoals(comp, team1Id, team2Id);
       var cards = extractCards(comp, team1Id, team2Id);
+      var shootout = (isET || isPens) ? extractShootout(comp, team1Id, team2Id) : null;
       // The play-by-play `details` feed is the more reliable signal — the
       // competitor `score` field has been observed lagging behind it. If
       // ESPN already lists more (real, non-disallowed) goals than the
@@ -178,7 +203,7 @@
       return {
         score: [score1, score2], minute: status.displayClock || null, state: state,
         goals1: goals[0], goals2: goals[1], cards1: cards[0], cards2: cards[1],
-        isET: isET, isPens: isPens, penScore: penScore
+        isET: isET, isPens: isPens, penScore: penScore, shootout: shootout
       };
     }
     return null;

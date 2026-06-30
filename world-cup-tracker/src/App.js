@@ -98,12 +98,48 @@ function GoalsToggle({ goals1, goals2, cards1, cards2, hasPens, show, onToggle, 
   );
 }
 
-function GoalsLine({ match, goals1, goals2, cards1, cards2, penInfo, show }) {
+function ShootoutTable({ match, shootout }) {
+  const { kicks1, kicks2 } = shootout;
+  const rounds = Math.max(kicks1.length, kicks2.length);
+  return (
+    <div className="shootout-table">
+      {Array.from({ length: rounds }, (_, i) => {
+        const k1 = kicks1[i], k2 = kicks2[i];
+        return (
+          <div key={i} className="shootout-row">
+            <span className="shootout-name left">{k1 ? k1.name : ''}</span>
+            <span className={`shootout-dot ${k1 ? (k1.scored ? 'scored' : 'missed') : 'empty'}`}>
+              {k1 ? (k1.scored ? '✓' : '✗') : ''}
+            </span>
+            <span className={`shootout-dot ${k2 ? (k2.scored ? 'scored' : 'missed') : 'empty'}`}>
+              {k2 ? (k2.scored ? '✓' : '✗') : ''}
+            </span>
+            <span className="shootout-name right">{k2 ? k2.name : ''}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function GoalsLine({ match, goals1, goals2, cards1, cards2, penInfo, shootout, show }) {
+  const [showShootout, setShowShootout] = React.useState(false);
   const hasContent = goals1.length || goals2.length || cards1.length || cards2.length || penInfo;
   if (!show || !hasContent) return null;
   return (
     <div className="goals-line">
-      {penInfo && <div className="goals-line-pens">{penInfo}</div>}
+      {penInfo && (
+        <div className="goals-line-pens">
+          <span>{penInfo}</span>
+          {shootout && (
+            <button className="shootout-toggle" onClick={() => setShowShootout(s => !s)}
+              title={showShootout ? 'Hide kicks' : 'Show kicks'}>
+              {showShootout ? '▲' : '▼'}
+            </button>
+          )}
+        </div>
+      )}
+      {showShootout && shootout && <ShootoutTable match={match} shootout={shootout} />}
       {goals1.length > 0 && <div className="goals-line-team"><TeamFlag name={match.team1Resolved} /> {formatScorers(goals1)}</div>}
       {goals2.length > 0 && <div className="goals-line-team"><TeamFlag name={match.team2Resolved} /> {formatScorers(goals2)}</div>}
       {cards1.length > 0 && <div className="goals-line-team"><TeamFlag name={match.team1Resolved} /> {formatCards(cards1)}</div>}
@@ -231,7 +267,7 @@ function MatchRow({ match, ctx, editable, onSave, tz, compact, liveData }) {
               tz={tz}
               goalsToggle={<GoalsToggle goals1={goals1} goals2={goals2} cards1={cards1} cards2={cards2} hasPens={hasPens} show={showGoals} onToggle={() => setShowGoals(s => !s)} compact={compact} />}
             />
-            <GoalsLine match={match} goals1={goals1} goals2={goals2} cards1={cards1} cards2={cards2} penInfo={penInfo} show={showGoals} />
+            <GoalsLine match={match} goals1={goals1} goals2={goals2} cards1={cards1} cards2={cards2} penInfo={penInfo} shootout={liveData && liveData.shootout} show={showGoals} />
           </React.Fragment>
         );
       })()}
