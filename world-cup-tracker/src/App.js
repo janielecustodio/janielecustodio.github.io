@@ -78,14 +78,6 @@ function formatScorers(goals) {
   return order.map(name => `${name} ${byName[name].join(', ')}`).join(', ');
 }
 
-function formatCards(cards) {
-  const yellows = cards.filter(c => !c.red).map(c => `${c.name} ${c.minute}'`);
-  const reds = cards.filter(c => c.red).map(c => `${c.name} ${c.minute}'`);
-  const parts = [];
-  if (yellows.length) parts.push(`🟨 ${yellows.join(', ')}`);
-  if (reds.length) parts.push(`🟥 ${reds.join(', ')}`);
-  return parts.join(' · ');
-}
 
 function GoalsToggle({ goals1, goals2, cards1, cards2, hasPens, show, onToggle, compact }) {
   if (!goals1.length && !goals2.length && !cards1.length && !cards2.length && !hasPens) return null;
@@ -160,8 +152,34 @@ function GoalsLine({ match, goals1, goals2, cards1, cards2, penInfo, espnShootou
     <div className="goals-line">
       {goals1.length > 0 && <div className="goals-line-team"><TeamFlag name={match.team1Resolved} /> {formatScorers(goals1)}</div>}
       {goals2.length > 0 && <div className="goals-line-team"><TeamFlag name={match.team2Resolved} /> {formatScorers(goals2)}</div>}
-      {cards1.length > 0 && <div className="goals-line-team"><TeamFlag name={match.team1Resolved} /> {formatCards(cards1)}</div>}
-      {cards2.length > 0 && <div className="goals-line-team"><TeamFlag name={match.team2Resolved} /> {formatCards(cards2)}</div>}
+      {(() => {
+        const allCards = [
+          ...cards1.map(c => ({ ...c, team: match.team1Resolved })),
+          ...cards2.map(c => ({ ...c, team: match.team2Resolved })),
+        ];
+        const yellows = allCards.filter(c => !c.red);
+        const reds = allCards.filter(c => c.red);
+        return (
+          <>
+            {yellows.length > 0 && (
+              <div className="goals-line-team">
+                <span>🟨</span>
+                {yellows.map((c, i) => (
+                  <span key={i}>{i > 0 && ', '}<TeamFlag name={c.team} /> {c.name} {c.minute}'</span>
+                ))}
+              </div>
+            )}
+            {reds.length > 0 && (
+              <div className="goals-line-team">
+                <span>🟥</span>
+                {reds.map((c, i) => (
+                  <span key={i}>{i > 0 && ', '}<TeamFlag name={c.team} /> {c.name} {c.minute}'</span>
+                ))}
+              </div>
+            )}
+          </>
+        );
+      })()}
       {penInfo && (
         <div className="goals-line-pens">
           <span>{penInfo}</span>
