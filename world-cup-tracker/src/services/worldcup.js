@@ -23,7 +23,27 @@
   }
 
   function fromFeed(json) {
-    return json.matches.map(function (m, i) { return normalizeFeedMatch(m, i + 1); });
+    var matches = json.matches.map(function (m, i) { return normalizeFeedMatch(m, i + 1); });
+
+    // Reassign stable template ids so that W<id> bracket refs (e.g. "W73" in
+    // the R16 fixture stubs) always point to the correct match, regardless of
+    // how the live feed orders its entries. Match by UTC kickoff time, which
+    // is unique per fixture and identical between feed and template.
+    if (global.WC && global.WC.FIXTURE_TEMPLATE && global.WC.toUtcMillis) {
+      var templateByUtcMs = {};
+      global.WC.FIXTURE_TEMPLATE.forEach(function (tm) {
+        var ms = global.WC.toUtcMillis(tm.date, tm.time);
+        if (ms !== null) templateByUtcMs[ms] = tm.id;
+      });
+      matches.forEach(function (m) {
+        var ms = global.WC.toUtcMillis(m.date, m.time);
+        if (ms !== null && templateByUtcMs[ms] !== undefined) {
+          m.id = templateByUtcMs[ms];
+        }
+      });
+    }
+
+    return matches;
   }
 
   function fromFallback() {
