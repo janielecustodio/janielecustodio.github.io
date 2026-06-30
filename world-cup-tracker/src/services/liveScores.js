@@ -121,29 +121,17 @@
   // they appear in the play-by-play so rounds pair up naturally.
   function extractShootout(comp, team1Id, team2Id) {
     var kicks1 = [], kicks2 = [];
-    global._wcShootoutDebug = (comp.details || []).map(function(d) {
-      return { type: d.type && d.type.text, period: d.period && (d.period.number || d.period), shootout: d.shootout, scoringPlay: d.scoringPlay, teamId: d.team && d.team.id, player: d.athletesInvolved && d.athletesInvolved[0] && d.athletesInvolved[0].shortName };
-    });
+    // ESPN only logs scored kicks in details — missed kicks are absent entirely.
+    // We collect scorer names per team in kick order.
     (comp.details || []).forEach(function (d) {
-      var text = d.type && d.type.text || '';
-      var periodNum = d.period && (typeof d.period === 'object' ? d.period.number : d.period);
-      // ESPN only sets shootout:true on scored kicks; missed/saved kicks often
-      // only appear with type.text "Miss"/"Save"/"Penalty - Missed". Accept
-      // by any of: shootout flag, period 5, or penalty/miss/save type text.
-      var isShootoutEvent = d.shootout || periodNum === 5
-        || /^(miss|save|penalty[\s-])/i.test(text);
-      if (!isShootoutEvent) return;
-      var scored = d.scoringPlay === true || /goal/i.test(text);
+      if (!d.shootout) return;
       var player = d.athletesInvolved && d.athletesInvolved[0];
-      var entry = {
-        name: player ? (player.shortName || player.displayName || '?') : '?',
-        scored: scored
-      };
+      var name = player ? (player.shortName || player.displayName || '?') : '?';
       var teamId = String(d.team && d.team.id || '');
-      if (teamId === String(team1Id)) kicks1.push(entry);
-      else if (teamId === String(team2Id)) kicks2.push(entry);
+      if (teamId === String(team1Id)) kicks1.push(name);
+      else if (teamId === String(team2Id)) kicks2.push(name);
     });
-    return (kicks1.length || kicks2.length) ? { kicks1: kicks1, kicks2: kicks2 } : null;
+    return (kicks1.length || kicks2.length) ? { scorers1: kicks1, scorers2: kicks2 } : null;
   }
 
   function extractCards(comp, team1Id, team2Id) {

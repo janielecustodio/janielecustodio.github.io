@@ -99,25 +99,21 @@ function GoalsToggle({ goals1, goals2, cards1, cards2, hasPens, show, onToggle, 
 }
 
 function ShootoutTable({ match, shootout }) {
-  const { kicks1, kicks2 } = shootout;
-  const rounds = Math.max(kicks1.length, kicks2.length);
+  const { scorers1, scorers2 } = shootout;
   return (
     <div className="shootout-table">
-      {Array.from({ length: rounds }, (_, i) => {
-        const k1 = kicks1[i], k2 = kicks2[i];
-        return (
-          <div key={i} className="shootout-row">
-            <span className="shootout-name left">{k1 ? k1.name : ''}</span>
-            <span className={`shootout-dot ${k1 ? (k1.scored ? 'scored' : 'missed') : 'empty'}`}>
-              {k1 ? (k1.scored ? '✓' : '✗') : ''}
-            </span>
-            <span className={`shootout-dot ${k2 ? (k2.scored ? 'scored' : 'missed') : 'empty'}`}>
-              {k2 ? (k2.scored ? '✓' : '✗') : ''}
-            </span>
-            <span className="shootout-name right">{k2 ? k2.name : ''}</span>
-          </div>
-        );
-      })}
+      {scorers1.length > 0 && (
+        <div className="shootout-scorers">
+          <TeamFlag name={match.team1Resolved} />
+          <span>{scorers1.join(', ')}</span>
+        </div>
+      )}
+      {scorers2.length > 0 && (
+        <div className="shootout-scorers">
+          <TeamFlag name={match.team2Resolved} />
+          <span>{scorers2.join(', ')}</span>
+        </div>
+      )}
     </div>
   );
 }
@@ -144,11 +140,6 @@ function GoalsLine({ match, goals1, goals2, cards1, cards2, penInfo, shootout, s
         </div>
       )}
       {showShootout && shootout && <ShootoutTable match={match} shootout={shootout} />}
-      {showShootout && window._wcShootoutDebug && (
-        <pre style={{fontSize:8,overflowX:'auto',background:'#eee',padding:4,marginTop:4,whiteSpace:'pre-wrap',wordBreak:'break-all'}}>
-          {JSON.stringify(window._wcShootoutDebug, null, 1)}
-        </pre>
-      )}
     </div>
   );
 }
