@@ -153,6 +153,9 @@
 
       var status = comp.status || {};
       var state = status.type && status.type.state; // 'pre' | 'in' | 'post'
+      var period = status.period || 1; // 1=1H 2=2H 3=ET1 4=ET2 5=Pens
+      var isET = period === 3 || period === 4;
+      var isPens = period >= 5;
       var team1Id = direct ? c0.team && c0.team.id : c1.team && c1.team.id;
       var team2Id = direct ? c1.team && c1.team.id : c0.team && c0.team.id;
       var goals = extractGoals(comp, team1Id, team2Id);
@@ -163,9 +166,19 @@
       // scoreline shows, trust the goal list and bump the score to match.
       score1 = Math.max(score1, goals[0].length);
       score2 = Math.max(score2, goals[1].length);
+      // Penalty shootout scores live in linescores[4] (the 5th period slot).
+      var penScore = null;
+      if (isPens) {
+        var ls1 = (direct ? c0 : c1).linescores || [];
+        var ls2 = (direct ? c1 : c0).linescores || [];
+        if (ls1[4] !== undefined && ls2[4] !== undefined) {
+          penScore = [Number(ls1[4].value || 0), Number(ls2[4].value || 0)];
+        }
+      }
       return {
         score: [score1, score2], minute: status.displayClock || null, state: state,
-        goals1: goals[0], goals2: goals[1], cards1: cards[0], cards2: cards[1]
+        goals1: goals[0], goals2: goals[1], cards1: cards[0], cards2: cards[1],
+        isET: isET, isPens: isPens, penScore: penScore
       };
     }
     return null;
