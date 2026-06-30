@@ -79,18 +79,11 @@ function formatScorers(goals) {
 }
 
 function formatCards(cards) {
-  // Group consecutive same-colour cards, prefix the group with one icon
+  const yellows = cards.filter(c => !c.red).map(c => `${c.name} ${c.minute}'`);
+  const reds = cards.filter(c => c.red).map(c => `${c.name} ${c.minute}'`);
   const parts = [];
-  let i = 0;
-  while (i < cards.length) {
-    const isRed = cards[i].red;
-    const group = [];
-    while (i < cards.length && cards[i].red === isRed) {
-      group.push(`${cards[i].name} ${cards[i].minute}'`);
-      i++;
-    }
-    parts.push(`${isRed ? '🟥' : '🟨'} ${group.join(', ')}`);
-  }
+  if (yellows.length) parts.push(`🟨 ${yellows.join(', ')}`);
+  if (reds.length) parts.push(`🟥 ${reds.join(', ')}`);
   return parts.join(' · ');
 }
 
