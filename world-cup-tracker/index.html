@@ -204,7 +204,17 @@ body{
 .bracket-card .goals-line,.standings-modal-matches .goals-line{font-size:10px}
 .goals-line{font-size:11px;color:var(--color-muted);margin-top:4px;display:flex;flex-direction:column;gap:4px;text-align:left}
 .goals-line-team{display:flex;align-items:center;gap:6px;text-align:left}
-.goals-line-pens{font-weight:600;color:var(--color-text)}
+.goals-line-pens{font-weight:600;color:var(--color-text);display:flex;align-items:center;gap:6px}
+.shootout-toggle{background:none;border:1px solid var(--color-border);border-radius:4px;padding:0 5px;font-size:9px;color:var(--color-muted);cursor:pointer;line-height:1.6}
+.shootout-table{margin-top:4px;display:flex;flex-direction:column;gap:3px;width:100%}
+.shootout-row{display:grid;grid-template-columns:1fr auto auto 1fr;align-items:center;gap:4px;font-size:10px}
+.shootout-name{color:var(--color-text)}
+.shootout-name.left{text-align:right}
+.shootout-name.right{text-align:left}
+.shootout-dot{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0}
+.shootout-dot.scored{background:#22c55e;color:#fff}
+.shootout-dot.missed{background:#ef4444;color:#fff}
+.shootout-dot.empty{background:var(--color-border)}
 .goals-line-team .match-flag{width:16px}
 .goals-team-name{font-weight:600;color:var(--color-secondary)}
 .match-row .venue-line{font-size:11px;color:var(--color-muted);display:flex;flex-direction:column;align-items:center;gap:2px;margin-top:4px;font-family:'IBM Plex Mono',monospace}
