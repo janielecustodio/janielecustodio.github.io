@@ -128,6 +128,10 @@ function GoalsLine({ match, goals1, goals2, cards1, cards2, penInfo, shootout, s
   if (!show || !hasContent) return null;
   return (
     <div className="goals-line">
+      {goals1.length > 0 && <div className="goals-line-team"><TeamFlag name={match.team1Resolved} /> {formatScorers(goals1)}</div>}
+      {goals2.length > 0 && <div className="goals-line-team"><TeamFlag name={match.team2Resolved} /> {formatScorers(goals2)}</div>}
+      {cards1.length > 0 && <div className="goals-line-team"><TeamFlag name={match.team1Resolved} /> {formatCards(cards1)}</div>}
+      {cards2.length > 0 && <div className="goals-line-team"><TeamFlag name={match.team2Resolved} /> {formatCards(cards2)}</div>}
       {penInfo && (
         <div className="goals-line-pens">
           <span>{penInfo}</span>
@@ -140,10 +144,6 @@ function GoalsLine({ match, goals1, goals2, cards1, cards2, penInfo, shootout, s
         </div>
       )}
       {showShootout && shootout && <ShootoutTable match={match} shootout={shootout} />}
-      {goals1.length > 0 && <div className="goals-line-team"><TeamFlag name={match.team1Resolved} /> {formatScorers(goals1)}</div>}
-      {goals2.length > 0 && <div className="goals-line-team"><TeamFlag name={match.team2Resolved} /> {formatScorers(goals2)}</div>}
-      {cards1.length > 0 && <div className="goals-line-team"><TeamFlag name={match.team1Resolved} /> {formatCards(cards1)}</div>}
-      {cards2.length > 0 && <div className="goals-line-team"><TeamFlag name={match.team2Resolved} /> {formatCards(cards2)}</div>}
     </div>
   );
 }
