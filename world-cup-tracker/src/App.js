@@ -573,12 +573,16 @@ function BracketView({ resolved, ctx, editable, onSave, filter, tz, liveScores }
   const matchById = {};
   resolved.matches.forEach(m => { matchById[m.id] = m; });
 
-  // Order R32 by grouping pairs that feed the same R16 match, then sorting
-  // pairs chronologically. We derive the grouping from actual runtime refs
-  // in resolved.matches (not hardcoded template ids) so it works regardless
-  // of whether the live feed ids match the fixture template ids.
+  // Order R32 by grouping sibling pairs (matches that feed the same R16 slot)
+  // then sorting pairs chronologically.
+  //
+  // Primary source: scan resolved.matches for W<id> refs pointing at R32 ids
+  // (works when R16 fixtures are present in the live feed).
+  // Fallback: use WC.FIXTURE_TEMPLATE to derive sibling pairs by matching
+  // each live R32 match to its template counterpart via UTC kickoff time —
+  // this handles the common case where the live feed has no R16 fixtures yet.
   const r32Ids = new Set(byRound['Round of 32'].map(m => m.id));
-  const r32Parent = {}; // r32_match_id → r16_match_id
+  const r32Parent = {}; // r32_match_id → r16_match_id (from live data)
   resolved.matches.forEach(m => {
     [m.team1Ref, m.team2Ref].forEach(ref => {
       const wl = BRACKET_REF_RE.exec(ref || '');
@@ -587,14 +591,52 @@ function BracketView({ resolved, ctx, editable, onSave, filter, tz, liveScores }
       }
     });
   });
-  // Group R32 matches by their R16 parent (or by own id if unmatched)
-  const r32Groups = {}; // r16_id (or 'solo_'+r32_id) → [r32_match, ...]
+
+  // Template-derived sibling map: each R32 template id → its sibling's template id
+  const templateSiblings = {}; // template_r32_id → sibling_template_r32_id
+  const templateR32ByUtcMs = {}; // utcMs → template_r32_id
+  if (window.WC && window.WC.FIXTURE_TEMPLATE && window.WC.toUtcMillis) {
+    window.WC.FIXTURE_TEMPLATE.forEach(m => {
+      if (m.round === 'Round of 32') {
+        const ms = window.WC.toUtcMillis(m.date, m.time);
+        if (ms !== null) templateR32ByUtcMs[ms] = m.id;
+      }
+    });
+    window.WC.FIXTURE_TEMPLATE.forEach(m => {
+      if (m.round === 'Round of 16') {
+        const w1 = BRACKET_REF_RE.exec(m.team1 || '');
+        const w2 = BRACKET_REF_RE.exec(m.team2 || '');
+        if (w1 && w2) {
+          const id1 = Number(w1[2]), id2 = Number(w2[2]);
+          templateSiblings[id1] = id2;
+          templateSiblings[id2] = id1;
+        }
+      }
+    });
+  }
+
+  // Group R32 matches into sibling pairs
+  const r32Groups = {};
   byRound['Round of 32'].forEach(m => {
-    const key = r32Parent[m.id] !== undefined ? r32Parent[m.id] : 'solo_' + m.id;
+    // Try live-data parent first
+    if (r32Parent[m.id] !== undefined) {
+      const key = r32Parent[m.id];
+      if (!r32Groups[key]) r32Groups[key] = [];
+      r32Groups[key].push(m);
+      return;
+    }
+    // Fall back to template sibling lookup via UTC kickoff time
+    const utcMs = window.WC && window.WC.toUtcMillis ? window.WC.toUtcMillis(m.date, m.time) : null;
+    const templateId = utcMs !== null ? templateR32ByUtcMs[utcMs] : undefined;
+    const siblingTemplateId = templateId !== undefined ? templateSiblings[templateId] : undefined;
+    const key = templateId !== undefined && siblingTemplateId !== undefined
+      ? 'tpl_' + Math.min(templateId, siblingTemplateId)
+      : 'solo_' + m.id;
     if (!r32Groups[key]) r32Groups[key] = [];
     r32Groups[key].push(m);
   });
-  // Sort within each pair by date, sort pairs by earliest date
+
+  // Sort within each pair by kickoff, sort pairs by earliest kickoff
   const r32Sorted = Object.values(r32Groups)
     .map(pair => pair.slice().sort((a, b) => (a.date || '') < (b.date || '') ? -1 : 1))
     .sort((a, b) => (a[0].date || '') < (b[0].date || '') ? -1 : 1)
