@@ -82,8 +82,8 @@ function formatCards(cards) {
   return cards.map(c => `${c.red ? '🟥' : '🟨'} ${c.name} ${c.minute}'`).join(', ');
 }
 
-function GoalsToggle({ goals1, goals2, cards1, cards2, show, onToggle, compact }) {
-  if (!goals1.length && !goals2.length && !cards1.length && !cards2.length) return null;
+function GoalsToggle({ goals1, goals2, cards1, cards2, hasPens, show, onToggle, compact }) {
+  if (!goals1.length && !goals2.length && !cards1.length && !cards2.length && !hasPens) return null;
   if (compact) {
     return (
       <button className={`goals-toggle-btn compact ${show ? 'is-open' : ''}`} onClick={onToggle} title={show ? 'Hide details' : 'Show scorers & cards'}>
@@ -98,10 +98,12 @@ function GoalsToggle({ goals1, goals2, cards1, cards2, show, onToggle, compact }
   );
 }
 
-function GoalsLine({ match, goals1, goals2, cards1, cards2, show }) {
-  if (!show || (!goals1.length && !goals2.length && !cards1.length && !cards2.length)) return null;
+function GoalsLine({ match, goals1, goals2, cards1, cards2, penInfo, show }) {
+  const hasContent = goals1.length || goals2.length || cards1.length || cards2.length || penInfo;
+  if (!show || !hasContent) return null;
   return (
     <div className="goals-line">
+      {penInfo && <div className="goals-line-pens">{penInfo}</div>}
       {goals1.length > 0 && <div className="goals-line-team"><TeamFlag name={match.team1Resolved} /> {formatScorers(goals1)}</div>}
       {goals2.length > 0 && <div className="goals-line-team"><TeamFlag name={match.team2Resolved} /> {formatScorers(goals2)}</div>}
       {cards1.length > 0 && <div className="goals-line-team"><TeamFlag name={match.team1Resolved} /> {formatCards(cards1)}</div>}
@@ -195,13 +197,6 @@ function MatchRow({ match, ctx, editable, onSave, tz, compact, liveData }) {
                   : '–'}
               </span>
               {ended && <span className="ft-tag">{match.et ? 'AET' : 'FT'}</span>}
-              {ended && match.penalties && (() => {
-                const [p1, p2] = match.penalties;
-                const penWinner = p1 > p2 ? match.team1Resolved : match.team2Resolved;
-                return <span className="pen-tag">{teamLabel(penWinner)} won {p1 > p2 ? p1 : p2}–{p1 > p2 ? p2 : p1} on pens</span>;
-              })()}
-              {live && liveData && liveData.isPens && liveData.penScore &&
-                <span className="pen-tag">{liveData.penScore[0]}–{liveData.penScore[1]} on pens</span>}
               {live && <span className="live-badge">
                 {liveData && liveData.isPens ? '● LIVE PENS' : liveData && liveData.isET ? '● LIVE ET' : '● LIVE'}
                 {liveMinuteText && !(liveData && liveData.isPens) ? ` ${liveMinuteText}` : ''}
@@ -219,12 +214,27 @@ function MatchRow({ match, ctx, editable, onSave, tz, compact, liveData }) {
           {team2Confirmed && !bothConfirmed && <span className="clinched-tag" title="Confirmed to advance to the next phase">✓</span>}
         </div>
       </div>
-      <VenueLine
-        match={match}
-        tz={tz}
-        goalsToggle={<GoalsToggle goals1={goals1} goals2={goals2} cards1={cards1} cards2={cards2} show={showGoals} onToggle={() => setShowGoals(s => !s)} compact={compact} />}
-      />
-      <GoalsLine match={match} goals1={goals1} goals2={goals2} cards1={cards1} cards2={cards2} show={showGoals} />
+      {(() => {
+        let penInfo = null;
+        if (ended && match.penalties) {
+          const [p1, p2] = match.penalties;
+          const penWinner = p1 > p2 ? match.team1Resolved : match.team2Resolved;
+          penInfo = `${teamLabel(penWinner)} won ${Math.max(p1,p2)}–${Math.min(p1,p2)} on pens`;
+        } else if (live && liveData && liveData.isPens && liveData.penScore) {
+          penInfo = `${liveData.penScore[0]}–${liveData.penScore[1]} on pens`;
+        }
+        const hasPens = !!penInfo;
+        return (
+          <React.Fragment>
+            <VenueLine
+              match={match}
+              tz={tz}
+              goalsToggle={<GoalsToggle goals1={goals1} goals2={goals2} cards1={cards1} cards2={cards2} hasPens={hasPens} show={showGoals} onToggle={() => setShowGoals(s => !s)} compact={compact} />}
+            />
+            <GoalsLine match={match} goals1={goals1} goals2={goals2} cards1={cards1} cards2={cards2} penInfo={penInfo} show={showGoals} />
+          </React.Fragment>
+        );
+      })()}
     </div>
   );
 }
