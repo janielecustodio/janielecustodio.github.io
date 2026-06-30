@@ -79,7 +79,19 @@ function formatScorers(goals) {
 }
 
 function formatCards(cards) {
-  return cards.map(c => `${c.red ? '🟥' : '🟨'} ${c.name} ${c.minute}'`).join(', ');
+  // Group consecutive same-colour cards, prefix the group with one icon
+  const parts = [];
+  let i = 0;
+  while (i < cards.length) {
+    const isRed = cards[i].red;
+    const group = [];
+    while (i < cards.length && cards[i].red === isRed) {
+      group.push(`${cards[i].name} ${cards[i].minute}'`);
+      i++;
+    }
+    parts.push(`${isRed ? '🟥' : '🟨'} ${group.join(', ')}`);
+  }
+  return parts.join(' · ');
 }
 
 function GoalsToggle({ goals1, goals2, cards1, cards2, hasPens, show, onToggle, compact }) {
