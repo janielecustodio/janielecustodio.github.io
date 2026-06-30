@@ -677,58 +677,11 @@ function BracketView({ resolved, ctx, editable, onSave, filter, tz, liveScores }
     });
   });
 
-  // Template-derived sibling map: each R32 template id → its sibling's template id
-  const templateSiblings = {}; // template_r32_id → sibling_template_r32_id
-  const templateR32ByUtcMs = {}; // utcMs → template_r32_id
-  if (window.WC && window.WC.FIXTURE_TEMPLATE && window.WC.toUtcMillis) {
-    window.WC.FIXTURE_TEMPLATE.forEach(m => {
-      if (m.round === 'Round of 32') {
-        const ms = window.WC.toUtcMillis(m.date, m.time);
-        if (ms !== null) templateR32ByUtcMs[ms] = m.id;
-      }
-    });
-    window.WC.FIXTURE_TEMPLATE.forEach(m => {
-      if (m.round === 'Round of 16') {
-        const w1 = BRACKET_REF_RE.exec(m.team1 || '');
-        const w2 = BRACKET_REF_RE.exec(m.team2 || '');
-        if (w1 && w2) {
-          const id1 = Number(w1[2]), id2 = Number(w2[2]);
-          templateSiblings[id1] = id2;
-          templateSiblings[id2] = id1;
-        }
-      }
-    });
-  }
 
-  // Group R32 matches into sibling pairs
-  const r32Groups = {};
-  byRound['Round of 32'].forEach(m => {
-    // Try live-data parent first
-    if (r32Parent[m.id] !== undefined) {
-      const key = r32Parent[m.id];
-      if (!r32Groups[key]) r32Groups[key] = [];
-      r32Groups[key].push(m);
-      return;
-    }
-    // Fall back to template sibling lookup via UTC kickoff time
-    const utcMs = window.WC && window.WC.toUtcMillis ? window.WC.toUtcMillis(m.date, m.time) : null;
-    const templateId = utcMs !== null ? templateR32ByUtcMs[utcMs] : undefined;
-    const siblingTemplateId = templateId !== undefined ? templateSiblings[templateId] : undefined;
-    const key = templateId !== undefined && siblingTemplateId !== undefined
-      ? 'tpl_' + Math.min(templateId, siblingTemplateId)
-      : 'solo_' + m.id;
-    if (!r32Groups[key]) r32Groups[key] = [];
-    r32Groups[key].push(m);
-  });
-
-  // Sort within each pair by kickoff, sort pairs by earliest kickoff
-  const r32Sorted = Object.values(r32Groups)
-    .map(pair => pair.slice().sort((a, b) => (a.date || '') < (b.date || '') ? -1 : 1))
-    .sort((a, b) => (a[0].date || '') < (b[0].date || '') ? -1 : 1)
-    .flat();
-  byRound['Round of 32'] = r32Sorted;
-
-  // Order R16+ via reverse-chain tree traversal from Final downward.
+  // Order all knockout rounds via reverse-chain tree traversal from Final downward.
+  // R32 is included in the same pass so its ordering is consistent with the tree
+  // structure — chronological ordering of R32 would misalign feeder pairs for
+  // QF/SF centering, causing crossing connector lines.
   const treeOrder = {};
   BRACKET_REVERSE_CHAIN.forEach((round, i) => {
     if (i === 0) {
@@ -749,8 +702,8 @@ function BracketView({ resolved, ctx, editable, onSave, filter, tz, liveScores }
     byRound[round].forEach(m => { if (!seqSet.has(m.id)) seq.push(m.id); });
     treeOrder[round] = seq;
   });
-  // Apply treeOrder to R16+ (R32 already sorted above)
-  ['Round of 16', 'Quarter-final', 'Semi-final', 'Final'].forEach(round => {
+  // Apply treeOrder to all knockout rounds including R32
+  ['Round of 32', 'Round of 16', 'Quarter-final', 'Semi-final', 'Final'].forEach(round => {
     const ord = treeOrder[round];
     if (ord) byRound[round].sort((a, b) => ord.indexOf(a.id) - ord.indexOf(b.id));
   });
