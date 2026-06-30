@@ -200,7 +200,12 @@ function MatchRow({ match, ctx, editable, onSave, tz, compact, liveData }) {
                 const penWinner = p1 > p2 ? match.team1Resolved : match.team2Resolved;
                 return <span className="pen-tag">{teamLabel(penWinner)} won {p1 > p2 ? p1 : p2}–{p1 > p2 ? p2 : p1} on pens</span>;
               })()}
-              {live && <span className="live-badge">● LIVE{liveMinuteText ? ` ${liveMinuteText}` : ''}</span>}
+              {live && liveData && liveData.isPens && liveData.penScore &&
+                <span className="pen-tag">{liveData.penScore[0]}–{liveData.penScore[1]} on pens</span>}
+              {live && <span className="live-badge">
+                {liveData && liveData.isPens ? '● LIVE PENS' : liveData && liveData.isET ? '● LIVE ET' : '● LIVE'}
+                {liveMinuteText && !(liveData && liveData.isPens) ? ` ${liveMinuteText}` : ''}
+              </span>}
             </React.Fragment>
           )}
         </div>
