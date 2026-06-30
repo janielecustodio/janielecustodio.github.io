@@ -122,11 +122,14 @@
   function extractShootout(comp, team1Id, team2Id) {
     var kicks1 = [], kicks2 = [];
     (comp.details || []).forEach(function (d) {
-      var periodNum = d.period && (typeof d.period === 'object' ? d.period.number : d.period);
-      if (!d.shootout && periodNum !== 5) return;
-      // Include every shootout event; derive scored from scoringPlay (primary)
-      // or type text (fallback). Missing both → treat as missed (safe default).
       var text = d.type && d.type.text || '';
+      var periodNum = d.period && (typeof d.period === 'object' ? d.period.number : d.period);
+      // ESPN only sets shootout:true on scored kicks; missed/saved kicks often
+      // only appear with type.text "Miss"/"Save"/"Penalty - Missed". Accept
+      // by any of: shootout flag, period 5, or penalty/miss/save type text.
+      var isShootoutEvent = d.shootout || periodNum === 5
+        || /^(miss|save|penalty[\s-])/i.test(text);
+      if (!isShootoutEvent) return;
       var scored = d.scoringPlay === true || /goal/i.test(text);
       var player = d.athletesInvolved && d.athletesInvolved[0];
       var entry = {
