@@ -121,6 +121,10 @@
   // they appear in the play-by-play so rounds pair up naturally.
   function extractShootout(comp, team1Id, team2Id) {
     var kicks1 = [], kicks2 = [];
+    console.log('[WC shootout] details count:', (comp.details || []).length);
+    (comp.details || []).slice(0, 5).forEach(function (d) {
+      console.log('[WC shootout] sample detail:', JSON.stringify({ type: d.type, period: d.period, shootout: d.shootout, scoringPlay: d.scoringPlay, team: d.team && d.team.id }));
+    });
     (comp.details || []).forEach(function (d) {
       var text = d.type && d.type.text || '';
       var periodNum = d.period && (typeof d.period === 'object' ? d.period.number : d.period);
