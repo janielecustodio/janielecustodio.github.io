@@ -165,7 +165,7 @@ function GoalsLine({ match, goals1, goals2, cards1, cards2, penInfo, espnShootou
               <div className="goals-line-team">
                 <span>🟨</span>
                 {yellows.map((c, i) => (
-                  <span key={i}>{i > 0 && ', '}<TeamFlag name={c.team} /> {c.name} {c.minute}'</span>
+                  <span key={i}>{i > 0 && ', '}{c.team !== (yellows[i-1] && yellows[i-1].team) && <TeamFlag name={c.team} />} {c.name} {c.minute}'</span>
                 ))}
               </div>
             )}
@@ -173,7 +173,7 @@ function GoalsLine({ match, goals1, goals2, cards1, cards2, penInfo, espnShootou
               <div className="goals-line-team">
                 <span>🟥</span>
                 {reds.map((c, i) => (
-                  <span key={i}>{i > 0 && ', '}<TeamFlag name={c.team} /> {c.name} {c.minute}'</span>
+                  <span key={i}>{i > 0 && ', '}{c.team !== (reds[i-1] && reds[i-1].team) && <TeamFlag name={c.team} />} {c.name} {c.minute}'</span>
                 ))}
               </div>
             )}
