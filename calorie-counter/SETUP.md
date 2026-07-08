@@ -18,12 +18,15 @@ Everything below is free. Total time: ~15 minutes.
    `sql/schema.sql` and click **Run**. This creates the `foods` and
    `food_logs` tables with Row Level Security policies already applied.
 6. **Authentication → Sign In / Providers**: Email should already be
-   enabled by default — nothing to do here.
+   enabled by default — nothing to do here. The app uses passwordless
+   email one-time-code sign-in (enter your email, get a 6-digit code,
+   enter it) rather than a password.
 7. Open `calorie-counter/index.html` in a browser (or visit it once it's
-   deployed) and use the **Sign up** link to create your one account.
+   deployed), enter your email, and enter the code that arrives — this
+   creates your one account.
 8. Lock the app down to just you: **Authentication → Settings**, turn off
-   **Allow new users to sign up**. From now on only accounts that already
-   exist can sign in.
+   **Allow new users to sign up**. From now on only your existing account
+   can request a sign-in code.
 
 ## 2. Get a free USDA FoodData Central API key
 
