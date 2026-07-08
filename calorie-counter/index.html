@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calorie Counter — Janiele Custodio</title>
+<meta name="description" content="Private daily food log — macros and calories per entry, weighed in grams.">
+<meta name="robots" content="noindex, nofollow">
+<link rel="canonical" href="https://janielecustodio.com/calorie-counter/">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script>document.documentElement.setAttribute('data-theme',localStorage.getItem('jc_theme')||'dark')</script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#111318;--ink2:#16191f;--ink3:#1c2029;
+  --line:#22273a;--line2:#2c3248;
+  --muted:#505775;--muted2:#7a8299;
+  --body:#b2bace;--head:#e2e6f2;
+  --accent:#8c9eff;--good:#4caf7d;--bad:#e2685f;--r:5px;
+}
+[data-theme="light"]{
+  --ink:#f7f8fc;--ink2:#eef0f7;--ink3:#e6e8f2;
+  --line:#d8dce8;--line2:#c4c9da;
+  --muted:#9299b0;--muted2:#626882;
+  --body:#474e68;--head:#1a1d2e;
+  --accent:#4a5cf0;--good:#1f9d52;--bad:#c8483d;
+}
+html{scroll-behavior:smooth}
+body{
+  background:var(--ink);color:var(--body);
+  font-family:'IBM Plex Sans',sans-serif;font-size:15px;line-height:1.6;
+  min-height:100vh;-webkit-font-smoothing:antialiased;
+}
+a{color:var(--accent)}
+button{font-family:inherit}
+
+/* ── TOPBAR ── */
+.topbar{
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  padding:12px 20px;border-bottom:1px solid var(--line);
+  background:var(--ink2);position:sticky;top:0;z-index:50;
+}
+.btn-back{
+  background:transparent;border:1px solid var(--line2);border-radius:var(--r);
+  color:var(--muted2);font-size:11px;padding:5px 11px;cursor:pointer;
+  font-family:'IBM Plex Mono',monospace;text-decoration:none;
+  transition:color .15s,border-color .15s;
+}
+.btn-back:hover{color:var(--head);border-color:var(--muted);text-decoration:none}
+.topbar-title{font-size:14px;font-weight:600;color:var(--head)}
+.date-nav{display:flex;align-items:center;gap:8px;margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:12px}
+.date-nav button{background:none;border:1px solid var(--line2);border-radius:var(--r);color:var(--muted2);width:26px;height:26px;cursor:pointer}
+.date-nav button:hover{color:var(--head);border-color:var(--muted)}
+.date-nav-label{color:var(--body);min-width:118px;text-align:center}
+.date-today-btn{border:1px solid var(--line2);border-radius:var(--r);background:none;color:var(--muted2);font-size:11px;padding:4px 9px;cursor:pointer;font-family:'IBM Plex Mono',monospace}
+.date-today-btn:hover{color:var(--head);border-color:var(--muted)}
+.theme-toggle,.signout-btn{
+  background:none;border:1px solid var(--line2);border-radius:var(--r);
+  color:var(--muted2);font-size:11px;padding:5px 10px;cursor:pointer;
+  font-family:'IBM Plex Mono',monospace;transition:color .15s,border-color .15s;
+}
+.theme-toggle:hover,.signout-btn:hover{color:var(--body);border-color:var(--muted)}
+
+/* ── MAIN ── */
+.main{max-width:720px;margin:0 auto;padding:32px 20px 80px}
+.section{margin-bottom:32px}
+.section-title{
+  font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:500;
+  text-transform:uppercase;letter-spacing:.16em;color:var(--muted);
+  margin-bottom:14px;display:flex;align-items:center;gap:10px;
+}
+.section-title::after{content:'';flex:1;height:1px;background:var(--line)}
+
+/* ── AUTH ── */
+#auth-gate{max-width:340px;margin:60px auto 0}
+.auth-card{border:1px solid var(--line);border-radius:8px;padding:28px;background:var(--ink2)}
+.auth-title{font-size:18px;font-weight:600;color:var(--head);margin-bottom:4px}
+.auth-sub{font-size:12px;color:var(--muted2);margin-bottom:18px}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:11px;color:var(--muted2);margin-bottom:4px;font-family:'IBM Plex Mono',monospace}
+.field input{
+  width:100%;background:var(--ink);border:1px solid var(--line2);border-radius:var(--r);
+  color:var(--head);padding:8px 10px;font-size:13px;font-family:inherit;
+}
+.field input:focus{outline:none;border-color:var(--accent)}
+.btn-primary{
+  width:100%;background:var(--accent);color:var(--ink);border:none;border-radius:var(--r);
+  padding:9px 0;font-size:13px;font-weight:600;cursor:pointer;margin-top:6px;
+}
+.btn-primary:hover{opacity:.9}
+.auth-toggle{margin-top:14px;font-size:12px;color:var(--muted2);text-align:center}
+.auth-toggle a{cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.auth-error{color:var(--bad);font-size:12px;margin-top:8px}
+.auth-warning{
+  border:1px solid var(--bad);border-radius:var(--r);color:var(--bad);
+  font-size:12px;padding:10px 12px;margin-bottom:16px;line-height:1.5;
+}
+
+/* ── SUMMARY ── */
+.summary-kcal{font-size:30px;font-weight:600;color:var(--head);margin-bottom:2px}
+.summary-kcal-label{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:14px}
+.macro-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:13px}
+.macro-name{width:64px;color:var(--body)}
+.macro-bar-track{flex:1;height:8px;border-radius:4px;background:var(--ink3);overflow:hidden}
+.macro-bar-fill{height:100%;border-radius:4px}
+.macro-bar-fill.protein{background:#8c9eff}
+.macro-bar-fill.carbs{background:#ffcf6b}
+.macro-bar-fill.fat{background:#ff8c8c}
+.macro-val{width:118px;text-align:right;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted2)}
+.no-entries{font-size:13px;color:var(--muted2)}
+
+/* ── SEARCH ── */
+.search-row{display:flex;gap:8px;margin-bottom:10px}
+#search-input{
+  flex:1;background:var(--ink2);border:1px solid var(--line2);border-radius:var(--r);
+  color:var(--head);padding:9px 12px;font-size:14px;font-family:inherit;
+}
+#search-input:focus{outline:none;border-color:var(--accent)}
+.btn-scan{
+  background:var(--ink2);border:1px solid var(--line2);border-radius:var(--r);
+  color:var(--body);padding:0 14px;font-size:13px;cursor:pointer;white-space:nowrap;
+}
+.btn-scan:hover{border-color:var(--muted)}
+#search-results{display:flex;flex-direction:column;gap:6px;max-height:340px;overflow-y:auto}
+.result-item{
+  display:flex;align-items:center;gap:10px;padding:9px 12px;
+  border:1px solid var(--line);border-radius:var(--r);cursor:pointer;
+  transition:border-color .15s,background .15s;
+}
+.result-item:hover{border-color:var(--accent);background:rgba(140,158,255,.04)}
+.result-body{flex:1;min-width:0}
+.result-name{font-size:13px;color:var(--head);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.result-meta{font-size:11px;color:var(--muted2);font-family:'IBM Plex Mono',monospace;margin-top:2px}
+.tag{
+  display:inline-block;background:var(--ink3);border-radius:3px;padding:2px 6px;
+  font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--muted2);flex-shrink:0;
+  text-transform:uppercase;letter-spacing:.04em;
+}
+.result-kcal{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted2);flex-shrink:0}
+.search-status{font-size:12px;color:var(--muted2);padding:6px 2px}
+
+/* ── LOG LIST ── */
+.log-item{
+  display:flex;align-items:center;gap:12px;padding:10px 0;
+  border-bottom:1px solid var(--line);font-size:13px;
+}
+.log-item:last-child{border-bottom:none}
+.log-time{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);width:48px;flex-shrink:0}
+.log-body{flex:1;min-width:0}
+.log-name{color:var(--head);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.log-meta{font-size:11px;color:var(--muted2);font-family:'IBM Plex Mono',monospace;margin-top:2px}
+.log-kcal{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--body);flex-shrink:0}
+.log-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:15px;flex-shrink:0;padding:2px 4px}
+.log-del:hover{color:var(--bad)}
+
+/* ── MODAL ── */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;
+  align-items:center;justify-content:center;z-index:200;padding:20px;
+}
+.modal-card{
+  background:var(--ink2);border:1px solid var(--line);border-radius:8px;
+  padding:24px;width:100%;max-width:360px;
+}
+.modal-title{font-size:15px;font-weight:600;color:var(--head);margin-bottom:16px}
+.modal-actions{display:flex;gap:10px;margin-top:18px}
+.btn-secondary{
+  flex:1;background:none;border:1px solid var(--line2);border-radius:var(--r);
+  color:var(--body);padding:9px 0;font-size:13px;cursor:pointer;
+}
+.btn-secondary:hover{border-color:var(--muted)}
+.modal-actions .btn-primary{flex:1;margin-top:0}
+#scan-video{width:100%;border-radius:var(--r);background:#000;max-height:60vh}
+
+@media(max-width:560px){
+  .date-nav-label{min-width:96px;font-size:11px}
+  .topbar-title{display:none}
+}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:var(--ink)}
+::-webkit-scrollbar-thumb{background:var(--line2);border-radius:2px}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="btn-back" href="/">⟵ Home</a>
+  <div class="topbar-title">🍽️ Calorie Counter</div>
+  <div class="date-nav" id="date-nav" hidden>
+    <button id="date-prev" aria-label="Previous day">‹</button>
+    <span class="date-nav-label" id="date-label"></span>
+    <button id="date-next" aria-label="Next day">›</button>
+    <button class="date-today-btn" id="date-today">Today</button>
+  </div>
+  <button class="theme-toggle" id="theme-toggle">
+    <span id="theme-icon">☀</span>&nbsp;<span id="theme-label">Light</span>
+  </button>
+  <button class="signout-btn" id="signout-btn" hidden>Sign out</button>
+</div>
+
+<main class="main">
+
+  <div id="auth-gate">
+    <div class="auth-card">
+      <div id="config-warning" class="auth-warning" hidden>
+        Supabase isn't configured yet — edit <code>src/config.js</code> with your
+        project URL and anon key (see SETUP.md), then reload.
+      </div>
+      <div class="auth-title" id="auth-title">Sign in</div>
+      <div class="auth-sub">Private log — your data only.</div>
+      <form id="auth-form">
+        <div class="field">
+          <label for="auth-email">Email</label>
+          <input id="auth-email" type="email" autocomplete="email" required>
+        </div>
+        <div class="field">
+          <label for="auth-password">Password</label>
+          <input id="auth-password" type="password" autocomplete="current-password" required>
+        </div>
+        <button class="btn-primary" type="submit" id="auth-submit">Sign in</button>
+        <div class="auth-error" id="auth-error" hidden></div>
+      </form>
+      <div class="auth-toggle">
+        <span id="auth-toggle-text">Need an account?</span>
+        <a id="auth-toggle-link">Sign up</a>
+      </div>
+    </div>
+  </div>
+
+  <div id="app" hidden>
+    <section class="section" id="summary-panel">
+      <div class="section-title">Daily Summary</div>
+      <div id="summary-body"></div>
+    </section>
+
+    <section class="section">
+      <div class="section-title">Add Food</div>
+      <div class="search-row">
+        <input id="search-input" type="text" placeholder="Search foods (e.g. chicken breast, arroz)…" autocomplete="off">
+        <button class="btn-scan" id="scan-btn">📷 Scan</button>
+      </div>
+      <div id="search-status" class="search-status" hidden></div>
+      <div id="search-results"></div>
+    </section>
+
+    <section class="section">
+      <div class="section-title">Today's Log</div>
+      <div id="log-list"></div>
+    </section>
+  </div>
+
+</main>
+
+<div class="modal-overlay" id="qty-modal" hidden>
+  <div class="modal-card">
+    <div class="modal-title" id="qty-food-name"></div>
+    <div class="field">
+      <label for="qty-grams">Quantity (grams)</label>
+      <input id="qty-grams" type="number" min="1" step="1" value="100">
+    </div>
+    <div class="field">
+      <label for="qty-time">Time</label>
+      <input id="qty-time" type="datetime-local">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="qty-cancel">Cancel</button>
+      <button class="btn-primary" id="qty-confirm">Add to log</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="scan-modal" hidden>
+  <div class="modal-card">
+    <div class="modal-title">Scan barcode</div>
+    <video id="scan-video" autoplay playsinline muted></video>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="scan-cancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
