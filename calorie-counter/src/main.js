@@ -1,71 +1,55 @@
 import { isConfigured } from "./supabaseClient.js";
-import { onAuthChange, signIn, signUp, signOut } from "./auth.js";
+import { onAuthChange, requestOtp, verifyOtp, signOut } from "./auth.js";
 import { searchAll } from "./foodSearch.js";
 import { startScan, barcodeScanningSupported } from "./barcode.js";
 import { lookupBarcode } from "./sources/off.js";
 import { addEntry, deleteEntry, getEntriesForDate } from "./log.js";
 import { computeSummary } from "./summary.js";
 
-// ── Theme toggle (shared jc_theme key with the rest of the site) ──
-(function () {
-  const root = document.documentElement;
-  const icon = document.getElementById("theme-icon");
-  const lbl = document.getElementById("theme-label");
-  function apply(t) {
-    root.setAttribute("data-theme", t);
-    localStorage.setItem("jc_theme", t);
-    icon.textContent = t === "dark" ? "☀" : "☾";
-    lbl.textContent = t === "dark" ? "Light" : "Dark";
-  }
-  apply(localStorage.getItem("jc_theme") || "dark");
-  document.getElementById("theme-toggle").addEventListener("click", () =>
-    apply(root.getAttribute("data-theme") === "dark" ? "light" : "dark")
-  );
-})();
-
 if (!isConfigured) {
   document.getElementById("config-warning").hidden = false;
 }
 
-// ── Auth form ──
-let authMode = "signin";
-const authTitle = document.getElementById("auth-title");
-const authSubmit = document.getElementById("auth-submit");
-const authToggleText = document.getElementById("auth-toggle-text");
-const authToggleLink = document.getElementById("auth-toggle-link");
+// ── Auth: email one-time passcode, two steps ──
 const authError = document.getElementById("auth-error");
+const emailStep = document.getElementById("auth-email-step");
+const codeStep = document.getElementById("auth-code-step");
+const codeSentTo = document.getElementById("auth-code-sent-to");
+let pendingEmail = "";
 
-function setAuthMode(mode) {
-  authMode = mode;
-  authError.hidden = true;
-  if (mode === "signin") {
-    authTitle.textContent = "Sign in";
-    authSubmit.textContent = "Sign in";
-    authToggleText.textContent = "Need an account?";
-    authToggleLink.textContent = "Sign up";
-  } else {
-    authTitle.textContent = "Create account";
-    authSubmit.textContent = "Sign up";
-    authToggleText.textContent = "Already have an account?";
-    authToggleLink.textContent = "Sign in";
-  }
-}
-authToggleLink.addEventListener("click", () =>
-  setAuthMode(authMode === "signin" ? "signup" : "signin")
-);
-
-document.getElementById("auth-form").addEventListener("submit", async (e) => {
+document.getElementById("auth-email-form").addEventListener("submit", async (e) => {
   e.preventDefault();
   const email = document.getElementById("auth-email").value.trim();
-  const password = document.getElementById("auth-password").value;
   authError.hidden = true;
   try {
-    if (authMode === "signin") await signIn(email, password);
-    else await signUp(email, password);
+    await requestOtp(email);
+    pendingEmail = email;
+    codeSentTo.textContent = email;
+    emailStep.hidden = true;
+    codeStep.hidden = false;
+    document.getElementById("auth-code").focus();
   } catch (err) {
-    authError.textContent = err.message || "Something went wrong.";
+    authError.textContent = err.message || "Couldn't send a code — try again.";
     authError.hidden = false;
   }
+});
+
+document.getElementById("auth-code-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const code = document.getElementById("auth-code").value.trim();
+  authError.hidden = true;
+  try {
+    await verifyOtp(pendingEmail, code);
+  } catch (err) {
+    authError.textContent = err.message || "Invalid or expired code.";
+    authError.hidden = false;
+  }
+});
+
+document.getElementById("auth-use-different-email").addEventListener("click", () => {
+  authError.hidden = true;
+  codeStep.hidden = true;
+  emailStep.hidden = false;
 });
 
 document.getElementById("signout-btn").addEventListener("click", () => signOut());
@@ -113,7 +97,14 @@ onAuthChange((session) => {
   document.getElementById("app").hidden = !authed;
   document.getElementById("date-nav").hidden = !authed;
   document.getElementById("signout-btn").hidden = !authed;
-  if (authed) refresh();
+  if (authed) {
+    refresh();
+  } else {
+    codeStep.hidden = true;
+    emailStep.hidden = false;
+    document.getElementById("auth-email-form").reset();
+    document.getElementById("auth-code-form").reset();
+  }
 });
 
 async function refresh() {
