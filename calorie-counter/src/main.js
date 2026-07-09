@@ -4,7 +4,14 @@ import { searchAll } from "./foodSearch.js";
 import { startScan, barcodeScanningSupported } from "./barcode.js";
 import { lookupBarcode } from "./sources/off.js";
 import { fetchUsdaDetail } from "./sources/usda.js";
-import { addEntry, deleteEntry, getEntriesForDate } from "./log.js";
+import {
+  addEntry,
+  updateEntry,
+  deleteEntry,
+  getEntriesForDate,
+  getFrequentFoodsForMeal,
+  copyDay,
+} from "./log.js";
 import { computeSummary } from "./summary.js";
 import { MEAL_TYPES, inferMealType } from "./mealTypes.js";
 
@@ -231,10 +238,14 @@ function renderLog(entries) {
     group.innerHTML = `
       <div class="log-group-header">
         <span>${label} ${kcalHtml}</span>
-        <button class="log-group-add" type="button">+ Add</button>
+        <span class="log-group-actions">
+          <button class="log-group-copy" type="button" title="Copy from yesterday">⧉</button>
+          <button class="log-group-add" type="button">+ Add</button>
+        </span>
       </div>
     `;
     group.querySelector(".log-group-add").addEventListener("click", () => setAddTarget(id));
+    group.querySelector(".log-group-copy").addEventListener("click", () => copyMealFromYesterday(id, label));
 
     for (const e of groupEntries) {
       const row = document.createElement("div");
@@ -250,9 +261,16 @@ function renderLog(entries) {
       )} · F ${e.fat_g.toFixed(0)}</div>
         </div>
         <div class="log-kcal">${Math.round(e.kcal)} kcal</div>
+        <button class="log-repeat" aria-label="Log again today" title="Log again today">↻</button>
         <button class="log-del" aria-label="Delete entry">✕</button>
       `;
-      row.querySelector(".log-del").addEventListener("click", async () => {
+      row.addEventListener("click", () => openEditModal(e));
+      row.querySelector(".log-repeat").addEventListener("click", async (ev) => {
+        ev.stopPropagation();
+        await logAgain(e);
+      });
+      row.querySelector(".log-del").addEventListener("click", async (ev) => {
+        ev.stopPropagation();
         await deleteEntry(e.id);
         refresh();
       });
@@ -262,10 +280,61 @@ function renderLog(entries) {
   }
 }
 
+// Reconstructs a food-shaped object (per-100g macros) from a food_logs row
+// so it can flow through the same openQtyModal/addEntry path used for a
+// fresh search result — shared by edit, log-again, and the frequent-food
+// quick-picks. Prefers the live `foods` join (fresher if re-synced since);
+// falls back to back-computing from the entry's own snapshot if that join
+// is missing for some reason.
+function foodFromEntry(entry) {
+  const f = entry.foods || {};
+  const per100 = (snapshotVal, fallback100) => {
+    if (typeof fallback100 === "number") return fallback100;
+    return entry.quantity_g > 0 ? (snapshotVal / entry.quantity_g) * 100 : 0;
+  };
+  return {
+    source: f.source,
+    source_id: f.source_id,
+    name: f.name || "Food",
+    kcal_100g: per100(entry.kcal, f.kcal_100g),
+    protein_100g: per100(entry.protein_g, f.protein_100g),
+    fat_100g: per100(entry.fat_g, f.fat_100g),
+    carbs_100g: per100(entry.carbs_g, f.carbs_100g),
+    fiber_100g: per100(entry.fiber_g, f.fiber_100g) || 0,
+    micros: f.micros || entry.micros || {},
+    portions: [],
+  };
+}
+
+async function openEditModal(entry) {
+  editingEntryId = entry.id;
+  await openQtyModal(foodFromEntry(entry), {
+    amount: entry.quantity_g,
+    unitId: "grams",
+    time: new Date(entry.logged_at),
+    mealType: entry.meal_type || inferMealType(new Date(entry.logged_at)),
+  });
+}
+
+async function logAgain(entry) {
+  const food = foodFromEntry(entry);
+  await addEntry(
+    food,
+    entry.quantity_g,
+    new Date(),
+    entry.meal_type || inferMealType(new Date()),
+    entry.quantity_label
+  );
+  refresh();
+}
+
 // ── Add-food target (pinned meal) ──
 let pinnedMealType = null;
 const addTarget = document.getElementById("add-target");
 const addTargetLabel = document.getElementById("add-target-label");
+const frequentFoods = document.getElementById("frequent-foods");
+const frequentMealLabel = document.getElementById("frequent-meal-label");
+const frequentChips = document.getElementById("frequent-chips");
 
 function setAddTarget(mealId) {
   pinnedMealType = mealId;
@@ -273,14 +342,87 @@ function setAddTarget(mealId) {
   addTarget.hidden = false;
   document.getElementById("search-input").scrollIntoView({ behavior: "smooth", block: "center" });
   document.getElementById("search-input").focus();
+  renderFrequentFoods(mealId);
 }
 
 function clearAddTarget() {
   pinnedMealType = null;
   addTarget.hidden = true;
+  frequentFoods.hidden = true;
 }
 
 document.getElementById("add-target-clear").addEventListener("click", clearAddTarget);
+
+// Quick-pick chips for the 5-6 most-logged foods in this meal, pre-filled
+// with whatever quantity was used last time — skips search entirely for
+// the rotation of things you eat most days.
+async function renderFrequentFoods(mealId) {
+  frequentMealLabel.textContent = MEAL_TYPES.find((m) => m.id === mealId)?.label || "";
+  try {
+    const rows = await getFrequentFoodsForMeal(mealId, 6);
+    if (rows.length === 0) {
+      frequentFoods.hidden = true;
+      return;
+    }
+    frequentChips.innerHTML = "";
+    for (const row of rows) {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "frequent-chip";
+      chip.textContent = row.foods?.name || "Food";
+      chip.addEventListener("click", async () => {
+        const now = new Date();
+        const time = new Date(currentDate);
+        time.setHours(now.getHours(), now.getMinutes(), 0, 0);
+        await openQtyModal(foodFromEntry(row), {
+          amount: row.quantity_g,
+          unitId: "grams",
+          time,
+          mealType: mealId,
+        });
+      });
+      frequentChips.appendChild(chip);
+    }
+    frequentFoods.hidden = false;
+  } catch {
+    frequentFoods.hidden = true;
+  }
+}
+
+// ── Copy day / copy meal ──
+function prevDate(d) {
+  const x = new Date(d);
+  x.setDate(x.getDate() - 1);
+  return x;
+}
+
+document.getElementById("copy-day-btn").addEventListener("click", async () => {
+  const from = prevDate(currentDate);
+  const source = await getEntriesForDate(from);
+  if (source.length === 0) {
+    alert("Nothing logged yesterday to copy.");
+    return;
+  }
+  if (!confirm(`Copy ${source.length} entr${source.length === 1 ? "y" : "ies"} from yesterday into today?`)) {
+    return;
+  }
+  await copyDay(from, currentDate);
+  refresh();
+});
+
+async function copyMealFromYesterday(mealId, mealLabel) {
+  const from = prevDate(currentDate);
+  const source = (await getEntriesForDate(from)).filter((e) => e.meal_type === mealId);
+  if (source.length === 0) {
+    alert(`Nothing logged for ${mealLabel} yesterday to copy.`);
+    return;
+  }
+  if (!confirm(`Copy yesterday's ${mealLabel} (${source.length} item${source.length === 1 ? "" : "s"}) into today?`)) {
+    return;
+  }
+  await copyDay(from, currentDate, mealId);
+  refresh();
+}
 
 function escapeHtml(s) {
   const div = document.createElement("div");
@@ -359,7 +501,9 @@ const qtyUnit = document.getElementById("qty-unit");
 const qtyGramsHint = document.getElementById("qty-grams-hint");
 const qtyTime = document.getElementById("qty-time");
 const qtyMeal = document.getElementById("qty-meal");
+const qtyConfirm = document.getElementById("qty-confirm");
 let pendingFood = null;
+let editingEntryId = null;
 let currentUnits = [{ id: "grams", label: "Grams", grams: 1 }];
 
 qtyMeal.innerHTML = MEAL_TYPES.map((m) => `<option value="${m.id}">${m.label}</option>`).join("");
@@ -383,7 +527,7 @@ function updateGramsHint() {
   qtyGramsHint.textContent = qtyUnit.value === "grams" ? "" : `= ${totalGrams.toFixed(1)} g`;
 }
 
-function populateUnits(portions) {
+function populateUnits(portions, overrides) {
   currentUnits = [
     { id: "grams", label: "Grams", grams: 1 },
     ...portions.map((p, i) => ({ id: `portion${i}`, label: p.label, grams: p.grams })),
@@ -391,7 +535,10 @@ function populateUnits(portions) {
   qtyUnit.innerHTML = currentUnits
     .map((u) => `<option value="${u.id}">${escapeHtml(u.label)}</option>`)
     .join("");
-  if (portions.length > 0) {
+  if (overrides) {
+    qtyUnit.value = overrides.unitId || "grams";
+    qtyAmount.value = overrides.amount;
+  } else if (portions.length > 0) {
     qtyUnit.value = "portion0";
     qtyAmount.value = 1;
   } else {
@@ -408,17 +555,27 @@ qtyUnit.addEventListener("change", updateGramsHint);
 // full detail record, not search results — fetched here, lazily, only for
 // the one item the user is actually adding. Search stays fast; this is a
 // single extra request triggered by an explicit click, not one per result.
-async function openQtyModal(food) {
+//
+// `overrides` (used by edit/log-again/frequent-chip flows) pre-fills
+// amount/unit/time/meal instead of the normal add-new defaults.
+async function openQtyModal(food, overrides) {
   pendingFood = food;
   qtyName.textContent = food.name;
-  const now = new Date();
-  const defaultTime = new Date(currentDate);
-  defaultTime.setHours(now.getHours(), now.getMinutes(), 0, 0);
+  qtyConfirm.textContent = editingEntryId ? "Save changes" : "Add to log";
+
+  const defaultTime =
+    overrides?.time ||
+    (() => {
+      const now = new Date();
+      const d = new Date(currentDate);
+      d.setHours(now.getHours(), now.getMinutes(), 0, 0);
+      return d;
+    })();
   qtyTime.value = toLocalInputValue(defaultTime);
-  qtyMeal.value = pinnedMealType || inferMealType(defaultTime);
+  qtyMeal.value = overrides?.mealType || pinnedMealType || inferMealType(defaultTime);
 
   let portions = food.portions || [];
-  if (food.source === "usda") {
+  if (food.source === "usda" && food.source_id) {
     searchStatus.hidden = false;
     searchStatus.textContent = "Loading portion sizes…";
     try {
@@ -437,12 +594,13 @@ async function openQtyModal(food) {
       searchStatus.hidden = true;
     }
   }
-  populateUnits(portions);
+  populateUnits(portions, overrides);
   qtyModal.hidden = false;
 }
 
 document.getElementById("qty-cancel").addEventListener("click", () => {
   qtyModal.hidden = true;
+  editingEntryId = null;
 });
 
 // Re-infer the suggested meal whenever the time changes, so picking a
@@ -454,14 +612,19 @@ qtyTime.addEventListener("change", () => {
   if (!isNaN(t)) qtyMeal.value = inferMealType(t);
 });
 
-document.getElementById("qty-confirm").addEventListener("click", async () => {
+qtyConfirm.addEventListener("click", async () => {
   const amount = Number(qtyAmount.value);
   if (!pendingFood || !amount || amount <= 0) return;
   const grams = amount * selectedUnitGrams();
   const unit = currentUnits.find((u) => u.id === qtyUnit.value);
   const quantityLabel = qtyUnit.value === "grams" ? null : `${amount}× ${unit.label}`;
   const loggedAt = new Date(qtyTime.value);
-  await addEntry(pendingFood, grams, loggedAt, qtyMeal.value, quantityLabel);
+  if (editingEntryId) {
+    await updateEntry(editingEntryId, pendingFood, grams, loggedAt, qtyMeal.value, quantityLabel);
+    editingEntryId = null;
+  } else {
+    await addEntry(pendingFood, grams, loggedAt, qtyMeal.value, quantityLabel);
+  }
   qtyModal.hidden = true;
   searchInput.value = "";
   searchResults.innerHTML = "";

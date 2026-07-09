@@ -139,6 +139,18 @@ button{font-family:inherit}
   font-size:12px;padding:0 2px;line-height:1;
 }
 .add-target-clear:hover{color:var(--bad)}
+.frequent-foods{margin-bottom:12px}
+.frequent-label{
+  font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;
+}
+.frequent-chips{display:flex;flex-wrap:wrap;gap:6px}
+.frequent-chip{
+  background:var(--ink2);border:1px solid var(--line2);border-radius:14px;
+  color:var(--body);font-size:12px;padding:5px 12px;cursor:pointer;
+  font-family:inherit;white-space:nowrap;
+}
+.frequent-chip:hover{border-color:var(--accent);color:var(--head)}
 .search-row{display:flex;gap:8px;margin-bottom:10px}
 #search-input{
   flex:1;background:var(--ink2);border:1px solid var(--line2);border-radius:var(--r);
@@ -176,25 +188,35 @@ button{font-family:inherit}
   font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;
   text-transform:uppercase;letter-spacing:.08em;color:var(--muted2);
 }
-.log-group-add{
+.log-group-actions{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.log-group-add,.log-group-copy{
   background:none;border:1px solid var(--line2);border-radius:var(--r);
   color:var(--muted2);font-size:10px;padding:2px 8px;cursor:pointer;
   font-family:'IBM Plex Mono',monospace;font-weight:400;
   text-transform:none;letter-spacing:0;flex-shrink:0;
 }
-.log-group-add:hover{color:var(--head);border-color:var(--muted)}
+.log-group-copy{padding:2px 6px;font-size:12px}
+.log-group-add:hover,.log-group-copy:hover{color:var(--head);border-color:var(--muted)}
 .log-group-kcal{color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0}
+.copy-day-btn{
+  display:block;background:none;border:1px solid var(--line2);border-radius:var(--r);
+  color:var(--muted2);font-size:11px;padding:5px 10px;cursor:pointer;
+  font-family:'IBM Plex Mono',monospace;margin-bottom:14px;
+}
+.copy-day-btn:hover{color:var(--head);border-color:var(--muted)}
 .log-item{
-  display:flex;align-items:center;gap:12px;padding:10px 0;
+  display:flex;align-items:center;gap:12px;padding:10px 0;cursor:pointer;
   border-bottom:1px solid var(--line);font-size:13px;
 }
 .log-item:last-child{border-bottom:none}
+.log-item:hover .log-name{color:var(--accent)}
 .log-time{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);width:48px;flex-shrink:0}
 .log-body{flex:1;min-width:0}
-.log-name{color:var(--head);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.log-name{color:var(--head);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:color .15s}
 .log-meta{font-size:11px;color:var(--muted2);font-family:'IBM Plex Mono',monospace;margin-top:2px}
 .log-kcal{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--body);flex-shrink:0}
-.log-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:15px;flex-shrink:0;padding:2px 4px}
+.log-repeat,.log-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:15px;flex-shrink:0;padding:2px 4px}
+.log-repeat:hover{color:var(--accent)}
 .log-del:hover{color:var(--bad)}
 
 /* ── MODAL ── */
@@ -285,6 +307,10 @@ button{font-family:inherit}
         Adding to <strong id="add-target-label"></strong>
         <button id="add-target-clear" class="add-target-clear" type="button" aria-label="Clear target meal">✕</button>
       </div>
+      <div id="frequent-foods" class="frequent-foods" hidden>
+        <div class="frequent-label">Frequent for <span id="frequent-meal-label"></span></div>
+        <div class="frequent-chips" id="frequent-chips"></div>
+      </div>
       <div class="search-row">
         <input id="search-input" type="text" placeholder="Search foods (e.g. chicken breast, arroz)…" autocomplete="off">
         <button class="btn-scan" id="scan-btn">📷 Scan</button>
@@ -295,6 +321,7 @@ button{font-family:inherit}
 
     <section class="section">
       <div class="section-title">Today's Log</div>
+      <button class="copy-day-btn" id="copy-day-btn" type="button">⧉ Copy yesterday's log</button>
       <div id="log-list"></div>
     </section>
   </div>
