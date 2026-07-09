@@ -44,10 +44,19 @@ async function backfillMissingEnergy(food) {
 }
 
 export async function searchUSDA(query) {
-  const url = `${BASE}/foods/search?api_key=${USDA_API_KEY}&query=${encodeURIComponent(
-    query
-  )}&pageSize=20&dataType=Foundation,SR%20Legacy`;
-  const res = await fetch(url);
+  // POST with a JSON body is the reliable way to pass array filters like
+  // dataType — the GET query-string form (dataType=Foundation,SR Legacy)
+  // silently failed to filter anything, letting Branded/processed items
+  // through and diluting results for whole-food searches.
+  const res = await fetch(`${BASE}/foods/search?api_key=${USDA_API_KEY}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      query,
+      pageSize: 50,
+      dataType: ["Foundation", "SR Legacy"],
+    }),
+  });
   if (!res.ok) throw new Error(`USDA search failed: ${res.status}`);
   const data = await res.json();
   const results = await Promise.all((data.foods || []).map(normalize).map(backfillMissingEnergy));
