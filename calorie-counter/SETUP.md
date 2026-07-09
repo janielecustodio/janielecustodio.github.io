@@ -50,25 +50,21 @@ table and then queried like any other cached food:
      download" for the current official PDF/spreadsheet link from NEPA.
    - **TBCA** (USP) — https://www.tbca.net.br lets you browse and export
      food composition data.
-2. Reformat the spreadsheet into a CSV with these exact column headers
-   (matching the `foods` table):
-
-   | column | notes |
-   |---|---|
-   | `source` | literal `taco` or `tbca` |
-   | `source_id` | the food's code from the original table (e.g. TACO's numeric code) — must be unique per source |
-   | `name` | food name |
-   | `kcal_100g` | energy per 100g |
-   | `protein_100g` | protein per 100g |
-   | `fat_100g` | fat per 100g |
-   | `carbs_100g` | carbohydrate per 100g |
-   | `fiber_100g` | fiber per 100g (optional, can leave blank) |
-
-   Leave `brand`, `barcode`, `micros` blank/empty — they're not used for
-   whole foods.
+2. Open `sql/taco_tbca_import_template.csv` in Excel/Numbers/Google
+   Sheets — it already has the exact column headers the `foods` table
+   expects (`source`, `source_id`, `name`, `kcal_100g`, `protein_100g`,
+   `fat_100g`, `carbs_100g`, `fiber_100g`). Delete the placeholder
+   `REPLACE-WITH-...` row and fill in one row per food from the source
+   spreadsheet:
+   - `source`: literal `taco` or `tbca`
+   - `source_id`: the food's code from the original table — must be
+     unique per source
+   - the rest: copy the matching nutrient values per 100g
+   Leave `brand`, `barcode`, `micros` out entirely — not used for whole
+   foods.
 3. In Supabase: **Table Editor → foods → Insert → Import data from CSV**,
-   upload the file, map the columns (they should auto-match by name), and
-   import.
+   upload your filled-in file, map the columns (they should auto-match by
+   name), and import.
 
 That's it — the app's search bar will immediately start returning TACO/TBCA
 results alongside USDA and Open Food Facts once the table has rows.
