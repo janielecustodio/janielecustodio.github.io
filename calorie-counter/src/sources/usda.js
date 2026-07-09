@@ -2,11 +2,13 @@ import { USDA_API_KEY } from "../config.js";
 
 const BASE = "https://api.nal.usda.gov/fdc/v1";
 
-function nutrient(food, names) {
-  const hit = food.foodNutrients?.find((n) =>
-    names.includes(n.nutrientName)
+// SR Legacy items often carry two "Energy" entries — one in kcal, one in kJ.
+// Matching on name alone risks grabbing the kJ value (~4.2x too high).
+function nutrient(food, names, unit) {
+  const hit = food.foodNutrients?.find(
+    (n) => names.includes(n.nutrientName) && (!unit || n.unitName === unit)
   );
-  return hit?.value ?? 0;
+  return hit?.value ?? null;
 }
 
 function normalize(food) {
@@ -16,21 +18,42 @@ function normalize(food) {
     name: food.description,
     brand: food.brandOwner || food.brandName || null,
     barcode: food.gtinUpc || null,
-    kcal_100g: nutrient(food, ["Energy"]),
-    protein_100g: nutrient(food, ["Protein"]),
-    fat_100g: nutrient(food, ["Total lipid (fat)"]),
-    carbs_100g: nutrient(food, ["Carbohydrate, by difference"]),
-    fiber_100g: nutrient(food, ["Fiber, total dietary"]),
+    kcal_100g: nutrient(food, ["Energy"], "KCAL"),
+    protein_100g: nutrient(food, ["Protein"], "G") ?? 0,
+    fat_100g: nutrient(food, ["Total lipid (fat)"], "G") ?? 0,
+    carbs_100g: nutrient(food, ["Carbohydrate, by difference"], "G") ?? 0,
+    fiber_100g: nutrient(food, ["Fiber, total dietary"], "G") ?? 0,
     micros: {},
   };
+}
+
+// The search endpoint's nutrient list is sometimes incomplete (missing
+// Energy, or missing it in KCAL specifically) even for perfectly valid
+// foods — fetch the full record for anything that came back empty.
+async function backfillMissingEnergy(food) {
+  if (food.kcal_100g !== null) return food;
+  try {
+    const res = await fetch(`${BASE}/food/${food.source_id}?api_key=${USDA_API_KEY}`);
+    if (!res.ok) return food;
+    const full = await res.json();
+    const detail = normalize(full);
+    return { ...food, ...detail, kcal_100g: detail.kcal_100g ?? food.kcal_100g };
+  } catch {
+    return food;
+  }
 }
 
 export async function searchUSDA(query) {
   const url = `${BASE}/foods/search?api_key=${USDA_API_KEY}&query=${encodeURIComponent(
     query
-  )}&pageSize=15&dataType=Foundation,SR%20Legacy`;
+  )}&pageSize=20&dataType=Foundation,SR%20Legacy`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`USDA search failed: ${res.status}`);
   const data = await res.json();
-  return (data.foods || []).map(normalize);
+  const results = await Promise.all((data.foods || []).map(normalize).map(backfillMissingEnergy));
+  // Drop entries USDA genuinely has no usable energy data for, rather than
+  // showing a false "0 kcal" that looks like a real (wrong) answer.
+  return results
+    .filter((f) => f.kcal_100g !== null)
+    .map((f) => ({ ...f, kcal_100g: f.kcal_100g }));
 }
