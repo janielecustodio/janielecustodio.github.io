@@ -1,6 +1,11 @@
-import { searchUSDA } from "./sources/usda.js";
+import { searchUSDA, backfillMissingEnergy } from "./sources/usda.js";
 import { searchOFF } from "./sources/off.js";
 import { searchTaco } from "./sources/taco.js";
+
+// How many top-ranked results get a USDA detail-fetch to backfill missing
+// calorie data. Bounded on purpose — backfilling every result in a page of
+// 25 was firing dozens of parallel requests and making search feel stuck.
+const BACKFILL_LIMIT = 10;
 
 function wordsOf(text) {
   return text.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
@@ -63,5 +68,16 @@ export async function searchAll(query) {
   results.sort(
     (a, b) => relevanceScore(b.name, queryWords) - relevanceScore(a.name, queryWords)
   );
-  return results;
+
+  // Rank first, *then* backfill — only the results actually worth showing
+  // pay for the extra USDA round-trip. Items further down that still turn
+  // out to have no usable calorie data are silently dropped (equivalent to
+  // never having matched — nobody was going to scroll to them anyway).
+  const visible = await Promise.all(
+    results
+      .slice(0, BACKFILL_LIMIT)
+      .map((f) => (f.source === "usda" ? backfillMissingEnergy(f) : f))
+  );
+  const rest = results.slice(BACKFILL_LIMIT);
+  return [...visible, ...rest].filter((f) => f.kcal_100g !== null);
 }

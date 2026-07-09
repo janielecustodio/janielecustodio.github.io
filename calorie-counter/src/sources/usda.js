@@ -29,8 +29,11 @@ function normalize(food) {
 
 // The search endpoint's nutrient list is sometimes incomplete (missing
 // Energy, or missing it in KCAL specifically) even for perfectly valid
-// foods — fetch the full record for anything that came back empty.
-async function backfillMissingEnergy(food) {
+// foods — fetch the full record to backfill it. Exported so the caller can
+// bound *how many* of these extra requests fire (see foodSearch.js) — doing
+// this for every result in a 25-50 item page was the search slowdown: one
+// query could fan out into dozens of parallel USDA requests.
+export async function backfillMissingEnergy(food) {
   if (food.kcal_100g !== null) return food;
   try {
     const res = await fetch(`${BASE}/food/${food.source_id}?api_key=${USDA_API_KEY}`);
@@ -53,16 +56,13 @@ export async function searchUSDA(query) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       query,
-      pageSize: 50,
+      pageSize: 25,
       dataType: ["Foundation", "SR Legacy"],
     }),
   });
   if (!res.ok) throw new Error(`USDA search failed: ${res.status}`);
   const data = await res.json();
-  const results = await Promise.all((data.foods || []).map(normalize).map(backfillMissingEnergy));
-  // Drop entries USDA genuinely has no usable energy data for, rather than
-  // showing a false "0 kcal" that looks like a real (wrong) answer.
-  return results
-    .filter((f) => f.kcal_100g !== null)
-    .map((f) => ({ ...f, kcal_100g: f.kcal_100g }));
+  // No backfill here — kcal_100g may be null. foodSearch.js ranks first,
+  // then backfills only the handful of results actually shown.
+  return (data.foods || []).map(normalize);
 }
