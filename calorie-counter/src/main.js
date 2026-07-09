@@ -3,6 +3,7 @@ import { onAuthChange, signIn, signUp, signOut } from "./auth.js";
 import { searchAll } from "./foodSearch.js";
 import { startScan, barcodeScanningSupported } from "./barcode.js";
 import { lookupBarcode } from "./sources/off.js";
+import { fetchUsdaDetail } from "./sources/usda.js";
 import { addEntry, deleteEntry, getEntriesForDate } from "./log.js";
 import { computeSummary } from "./summary.js";
 import { MEAL_TYPES, inferMealType } from "./mealTypes.js";
@@ -242,9 +243,11 @@ function renderLog(entries) {
         <div class="log-time">${timeFmt.format(new Date(e.logged_at))}</div>
         <div class="log-body">
           <div class="log-name">${escapeHtml(e.foods?.name || "Food")}</div>
-          <div class="log-meta">${e.quantity_g} g · P ${e.protein_g.toFixed(
+          <div class="log-meta">${escapeHtml(
+            e.quantity_label || `${e.quantity_g} g`
+          )} · P ${e.protein_g.toFixed(0)} · C ${e.carbs_g.toFixed(
         0
-      )} · C ${e.carbs_g.toFixed(0)} · F ${e.fat_g.toFixed(0)}</div>
+      )} · F ${e.fat_g.toFixed(0)}</div>
         </div>
         <div class="log-kcal">${Math.round(e.kcal)} kcal</div>
         <button class="log-del" aria-label="Delete entry">✕</button>
@@ -351,10 +354,13 @@ function renderResults(results) {
 // ── Quantity modal ──
 const qtyModal = document.getElementById("qty-modal");
 const qtyName = document.getElementById("qty-food-name");
-const qtyGrams = document.getElementById("qty-grams");
+const qtyAmount = document.getElementById("qty-amount");
+const qtyUnit = document.getElementById("qty-unit");
+const qtyGramsHint = document.getElementById("qty-grams-hint");
 const qtyTime = document.getElementById("qty-time");
 const qtyMeal = document.getElementById("qty-meal");
 let pendingFood = null;
+let currentUnits = [{ id: "grams", label: "Grams", grams: 1 }];
 
 qtyMeal.innerHTML = MEAL_TYPES.map((m) => `<option value="${m.id}">${m.label}</option>`).join("");
 
@@ -365,15 +371,73 @@ function toLocalInputValue(d) {
   )}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-function openQtyModal(food) {
+// grams-per-unit for whichever option is currently selected
+function selectedUnitGrams() {
+  const unit = currentUnits.find((u) => u.id === qtyUnit.value);
+  return unit ? unit.grams : 1;
+}
+
+function updateGramsHint() {
+  const amount = Number(qtyAmount.value) || 0;
+  const totalGrams = amount * selectedUnitGrams();
+  qtyGramsHint.textContent = qtyUnit.value === "grams" ? "" : `= ${totalGrams.toFixed(1)} g`;
+}
+
+function populateUnits(portions) {
+  currentUnits = [
+    { id: "grams", label: "Grams", grams: 1 },
+    ...portions.map((p, i) => ({ id: `portion${i}`, label: p.label, grams: p.grams })),
+  ];
+  qtyUnit.innerHTML = currentUnits
+    .map((u) => `<option value="${u.id}">${escapeHtml(u.label)}</option>`)
+    .join("");
+  if (portions.length > 0) {
+    qtyUnit.value = "portion0";
+    qtyAmount.value = 1;
+  } else {
+    qtyUnit.value = "grams";
+    qtyAmount.value = 100;
+  }
+  updateGramsHint();
+}
+
+qtyAmount.addEventListener("input", updateGramsHint);
+qtyUnit.addEventListener("change", updateGramsHint);
+
+// USDA household-unit portions ("1 large", "1 slice") only come from the
+// full detail record, not search results — fetched here, lazily, only for
+// the one item the user is actually adding. Search stays fast; this is a
+// single extra request triggered by an explicit click, not one per result.
+async function openQtyModal(food) {
   pendingFood = food;
   qtyName.textContent = food.name;
-  qtyGrams.value = 100;
   const now = new Date();
   const defaultTime = new Date(currentDate);
   defaultTime.setHours(now.getHours(), now.getMinutes(), 0, 0);
   qtyTime.value = toLocalInputValue(defaultTime);
   qtyMeal.value = pinnedMealType || inferMealType(defaultTime);
+
+  let portions = food.portions || [];
+  if (food.source === "usda") {
+    searchStatus.hidden = false;
+    searchStatus.textContent = "Loading portion sizes…";
+    try {
+      const detail = await fetchUsdaDetail(food.source_id);
+      // Prefer the detail fetch's macros, but never let a partial/odd
+      // response null out a good value the search result already had.
+      pendingFood = {
+        ...food,
+        ...detail,
+        kcal_100g: detail.kcal_100g ?? food.kcal_100g,
+      };
+      portions = detail.portions || [];
+    } catch {
+      // grams-only fallback is fine — not fatal
+    } finally {
+      searchStatus.hidden = true;
+    }
+  }
+  populateUnits(portions);
   qtyModal.hidden = false;
 }
 
@@ -391,10 +455,13 @@ qtyTime.addEventListener("change", () => {
 });
 
 document.getElementById("qty-confirm").addEventListener("click", async () => {
-  const grams = Number(qtyGrams.value);
-  if (!pendingFood || !grams || grams <= 0) return;
+  const amount = Number(qtyAmount.value);
+  if (!pendingFood || !amount || amount <= 0) return;
+  const grams = amount * selectedUnitGrams();
+  const unit = currentUnits.find((u) => u.id === qtyUnit.value);
+  const quantityLabel = qtyUnit.value === "grams" ? null : `${amount}× ${unit.label}`;
   const loggedAt = new Date(qtyTime.value);
-  await addEntry(pendingFood, grams, loggedAt, qtyMeal.value);
+  await addEntry(pendingFood, grams, loggedAt, qtyMeal.value, quantityLabel);
   qtyModal.hidden = true;
   searchInput.value = "";
   searchResults.innerHTML = "";

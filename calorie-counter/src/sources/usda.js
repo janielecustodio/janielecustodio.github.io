@@ -11,6 +11,37 @@ function nutrient(food, names, unit) {
   return hit?.value ?? null;
 }
 
+// foodPortions only appears on the full /food/{fdcId} detail response, not
+// search results, and its fields are inconsistent across records (some put
+// the unit name in `modifier`, some in `measureUnit.name` — which is often
+// the literal placeholder "undetermined"). Build a defensive label from
+// whatever's actually present rather than assuming one field is reliable.
+function parsePortions(food) {
+  if (!Array.isArray(food.foodPortions)) return [];
+  const seen = new Set();
+  const portions = [];
+  for (const p of food.foodPortions) {
+    const grams = Number(p.gramWeight);
+    if (!grams || grams <= 0) continue;
+    const parts = [];
+    if (p.amount && p.amount !== 1) parts.push(String(p.amount));
+    const unitName =
+      p.measureUnit?.name && p.measureUnit.name.toLowerCase() !== "undetermined"
+        ? p.measureUnit.name
+        : null;
+    if (unitName) parts.push(unitName);
+    if (p.modifier) parts.push(p.modifier);
+    if (p.portionDescription) parts.push(p.portionDescription);
+    let label = parts.filter(Boolean).join(" ").trim();
+    if (!label) label = `${Math.round(grams)}g portion`;
+    const key = `${label}|${grams}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    portions.push({ label, grams });
+  }
+  return portions.slice(0, 6);
+}
+
 function normalize(food) {
   return {
     source: "usda",
@@ -24,6 +55,7 @@ function normalize(food) {
     carbs_100g: nutrient(food, ["Carbohydrate, by difference"], "G") ?? 0,
     fiber_100g: nutrient(food, ["Fiber, total dietary"], "G") ?? 0,
     micros: {},
+    portions: parsePortions(food),
   };
 }
 
@@ -36,14 +68,21 @@ function normalize(food) {
 export async function backfillMissingEnergy(food) {
   if (food.kcal_100g !== null) return food;
   try {
-    const res = await fetch(`${BASE}/food/${food.source_id}?api_key=${USDA_API_KEY}`);
-    if (!res.ok) return food;
-    const full = await res.json();
-    const detail = normalize(full);
+    const detail = await fetchUsdaDetail(food.source_id);
     return { ...food, ...detail, kcal_100g: detail.kcal_100g ?? food.kcal_100g };
   } catch {
     return food;
   }
+}
+
+// foodPortions (household units like "1 large", "1 slice") only comes back
+// on the full detail record, never the search endpoint — fetched lazily
+// when the user actually selects a result to add, not for every search hit.
+export async function fetchUsdaDetail(fdcId) {
+  const res = await fetch(`${BASE}/food/${fdcId}?api_key=${USDA_API_KEY}`);
+  if (!res.ok) throw new Error(`USDA detail fetch failed: ${res.status}`);
+  const full = await res.json();
+  return normalize(full);
 }
 
 export async function searchUSDA(query) {
