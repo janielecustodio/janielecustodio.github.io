@@ -86,14 +86,17 @@ function renderDateLabel() {
 
 document.getElementById("date-prev").addEventListener("click", () => {
   currentDate.setDate(currentDate.getDate() - 1);
+  clearAddTarget();
   refresh();
 });
 document.getElementById("date-next").addEventListener("click", () => {
   currentDate.setDate(currentDate.getDate() + 1);
+  clearAddTarget();
   refresh();
 });
 document.getElementById("date-today").addEventListener("click", () => {
   currentDate = startOfDay(new Date());
+  clearAddTarget();
   refresh();
 });
 
@@ -108,6 +111,7 @@ onAuthChange((session) => {
     refresh();
   } else {
     document.getElementById("auth-form").reset();
+    clearAddTarget();
   }
 });
 
@@ -198,12 +202,11 @@ const timeFmt = new Intl.DateTimeFormat(undefined, {
   minute: "2-digit",
 });
 
+// All six meal sections always render, even empty — each with its own
+// "+ Add" button that pins where the next searched/scanned food lands
+// (see setAddTarget below), instead of guessing from the current time.
 function renderLog(entries) {
   const list = document.getElementById("log-list");
-  if (entries.length === 0) {
-    list.innerHTML = `<div class="no-entries">Nothing logged yet — search for a food above.</div>`;
-    return;
-  }
 
   // Entries logged before meal_type existed have none — bucket those by
   // time of day so every entry always lands in one of the fixed groups.
@@ -216,14 +219,21 @@ function renderLog(entries) {
   list.innerHTML = "";
   for (const { id, label } of MEAL_TYPES) {
     const groupEntries = groups.get(id);
-    if (groupEntries.length === 0) continue;
-
     const groupKcal = groupEntries.reduce((sum, e) => sum + (Number(e.kcal) || 0), 0);
+
     const group = document.createElement("div");
     group.className = "log-group";
-    group.innerHTML = `<div class="log-group-header">${label} <span class="log-group-kcal">· ${Math.round(
-      groupKcal
-    )} kcal</span></div>`;
+    const kcalHtml =
+      groupEntries.length > 0
+        ? `<span class="log-group-kcal">· ${Math.round(groupKcal)} kcal</span>`
+        : "";
+    group.innerHTML = `
+      <div class="log-group-header">
+        <span>${label} ${kcalHtml}</span>
+        <button class="log-group-add" type="button">+ Add</button>
+      </div>
+    `;
+    group.querySelector(".log-group-add").addEventListener("click", () => setAddTarget(id));
 
     for (const e of groupEntries) {
       const row = document.createElement("div");
@@ -248,6 +258,26 @@ function renderLog(entries) {
     list.appendChild(group);
   }
 }
+
+// ── Add-food target (pinned meal) ──
+let pinnedMealType = null;
+const addTarget = document.getElementById("add-target");
+const addTargetLabel = document.getElementById("add-target-label");
+
+function setAddTarget(mealId) {
+  pinnedMealType = mealId;
+  addTargetLabel.textContent = MEAL_TYPES.find((m) => m.id === mealId)?.label || "";
+  addTarget.hidden = false;
+  document.getElementById("search-input").scrollIntoView({ behavior: "smooth", block: "center" });
+  document.getElementById("search-input").focus();
+}
+
+function clearAddTarget() {
+  pinnedMealType = null;
+  addTarget.hidden = true;
+}
+
+document.getElementById("add-target-clear").addEventListener("click", clearAddTarget);
 
 function escapeHtml(s) {
   const div = document.createElement("div");
@@ -343,7 +373,7 @@ function openQtyModal(food) {
   const defaultTime = new Date(currentDate);
   defaultTime.setHours(now.getHours(), now.getMinutes(), 0, 0);
   qtyTime.value = toLocalInputValue(defaultTime);
-  qtyMeal.value = inferMealType(defaultTime);
+  qtyMeal.value = pinnedMealType || inferMealType(defaultTime);
   qtyModal.hidden = false;
 }
 
@@ -352,8 +382,10 @@ document.getElementById("qty-cancel").addEventListener("click", () => {
 });
 
 // Re-infer the suggested meal whenever the time changes, so picking a
-// different time (e.g. logging breakfast retroactively) updates the default.
+// different time (e.g. logging breakfast retroactively) updates the
+// default — but only when nothing's pinned via a meal section's + Add.
 qtyTime.addEventListener("change", () => {
+  if (pinnedMealType) return;
   const t = new Date(qtyTime.value);
   if (!isNaN(t)) qtyMeal.value = inferMealType(t);
 });

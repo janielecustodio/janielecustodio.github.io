@@ -125,6 +125,16 @@ button{font-family:inherit}
 .no-entries{font-size:13px;color:var(--muted2)}
 
 /* ── SEARCH ── */
+.add-target{
+  display:flex;align-items:center;gap:6px;margin-bottom:10px;
+  font-size:12px;color:var(--muted2);
+}
+.add-target strong{color:var(--head);font-weight:500}
+.add-target-clear{
+  background:none;border:none;color:var(--muted);cursor:pointer;
+  font-size:12px;padding:0 2px;line-height:1;
+}
+.add-target-clear:hover{color:var(--bad)}
 .search-row{display:flex;gap:8px;margin-bottom:10px}
 #search-input{
   flex:1;background:var(--ink2);border:1px solid var(--line2);border-radius:var(--r);
@@ -158,10 +168,17 @@ button{font-family:inherit}
 .log-group{margin-bottom:18px}
 .log-group:last-child{margin-bottom:0}
 .log-group-header{
-  display:flex;align-items:baseline;gap:8px;margin-bottom:2px;
+  display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:2px;
   font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;
   text-transform:uppercase;letter-spacing:.08em;color:var(--muted2);
 }
+.log-group-add{
+  background:none;border:1px solid var(--line2);border-radius:var(--r);
+  color:var(--muted2);font-size:10px;padding:2px 8px;cursor:pointer;
+  font-family:'IBM Plex Mono',monospace;font-weight:400;
+  text-transform:none;letter-spacing:0;flex-shrink:0;
+}
+.log-group-add:hover{color:var(--head);border-color:var(--muted)}
 .log-group-kcal{color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0}
 .log-item{
   display:flex;align-items:center;gap:12px;padding:10px 0;
@@ -260,6 +277,10 @@ button{font-family:inherit}
 
     <section class="section">
       <div class="section-title">Add Food</div>
+      <div id="add-target" class="add-target" hidden>
+        Adding to <strong id="add-target-label"></strong>
+        <button id="add-target-clear" class="add-target-clear" type="button" aria-label="Clear target meal">✕</button>
+      </div>
       <div class="search-row">
         <input id="search-input" type="text" placeholder="Search foods (e.g. chicken breast, arroz)…" autocomplete="off">
         <button class="btn-scan" id="scan-btn">📷 Scan</button>
