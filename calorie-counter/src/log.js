@@ -32,7 +32,7 @@ async function ensureFoodCached(food) {
   return data.id;
 }
 
-export async function addEntry(food, quantityG, loggedAt) {
+export async function addEntry(food, quantityG, loggedAt, mealType) {
   const foodId = await ensureFoodCached(food);
   const {
     data: { user },
@@ -43,6 +43,7 @@ export async function addEntry(food, quantityG, loggedAt) {
     user_id: user.id,
     food_id: foodId,
     logged_at: loggedAt.toISOString(),
+    meal_type: mealType,
     quantity_g: quantityG,
     kcal: food.kcal_100g * mult,
     protein_g: food.protein_100g * mult,

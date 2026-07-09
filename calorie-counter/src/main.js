@@ -5,6 +5,7 @@ import { startScan, barcodeScanningSupported } from "./barcode.js";
 import { lookupBarcode } from "./sources/off.js";
 import { addEntry, deleteEntry, getEntriesForDate } from "./log.js";
 import { computeSummary } from "./summary.js";
+import { MEAL_TYPES, inferMealType } from "./mealTypes.js";
 
 if (!isConfigured) {
   document.getElementById("config-warning").hidden = false;
@@ -155,26 +156,48 @@ function renderLog(entries) {
     list.innerHTML = `<div class="no-entries">Nothing logged yet — search for a food above.</div>`;
     return;
   }
-  list.innerHTML = "";
+
+  // Entries logged before meal_type existed have none — bucket those by
+  // time of day so every entry always lands in one of the fixed groups.
+  const groups = new Map(MEAL_TYPES.map((m) => [m.id, []]));
   for (const e of entries) {
-    const row = document.createElement("div");
-    row.className = "log-item";
-    row.innerHTML = `
-      <div class="log-time">${timeFmt.format(new Date(e.logged_at))}</div>
-      <div class="log-body">
-        <div class="log-name">${escapeHtml(e.foods?.name || "Food")}</div>
-        <div class="log-meta">${e.quantity_g} g · P ${e.protein_g.toFixed(
-      0
-    )} · C ${e.carbs_g.toFixed(0)} · F ${e.fat_g.toFixed(0)}</div>
-      </div>
-      <div class="log-kcal">${Math.round(e.kcal)} kcal</div>
-      <button class="log-del" aria-label="Delete entry">✕</button>
-    `;
-    row.querySelector(".log-del").addEventListener("click", async () => {
-      await deleteEntry(e.id);
-      refresh();
-    });
-    list.appendChild(row);
+    const mealType = e.meal_type || inferMealType(new Date(e.logged_at));
+    (groups.get(mealType) || groups.get("evening_snack")).push(e);
+  }
+
+  list.innerHTML = "";
+  for (const { id, label } of MEAL_TYPES) {
+    const groupEntries = groups.get(id);
+    if (groupEntries.length === 0) continue;
+
+    const groupKcal = groupEntries.reduce((sum, e) => sum + (Number(e.kcal) || 0), 0);
+    const group = document.createElement("div");
+    group.className = "log-group";
+    group.innerHTML = `<div class="log-group-header">${label} <span class="log-group-kcal">· ${Math.round(
+      groupKcal
+    )} kcal</span></div>`;
+
+    for (const e of groupEntries) {
+      const row = document.createElement("div");
+      row.className = "log-item";
+      row.innerHTML = `
+        <div class="log-time">${timeFmt.format(new Date(e.logged_at))}</div>
+        <div class="log-body">
+          <div class="log-name">${escapeHtml(e.foods?.name || "Food")}</div>
+          <div class="log-meta">${e.quantity_g} g · P ${e.protein_g.toFixed(
+        0
+      )} · C ${e.carbs_g.toFixed(0)} · F ${e.fat_g.toFixed(0)}</div>
+        </div>
+        <div class="log-kcal">${Math.round(e.kcal)} kcal</div>
+        <button class="log-del" aria-label="Delete entry">✕</button>
+      `;
+      row.querySelector(".log-del").addEventListener("click", async () => {
+        await deleteEntry(e.id);
+        refresh();
+      });
+      group.appendChild(row);
+    }
+    list.appendChild(group);
   }
 }
 
@@ -252,7 +275,10 @@ const qtyModal = document.getElementById("qty-modal");
 const qtyName = document.getElementById("qty-food-name");
 const qtyGrams = document.getElementById("qty-grams");
 const qtyTime = document.getElementById("qty-time");
+const qtyMeal = document.getElementById("qty-meal");
 let pendingFood = null;
+
+qtyMeal.innerHTML = MEAL_TYPES.map((m) => `<option value="${m.id}">${m.label}</option>`).join("");
 
 function toLocalInputValue(d) {
   const pad = (n) => String(n).padStart(2, "0");
@@ -269,6 +295,7 @@ function openQtyModal(food) {
   const defaultTime = new Date(currentDate);
   defaultTime.setHours(now.getHours(), now.getMinutes(), 0, 0);
   qtyTime.value = toLocalInputValue(defaultTime);
+  qtyMeal.value = inferMealType(defaultTime);
   qtyModal.hidden = false;
 }
 
@@ -276,11 +303,18 @@ document.getElementById("qty-cancel").addEventListener("click", () => {
   qtyModal.hidden = true;
 });
 
+// Re-infer the suggested meal whenever the time changes, so picking a
+// different time (e.g. logging breakfast retroactively) updates the default.
+qtyTime.addEventListener("change", () => {
+  const t = new Date(qtyTime.value);
+  if (!isNaN(t)) qtyMeal.value = inferMealType(t);
+});
+
 document.getElementById("qty-confirm").addEventListener("click", async () => {
   const grams = Number(qtyGrams.value);
   if (!pendingFood || !grams || grams <= 0) return;
   const loggedAt = new Date(qtyTime.value);
-  await addEntry(pendingFood, grams, loggedAt);
+  await addEntry(pendingFood, grams, loggedAt, qtyMeal.value);
   qtyModal.hidden = true;
   searchInput.value = "";
   searchResults.innerHTML = "";

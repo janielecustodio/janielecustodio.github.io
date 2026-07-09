@@ -23,6 +23,9 @@ create table if not exists public.food_logs (
   user_id uuid not null references auth.users (id) on delete cascade,
   food_id uuid references public.foods (id),
   logged_at timestamptz not null default now(),
+  meal_type text check (meal_type in (
+    'breakfast', 'morning_snack', 'lunch', 'afternoon_snack', 'dinner', 'evening_snack'
+  )),
   quantity_g numeric not null check (quantity_g > 0),
   -- Snapshot of the food's macros at the logged quantity, so historical
   -- entries never change if the cached `foods` row is later re-synced.
