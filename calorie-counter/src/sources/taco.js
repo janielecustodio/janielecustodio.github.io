@@ -25,5 +25,6 @@ export async function searchTaco(query) {
     carbs_100g: row.carbs_100g,
     fiber_100g: row.fiber_100g,
     micros: row.micros || {},
+    portions: [], // no household-unit data for TACO/TBCA, grams only
   }));
 }

@@ -89,6 +89,10 @@ button{font-family:inherit}
   color:var(--head);padding:8px 10px;font-size:13px;font-family:inherit;
 }
 .field input:focus,.field select:focus{outline:none;border-color:var(--accent)}
+.qty-amount-row{display:flex;gap:8px}
+.qty-amount-col{flex:1}
+.qty-unit-col{flex:1.4}
+.qty-grams-hint{font-size:11px;color:var(--muted2);font-family:'IBM Plex Mono',monospace;margin:-6px 0 12px}
 .btn-primary{
   width:100%;background:var(--accent);color:var(--ink);border:none;border-radius:var(--r);
   padding:9px 0;font-size:13px;font-weight:600;cursor:pointer;margin-top:6px;
@@ -300,10 +304,17 @@ button{font-family:inherit}
 <div class="modal-overlay" id="qty-modal" hidden>
   <div class="modal-card">
     <div class="modal-title" id="qty-food-name"></div>
-    <div class="field">
-      <label for="qty-grams">Quantity (grams)</label>
-      <input id="qty-grams" type="number" min="1" step="1" value="100">
+    <div class="field qty-amount-row">
+      <div class="qty-amount-col">
+        <label for="qty-amount">Amount</label>
+        <input id="qty-amount" type="number" min="0.1" step="any" value="100">
+      </div>
+      <div class="qty-unit-col">
+        <label for="qty-unit">Unit</label>
+        <select id="qty-unit"></select>
+      </div>
     </div>
+    <div class="qty-grams-hint" id="qty-grams-hint"></div>
     <div class="field">
       <label for="qty-time">Time</label>
       <input id="qty-time" type="datetime-local">

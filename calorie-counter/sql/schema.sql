@@ -27,6 +27,10 @@ create table if not exists public.food_logs (
     'breakfast', 'morning_snack', 'lunch', 'afternoon_snack', 'dinner', 'evening_snack'
   )),
   quantity_g numeric not null check (quantity_g > 0),
+  -- Friendly form of the quantity when logged by unit rather than a raw
+  -- gram amount, e.g. "2x large egg" — quantity_g is still always the
+  -- source of truth for macros; this is display-only and nullable.
+  quantity_label text,
   -- Snapshot of the food's macros at the logged quantity, so historical
   -- entries never change if the cached `foods` row is later re-synced.
   kcal numeric not null default 0,
