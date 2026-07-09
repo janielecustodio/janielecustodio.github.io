@@ -7,6 +7,10 @@
 <meta name="description" content="Private daily food log — macros and calories per entry, weighed in grams.">
 <meta name="robots" content="noindex, nofollow">
 <link rel="canonical" href="https://janielecustodio.com/calorie-counter/">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="theme-color" content="#111318">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script>document.documentElement.setAttribute('data-theme',localStorage.getItem('jc_theme')||'dark')</script>
@@ -386,6 +390,11 @@ button{font-family:inherit}
     apply(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
   });
 })();
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('/calorie-counter/sw.js');
+  });
+}
 </script>
 <script type="module" src="src/main.js"></script>
 </body>
