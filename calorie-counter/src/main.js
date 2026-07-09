@@ -17,6 +17,13 @@ const codeStep = document.getElementById("auth-code-step");
 const codeSentTo = document.getElementById("auth-code-sent-to");
 let pendingEmail = "";
 
+// Supabase errors don't always carry a plain string `.message` (e.g. a raw
+// network failure, or a malformed response) — fall back to a friendly
+// message instead of ever rendering "[object Object]" or "{}".
+function errMessage(err, fallback) {
+  return err && typeof err.message === "string" && err.message ? err.message : fallback;
+}
+
 document.getElementById("auth-email-form").addEventListener("submit", async (e) => {
   e.preventDefault();
   const email = document.getElementById("auth-email").value.trim();
@@ -29,7 +36,7 @@ document.getElementById("auth-email-form").addEventListener("submit", async (e) 
     codeStep.hidden = false;
     document.getElementById("auth-code").focus();
   } catch (err) {
-    authError.textContent = err.message || "Couldn't send a code — try again.";
+    authError.textContent = errMessage(err, "Couldn't send a code — try again.");
     authError.hidden = false;
   }
 });
@@ -41,7 +48,7 @@ document.getElementById("auth-code-form").addEventListener("submit", async (e) =
   try {
     await verifyOtp(pendingEmail, code);
   } catch (err) {
-    authError.textContent = err.message || "Invalid or expired code.";
+    authError.textContent = errMessage(err, "Invalid or expired code.");
     authError.hidden = false;
   }
 });
