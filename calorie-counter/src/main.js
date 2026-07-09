@@ -118,7 +118,29 @@ async function refresh() {
   renderLog(entries);
 }
 
-// ── Summary ──
+// ── Summary (donut) ──
+// r/gap are the donut's SVG geometry — see index.html .donut-svg (viewBox 0 0 140 140).
+const DONUT_R = 60;
+const DONUT_C = 2 * Math.PI * DONUT_R;
+const DONUT_GAP_PX = 3;
+
+// Builds stroke-dasharray/dashoffset for each macro's arc. Percentages can
+// sum to slightly more/less than 100 (macro-derived kcal vs. logged kcal
+// aren't always identical) — arcs are normalized to always tile exactly
+// 360° while the legend still shows the true, un-normalized percentage.
+function buildDonutSegments(macros) {
+  const sum = macros.reduce((acc, m) => acc + Math.max(m.pct, 0), 0);
+  let offset = 0;
+  return macros.map((m) => {
+    const frac = sum > 0 ? Math.max(m.pct, 0) / sum : 0;
+    const fullLen = frac * DONUT_C;
+    const len = fullLen > 0 ? Math.max(fullLen - DONUT_GAP_PX, 0.001) : 0;
+    const seg = { ...m, dasharray: `${len} ${DONUT_C - len}`, dashoffset: -offset };
+    offset += fullLen;
+    return seg;
+  });
+}
+
 function renderSummary(entries) {
   const s = computeSummary(entries);
   const body = document.getElementById("summary-body");
@@ -126,21 +148,47 @@ function renderSummary(entries) {
     body.innerHTML = `<div class="no-entries">No entries logged for this day yet.</div>`;
     return;
   }
-  const macroRow = (name, cls, grams, pct) => `
-    <div class="macro-row">
-      <div class="macro-name">${name}</div>
-      <div class="macro-bar-track"><div class="macro-bar-fill ${cls}" style="width:${Math.min(
-    pct,
-    100
-  ).toFixed(1)}%"></div></div>
-      <div class="macro-val">${grams.toFixed(1)} g · ${pct.toFixed(0)}%</div>
-    </div>`;
+
+  const macros = [
+    { key: "protein", label: "Protein", grams: s.protein_g, pct: s.pctProtein, colorVar: "--series-protein" },
+    { key: "carbs", label: "Carbs", grams: s.carbs_g, pct: s.pctCarbs, colorVar: "--series-carbs" },
+    { key: "fat", label: "Fat", grams: s.fat_g, pct: s.pctFat, colorVar: "--series-fat" },
+  ];
+  const segments = buildDonutSegments(macros);
+
+  const arcs = segments
+    .map(
+      (seg) => `<circle class="donut-seg" cx="70" cy="70" r="${DONUT_R}"
+        style="stroke:var(${seg.colorVar})"
+        stroke-dasharray="${seg.dasharray}" stroke-dashoffset="${seg.dashoffset}"></circle>`
+    )
+    .join("");
+
+  const legend = macros
+    .map(
+      (m) => `
+      <div class="legend-row">
+        <span class="legend-swatch" style="background:var(${m.colorVar})"></span>
+        <span class="legend-label">${m.label}</span>
+        <span class="legend-val">${m.grams.toFixed(1)} g · ${m.pct.toFixed(0)}%</span>
+      </div>`
+    )
+    .join("");
+
   body.innerHTML = `
-    <div class="summary-kcal">${Math.round(s.kcal)} kcal</div>
-    <div class="summary-kcal-label">Total for the day</div>
-    ${macroRow("Protein", "protein", s.protein_g, s.pctProtein)}
-    ${macroRow("Carbs", "carbs", s.carbs_g, s.pctCarbs)}
-    ${macroRow("Fat", "fat", s.fat_g, s.pctFat)}
+    <div class="summary-viz">
+      <div class="donut-wrap">
+        <svg class="donut-svg" viewBox="0 0 140 140">
+          <circle class="donut-track" cx="70" cy="70" r="${DONUT_R}"></circle>
+          ${arcs}
+        </svg>
+        <div class="donut-center">
+          <div class="donut-center-kcal">${Math.round(s.kcal)}</div>
+          <div class="donut-center-label">kcal</div>
+        </div>
+      </div>
+      <div class="donut-legend">${legend}</div>
+    </div>
   `;
 }
 
