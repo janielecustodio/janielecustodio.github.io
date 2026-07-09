@@ -209,34 +209,24 @@ button{font-family:inherit}
         project URL and anon key (see SETUP.md), then reload.
       </div>
 
-      <div id="auth-email-step">
-        <div class="auth-title">Sign in</div>
-        <div class="auth-sub">Private log — your data only. We'll email you a one-time code, no password needed.</div>
-        <form id="auth-email-form">
-          <div class="field">
-            <label for="auth-email">Email</label>
-            <input id="auth-email" type="email" autocomplete="email" required>
-          </div>
-          <button class="btn-primary" type="submit">Send code</button>
-        </form>
-      </div>
-
-      <div id="auth-code-step" hidden>
-        <div class="auth-title">Enter your code</div>
-        <div class="auth-sub">Sent to <span id="auth-code-sent-to"></span> — check your email.</div>
-        <form id="auth-code-form">
-          <div class="field">
-            <label for="auth-code">6-digit code</label>
-            <input id="auth-code" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" maxlength="6" required>
-          </div>
-          <button class="btn-primary" type="submit">Verify &amp; sign in</button>
-        </form>
-        <div class="auth-toggle">
-          <a id="auth-use-different-email">Use a different email</a>
+      <div class="auth-title" id="auth-title">Sign in</div>
+      <div class="auth-sub">Private log — your data only.</div>
+      <form id="auth-form">
+        <div class="field">
+          <label for="auth-email">Email</label>
+          <input id="auth-email" type="email" autocomplete="email" required>
         </div>
+        <div class="field">
+          <label for="auth-password">Password</label>
+          <input id="auth-password" type="password" autocomplete="current-password" required minlength="6">
+        </div>
+        <button class="btn-primary" type="submit" id="auth-submit">Sign in</button>
+        <div class="auth-error" id="auth-error" hidden></div>
+      </form>
+      <div class="auth-toggle">
+        <span id="auth-toggle-text">Need an account?</span>
+        <a id="auth-toggle-link">Sign up</a>
       </div>
-
-      <div class="auth-error" id="auth-error" hidden></div>
     </div>
   </div>
 
