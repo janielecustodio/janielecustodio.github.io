@@ -1,5 +1,5 @@
 import { isConfigured } from "./supabaseClient.js";
-import { onAuthChange, requestOtp, verifyOtp, signOut } from "./auth.js";
+import { onAuthChange, signIn, signUp, signOut } from "./auth.js";
 import { searchAll } from "./foodSearch.js";
 import { startScan, barcodeScanningSupported } from "./barcode.js";
 import { lookupBarcode } from "./sources/off.js";
@@ -10,13 +10,6 @@ if (!isConfigured) {
   document.getElementById("config-warning").hidden = false;
 }
 
-// ── Auth: email one-time passcode, two steps ──
-const authError = document.getElementById("auth-error");
-const emailStep = document.getElementById("auth-email-step");
-const codeStep = document.getElementById("auth-code-step");
-const codeSentTo = document.getElementById("auth-code-sent-to");
-let pendingEmail = "";
-
 // Supabase errors don't always carry a plain string `.message` (e.g. a raw
 // network failure, or a malformed response) — fall back to a friendly
 // message instead of ever rendering "[object Object]" or "{}".
@@ -24,39 +17,45 @@ function errMessage(err, fallback) {
   return err && typeof err.message === "string" && err.message ? err.message : fallback;
 }
 
-document.getElementById("auth-email-form").addEventListener("submit", async (e) => {
+// ── Auth: email + password ──
+let authMode = "signin";
+const authTitle = document.getElementById("auth-title");
+const authSubmit = document.getElementById("auth-submit");
+const authToggleText = document.getElementById("auth-toggle-text");
+const authToggleLink = document.getElementById("auth-toggle-link");
+const authError = document.getElementById("auth-error");
+
+function setAuthMode(mode) {
+  authMode = mode;
+  authError.hidden = true;
+  if (mode === "signin") {
+    authTitle.textContent = "Sign in";
+    authSubmit.textContent = "Sign in";
+    authToggleText.textContent = "Need an account?";
+    authToggleLink.textContent = "Sign up";
+  } else {
+    authTitle.textContent = "Create account";
+    authSubmit.textContent = "Sign up";
+    authToggleText.textContent = "Already have an account?";
+    authToggleLink.textContent = "Sign in";
+  }
+}
+authToggleLink.addEventListener("click", () =>
+  setAuthMode(authMode === "signin" ? "signup" : "signin")
+);
+
+document.getElementById("auth-form").addEventListener("submit", async (e) => {
   e.preventDefault();
   const email = document.getElementById("auth-email").value.trim();
+  const password = document.getElementById("auth-password").value;
   authError.hidden = true;
   try {
-    await requestOtp(email);
-    pendingEmail = email;
-    codeSentTo.textContent = email;
-    emailStep.hidden = true;
-    codeStep.hidden = false;
-    document.getElementById("auth-code").focus();
+    if (authMode === "signin") await signIn(email, password);
+    else await signUp(email, password);
   } catch (err) {
-    authError.textContent = errMessage(err, "Couldn't send a code — try again.");
+    authError.textContent = errMessage(err, "Something went wrong.");
     authError.hidden = false;
   }
-});
-
-document.getElementById("auth-code-form").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const code = document.getElementById("auth-code").value.trim();
-  authError.hidden = true;
-  try {
-    await verifyOtp(pendingEmail, code);
-  } catch (err) {
-    authError.textContent = errMessage(err, "Invalid or expired code.");
-    authError.hidden = false;
-  }
-});
-
-document.getElementById("auth-use-different-email").addEventListener("click", () => {
-  authError.hidden = true;
-  codeStep.hidden = true;
-  emailStep.hidden = false;
 });
 
 document.getElementById("signout-btn").addEventListener("click", () => signOut());
@@ -107,10 +106,7 @@ onAuthChange((session) => {
   if (authed) {
     refresh();
   } else {
-    codeStep.hidden = true;
-    emailStep.hidden = false;
-    document.getElementById("auth-email-form").reset();
-    document.getElementById("auth-code-form").reset();
+    document.getElementById("auth-form").reset();
   }
 });
 

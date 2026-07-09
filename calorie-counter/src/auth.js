@@ -5,23 +5,13 @@ export function onAuthChange(callback) {
   supabase.auth.onAuthStateChange((_event, session) => callback(session));
 }
 
-// Sends a 6-digit code to `email`. `shouldCreateUser: true` means the first
-// request creates your account; disable "Allow new users to sign up" in
-// Supabase Auth settings afterwards so no one else can do the same.
-export async function requestOtp(email) {
-  const { error } = await supabase.auth.signInWithOtp({
-    email,
-    options: { shouldCreateUser: true },
-  });
+export async function signIn(email, password) {
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) throw error;
 }
 
-export async function verifyOtp(email, code) {
-  const { error } = await supabase.auth.verifyOtp({
-    email,
-    token: code,
-    type: "email",
-  });
+export async function signUp(email, password) {
+  const { error } = await supabase.auth.signUp({ email, password });
   if (error) throw error;
 }
 
