@@ -599,20 +599,34 @@ const TARGET_MACRO_FIELDS = [
   { input: targetFatInput, key: "fat", label: document.getElementById("target-fat-label") },
   { input: targetCarbsInput, key: "carbs", label: document.getElementById("target-carbs-label") },
 ];
-let targetMode = "grams";
+let targetMode = "pct";
+
+// Percent entries are individually rounded (grams→% conversion, or just
+// typing), so three independently-rounded values summing to exactly 100
+// is unlikely even when they're "right" — tolerate a couple points of
+// drift rather than rejecting harmless rounding noise.
+const PCT_TOTAL_TOLERANCE = 2;
+function pctFieldSum() {
+  return TARGET_MACRO_FIELDS.reduce((sum, f) => sum + (Number(f.input.value) || 0), 0);
+}
+
+const TARGET_PLACEHOLDERS = {
+  grams: { protein: "e.g. 150", fat: "e.g. 70", carbs: "e.g. 200" },
+  pct: { protein: "e.g. 30", fat: "e.g. 25", carbs: "e.g. 45" },
+};
 
 function setTargetMode(mode) {
   targetMode = mode;
   document.querySelectorAll(".target-mode-btn").forEach((b) => b.classList.toggle("active", b.dataset.mode === mode));
   for (const f of TARGET_MACRO_FIELDS) {
     f.label.textContent = `${f.label.textContent.replace(/\s*\(.*\)$/, "")} (${mode === "pct" ? "%" : "g"})`;
+    f.input.placeholder = TARGET_PLACEHOLDERS[mode][f.key];
   }
   updateTargetHints();
 }
 
 function updateTargetHints() {
   const kcal = Number(targetKcalInput.value) || 0;
-  let pctSum = 0;
   let anySet = false;
   for (const f of TARGET_MACRO_FIELDS) {
     const val = Number(f.input.value) || 0;
@@ -621,20 +635,38 @@ function updateTargetHints() {
     if (targetMode === "grams") {
       const pct = kcal > 0 ? ((val * KCAL_PER_G[f.key]) / kcal) * 100 : 0;
       hint.textContent = kcal > 0 && val > 0 ? `≈ ${pct.toFixed(0)}% of calories` : "";
-      pctSum += pct;
     } else {
       const grams = kcal > 0 ? ((val / 100) * kcal) / KCAL_PER_G[f.key] : 0;
       hint.textContent = kcal > 0 && val > 0 ? `≈ ${grams.toFixed(0)}g` : "";
-      pctSum += val;
     }
   }
   if (targetMode === "pct" && kcal <= 0) {
     document.getElementById("target-protein-hint").textContent = "Set calories first";
   }
-  if (kcal > 0 && anySet) {
+
+  if (targetMode === "pct") {
+    // % mode's percentages describe the whole calorie target, so they
+    // need to total ~100 — grams mode has no such requirement (see the
+    // save handler for the actual gate; this is just the live readout).
+    if (kcal <= 0) {
+      targetPctTotal.hidden = true;
+    } else {
+      const sum = pctFieldSum();
+      const offBy100 = Math.abs(sum - 100) >= PCT_TOTAL_TOLERANCE;
+      targetPctTotal.hidden = false;
+      targetPctTotal.textContent = offBy100
+        ? `${sum.toFixed(0)}% of calories allocated — should total 100%`
+        : "100% of calories allocated";
+      targetPctTotal.classList.toggle("over", offBy100);
+    }
+  } else if (kcal > 0 && anySet) {
     targetPctTotal.hidden = false;
-    targetPctTotal.textContent = `${pctSum.toFixed(0)}% of calories allocated`;
-    targetPctTotal.classList.toggle("over", pctSum > 100.5);
+    const sum = TARGET_MACRO_FIELDS.reduce((total, f) => {
+      const val = Number(f.input.value) || 0;
+      return total + ((val * KCAL_PER_G[f.key]) / kcal) * 100;
+    }, 0);
+    targetPctTotal.textContent = `${sum.toFixed(0)}% of calories allocated`;
+    targetPctTotal.classList.toggle("over", sum > 100.5);
   } else {
     targetPctTotal.hidden = true;
   }
@@ -662,12 +694,25 @@ document.querySelectorAll(".target-mode-btn").forEach((btn) => {
 );
 
 document.getElementById("targets-toggle-btn").addEventListener("click", () => {
-  targetKcalInput.value = currentTargets?.kcal ?? "";
-  targetProteinInput.value = currentTargets?.protein_g ?? "";
-  targetFatInput.value = currentTargets?.fat_g ?? "";
-  targetCarbsInput.value = currentTargets?.carbs_g ?? "";
+  const kcal = currentTargets?.kcal ?? null;
+  targetKcalInput.value = kcal ?? "";
   targetsError.hidden = true;
-  setTargetMode("grams");
+
+  // % of calories is always the default entry mode. If there's an
+  // existing kcal target to convert saved gram values against, show
+  // those as percentages; otherwise the fields just start blank (there's
+  // nothing to convert either way).
+  if (kcal) {
+    const toPct = (grams, key) => (grams ? Math.round(((grams * KCAL_PER_G[key]) / kcal) * 100) : "");
+    targetProteinInput.value = toPct(currentTargets?.protein_g, "protein");
+    targetFatInput.value = toPct(currentTargets?.fat_g, "fat");
+    targetCarbsInput.value = toPct(currentTargets?.carbs_g, "carbs");
+  } else {
+    targetProteinInput.value = "";
+    targetFatInput.value = "";
+    targetCarbsInput.value = "";
+  }
+  setTargetMode("pct");
   targetsModal.hidden = false;
 });
 
@@ -681,6 +726,14 @@ document.getElementById("targets-save").addEventListener("click", async () => {
     targetsError.textContent = "Set calories first — percentages need a calorie target to convert to grams.";
     targetsError.hidden = false;
     return;
+  }
+  if (targetMode === "pct") {
+    const sum = pctFieldSum();
+    if (Math.abs(sum - 100) >= PCT_TOTAL_TOLERANCE) {
+      targetsError.textContent = `Protein/fat/carbs percentages should add up to 100% (currently ${sum.toFixed(0)}%).`;
+      targetsError.hidden = false;
+      return;
+    }
   }
   targetsError.hidden = true;
 
