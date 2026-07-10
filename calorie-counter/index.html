@@ -130,6 +130,8 @@ button{font-family:inherit}
   align-items:center;justify-content:center;pointer-events:none;
 }
 .donut-center-kcal{font-size:22px;font-weight:600;color:var(--head)}
+.donut-center-kcal.has-target{font-size:16px}
+.donut-center-kcal.over-target{color:var(--bad)}
 .donut-center-label{
   font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);
   text-transform:uppercase;letter-spacing:.08em;margin-top:2px;
@@ -139,6 +141,7 @@ button{font-family:inherit}
 .legend-swatch{width:10px;height:10px;border-radius:2px;flex-shrink:0}
 .legend-label{color:var(--body)}
 .legend-val{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted2)}
+.legend-target{color:var(--muted)}
 .no-entries{font-size:13px;color:var(--muted2)}
 .micros-details{margin-top:16px;border-top:1px solid var(--line);padding-top:12px}
 .micros-details summary{
@@ -370,6 +373,7 @@ button{font-family:inherit}
     <button class="date-today-btn" id="date-today">Today</button>
   </div>
   <button class="date-today-btn" id="trends-toggle-btn" hidden>📈 Trends</button>
+  <button class="date-today-btn" id="targets-toggle-btn" hidden>🎯 Targets</button>
   <button class="theme-toggle" id="theme-toggle">
     <span id="theme-icon">☀</span>&nbsp;<span id="theme-label">Light</span>
   </button>
@@ -587,6 +591,35 @@ button{font-family:inherit}
     <div class="modal-actions">
       <button class="btn-secondary" id="recipe-cancel">Cancel</button>
       <button class="btn-primary" id="recipe-save">Save recipe</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="targets-modal" hidden>
+  <div class="modal-card">
+    <div class="modal-title">Daily Targets</div>
+    <div class="field">
+      <label for="target-kcal">Calories</label>
+      <input id="target-kcal" type="number" min="0" step="any" placeholder="e.g. 2000">
+    </div>
+    <div class="field manual-macros-row">
+      <div>
+        <label for="target-protein">Protein (g)</label>
+        <input id="target-protein" type="number" min="0" step="any" placeholder="e.g. 150">
+      </div>
+      <div>
+        <label for="target-fat">Fat (g)</label>
+        <input id="target-fat" type="number" min="0" step="any" placeholder="e.g. 70">
+      </div>
+      <div>
+        <label for="target-carbs">Carbs (g)</label>
+        <input id="target-carbs" type="number" min="0" step="any" placeholder="e.g. 200">
+      </div>
+    </div>
+    <div class="manual-add-link"><a id="targets-clear">Clear targets</a></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="targets-cancel">Cancel</button>
+      <button class="btn-primary" id="targets-save">Save</button>
     </div>
   </div>
 </div>
