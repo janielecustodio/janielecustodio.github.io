@@ -493,6 +493,82 @@ function renderResults(results) {
   }
 }
 
+// ── Manual quick-add ──
+// Bypasses search entirely for one-off items with no good database match
+// (a restaurant meal, a homemade dish) — the user types totals for what
+// they're about to eat rather than per-100g values, so this stores the
+// entry at quantity_g=100 with kcal_100g/etc set to those totals directly;
+// the 100g "unit" is an implementation detail, never shown to the user.
+const manualModal = document.getElementById("manual-modal");
+const manualName = document.getElementById("manual-name");
+const manualDesc = document.getElementById("manual-desc");
+const manualKcal = document.getElementById("manual-kcal");
+const manualProtein = document.getElementById("manual-protein");
+const manualFat = document.getElementById("manual-fat");
+const manualCarbs = document.getElementById("manual-carbs");
+const manualTime = document.getElementById("manual-time");
+const manualMeal = document.getElementById("manual-meal");
+const manualError = document.getElementById("manual-error");
+const manualConfirm = document.getElementById("manual-confirm");
+
+manualMeal.innerHTML = MEAL_TYPES.map((m) => `<option value="${m.id}">${m.label}</option>`).join("");
+
+document.getElementById("manual-add-link").addEventListener("click", () => {
+  manualName.value = "";
+  manualDesc.value = "";
+  manualKcal.value = "";
+  manualProtein.value = "0";
+  manualFat.value = "0";
+  manualCarbs.value = "0";
+  manualError.hidden = true;
+  const now = new Date();
+  const defaultTime = new Date(currentDate);
+  defaultTime.setHours(now.getHours(), now.getMinutes(), 0, 0);
+  manualTime.value = toLocalInputValue(defaultTime);
+  manualMeal.value = pinnedMealType || inferMealType(defaultTime);
+  manualModal.hidden = false;
+  manualName.focus();
+});
+
+document.getElementById("manual-cancel").addEventListener("click", () => {
+  manualModal.hidden = true;
+});
+
+manualConfirm.addEventListener("click", async () => {
+  const name = manualName.value.trim();
+  const kcal = Number(manualKcal.value);
+  const protein = Number(manualProtein.value) || 0;
+  const fat = Number(manualFat.value) || 0;
+  const carbs = Number(manualCarbs.value) || 0;
+
+  if (!name) {
+    manualError.textContent = "Name is required.";
+    manualError.hidden = false;
+    return;
+  }
+  if (!manualKcal.value || !Number.isFinite(kcal) || kcal < 0) {
+    manualError.textContent = "Enter a valid calorie amount.";
+    manualError.hidden = false;
+    return;
+  }
+  manualError.hidden = true;
+
+  const food = {
+    source: "manual",
+    source_id: crypto.randomUUID(),
+    name,
+    kcal_100g: kcal,
+    protein_100g: protein,
+    fat_100g: fat,
+    carbs_100g: carbs,
+    fiber_100g: 0,
+  };
+  const loggedAt = new Date(manualTime.value);
+  await addEntry(food, 100, loggedAt, manualMeal.value, manualDesc.value.trim() || null);
+  manualModal.hidden = true;
+  refresh();
+});
+
 // ── Quantity modal ──
 const qtyModal = document.getElementById("qty-modal");
 const qtyName = document.getElementById("qty-food-name");

@@ -8,15 +8,6 @@ Everything below needs a Supabase migration (unlike edit/log-again/
 frequent-foods/copy-day, which shipped without touching the schema at
 all). Pick any of these up whenever — say the word.
 
-## Manual quick-add
-No good database match sometimes (homemade dish, restaurant meal) — a
-bypass form to type kcal/protein/fat/carbs directly instead of searching.
-- Schema: one `CHECK` constraint update on `foods.source` to allow
-  `'manual'`. No new table.
-- UI: a "Can't find it? Add manually" link under search results, opening
-  a small form instead of the search flow.
-- Effort: small-medium.
-
 ## Micronutrients, actually wired up
 `micros jsonb` already exists on both `foods` and `food_logs` — it's
 just never populated. This is finishing something half-built, not a new
