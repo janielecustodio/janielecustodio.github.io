@@ -96,7 +96,16 @@ button{font-family:inherit}
 .qty-amount-row{display:flex;gap:8px}
 .qty-amount-col{flex:1}
 .qty-unit-col{flex:1.4}
-.qty-grams-hint{font-size:11px;color:var(--muted2);font-family:'IBM Plex Mono',monospace;margin:-6px 0 12px}
+.qty-grams-hint{font-size:11px;color:var(--muted2);font-family:'IBM Plex Mono',monospace;margin:-6px 0 8px}
+.qty-preview{
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  background:var(--ink3);border-radius:8px;padding:10px 12px;margin:0 0 14px;
+}
+.qty-preview-kcal{font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:600;color:var(--head)}
+.qty-preview-macros{display:flex;gap:12px;flex-wrap:wrap}
+.qty-preview-macro{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted2);font-family:'IBM Plex Mono',monospace}
+.qty-preview-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0;display:inline-block}
+.qty-preview-macro b{color:var(--body);font-weight:600}
 .btn-primary{
   width:100%;background:var(--accent);color:var(--ink);border:none;border-radius:var(--r);
   padding:9px 0;font-size:13px;font-weight:600;cursor:pointer;margin-top:6px;
@@ -346,6 +355,14 @@ button{font-family:inherit}
       </div>
     </div>
     <div class="qty-grams-hint" id="qty-grams-hint"></div>
+    <div class="qty-preview" id="qty-preview">
+      <span class="qty-preview-kcal" id="qty-preview-kcal">0 kcal</span>
+      <span class="qty-preview-macros">
+        <span class="qty-preview-macro"><i class="qty-preview-dot" style="background:var(--series-protein)"></i>P <b id="qty-preview-protein">0g</b></span>
+        <span class="qty-preview-macro"><i class="qty-preview-dot" style="background:var(--series-fat)"></i>F <b id="qty-preview-fat">0g</b></span>
+        <span class="qty-preview-macro"><i class="qty-preview-dot" style="background:var(--series-carbs)"></i>C <b id="qty-preview-carbs">0g</b></span>
+      </span>
+    </div>
     <div class="field">
       <label for="qty-time">Time</label>
       <input id="qty-time" type="datetime-local">
