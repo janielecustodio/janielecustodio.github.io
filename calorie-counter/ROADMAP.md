@@ -8,15 +8,6 @@ Everything below needs a Supabase migration (unlike edit/log-again/
 frequent-foods/copy-day, which shipped without touching the schema at
 all). Pick any of these up whenever — say the word.
 
-## Water intake / body weight log
-Both explicitly optional — only worth building if actually used, not
-worth building speculatively.
-- Schema: one small new table each (`water_logs`: date + ml;
-  `weight_logs`: date + kg), fully independent of `food_logs`.
-- UI: water — a simple quick-add row. Weight — a simple form, optionally
-  a trend line if the Trends view above already exists.
-- Effort: small-medium each, fully independent of everything else.
-
 ## Targets/goals
 Explicitly deferred for v1 (logging + daily summary only, no targets) —
 listed here because it's the natural "next" once/if that changes.
