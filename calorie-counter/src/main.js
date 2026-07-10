@@ -440,9 +440,8 @@ function setAddTarget(mealId) {
   pinnedMealType = mealId;
   addTargetLabel.textContent = MEAL_TYPES.find((m) => m.id === mealId)?.label || "";
   addTarget.hidden = false;
-  document.getElementById("search-input").scrollIntoView({ behavior: "smooth", block: "center" });
-  document.getElementById("search-input").focus();
   renderFrequentFoods(mealId);
+  openSearchModal();
 }
 
 function clearAddTarget() {
@@ -771,7 +770,28 @@ function escapeHtml(s) {
 const searchInput = document.getElementById("search-input");
 const searchResults = document.getElementById("search-results");
 const searchStatus = document.getElementById("search-status");
+const searchModal = document.getElementById("search-modal");
 let searchToken = 0;
+
+// Opened either from a meal's "+ Add" (pins that meal — see setAddTarget)
+// or the general "Search & Add Food" button (no pin, meal falls back to
+// time-of-day inference same as before). Stays open across an add so a
+// pinned meal can take several items in a row without reopening it —
+// only the explicit Close button dismisses it.
+function openSearchModal() {
+  searchModal.hidden = false;
+  searchInput.value = "";
+  searchResults.innerHTML = "";
+  searchStatus.hidden = true;
+  searchInput.focus();
+}
+
+function closeSearchModal() {
+  searchModal.hidden = true;
+}
+
+document.getElementById("add-food-trigger").addEventListener("click", () => openSearchModal());
+document.getElementById("search-modal-close").addEventListener("click", closeSearchModal);
 
 searchInput.addEventListener(
   "input",
