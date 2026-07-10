@@ -15,6 +15,7 @@ import {
 } from "./log.js";
 import { computeSummary } from "./summary.js";
 import { MEAL_TYPES, inferMealType } from "./mealTypes.js";
+import { renderTrends } from "./trends.js";
 
 if (!isConfigured) {
   document.getElementById("config-warning").hidden = false;
@@ -116,11 +117,13 @@ onAuthChange((session) => {
   document.getElementById("app").hidden = !authed;
   document.getElementById("date-nav").hidden = !authed;
   document.getElementById("signout-btn").hidden = !authed;
+  document.getElementById("trends-toggle-btn").hidden = !authed;
   if (authed) {
     refresh();
   } else {
     document.getElementById("auth-form").reset();
     clearAddTarget();
+    showTodayView();
   }
 });
 
@@ -130,6 +133,38 @@ async function refresh() {
   renderSummary(entries);
   renderLog(entries);
 }
+
+// ── Today / Trends view switch ──
+const trendsView = document.getElementById("trends-view");
+const trendsBody = document.getElementById("trends-body");
+let trendsRangeDays = 7;
+
+function showTodayView() {
+  trendsView.hidden = true;
+  document.getElementById("app").hidden = false;
+  document.getElementById("date-nav").hidden = false;
+}
+
+function showTrendsView() {
+  document.getElementById("app").hidden = true;
+  document.getElementById("date-nav").hidden = true;
+  trendsView.hidden = false;
+  renderTrends(trendsBody, trendsRangeDays);
+}
+
+document.getElementById("trends-toggle-btn").addEventListener("click", showTrendsView);
+document.getElementById("trends-back-btn").addEventListener("click", () => {
+  showTodayView();
+  refresh();
+});
+
+document.getElementById("trends-range-buttons").addEventListener("click", (e) => {
+  const btn = e.target.closest(".range-btn");
+  if (!btn) return;
+  trendsRangeDays = Number(btn.dataset.days);
+  document.querySelectorAll(".range-btn").forEach((b) => b.classList.toggle("active", b === btn));
+  renderTrends(trendsBody, trendsRangeDays);
+});
 
 // ── Summary (donut) ──
 // r/gap are the donut's SVG geometry — see index.html .donut-svg (viewBox 0 0 140 140).
