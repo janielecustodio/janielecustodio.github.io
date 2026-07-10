@@ -499,6 +499,10 @@ const qtyName = document.getElementById("qty-food-name");
 const qtyAmount = document.getElementById("qty-amount");
 const qtyUnit = document.getElementById("qty-unit");
 const qtyGramsHint = document.getElementById("qty-grams-hint");
+const qtyPreviewKcal = document.getElementById("qty-preview-kcal");
+const qtyPreviewProtein = document.getElementById("qty-preview-protein");
+const qtyPreviewFat = document.getElementById("qty-preview-fat");
+const qtyPreviewCarbs = document.getElementById("qty-preview-carbs");
 const qtyTime = document.getElementById("qty-time");
 const qtyMeal = document.getElementById("qty-meal");
 const qtyConfirm = document.getElementById("qty-confirm");
@@ -527,6 +531,23 @@ function updateGramsHint() {
   qtyGramsHint.textContent = qtyUnit.value === "grams" ? "" : `= ${totalGrams.toFixed(1)} g`;
 }
 
+// Live macro/calorie preview — recalculated on every amount/unit change so
+// the user can eyeball whether a quantity looks right before confirming.
+function updateQtyPreview() {
+  if (!pendingFood) return;
+  const amount = Number(qtyAmount.value) || 0;
+  const totalGrams = amount * selectedUnitGrams();
+  const factor = totalGrams / 100;
+  const kcal = (pendingFood.kcal_100g ?? 0) * factor;
+  const protein = (pendingFood.protein_100g ?? 0) * factor;
+  const fat = (pendingFood.fat_100g ?? 0) * factor;
+  const carbs = (pendingFood.carbs_100g ?? 0) * factor;
+  qtyPreviewKcal.textContent = `${Math.round(kcal)} kcal`;
+  qtyPreviewProtein.textContent = `${protein.toFixed(0)}g`;
+  qtyPreviewFat.textContent = `${fat.toFixed(0)}g`;
+  qtyPreviewCarbs.textContent = `${carbs.toFixed(0)}g`;
+}
+
 function populateUnits(portions, overrides) {
   currentUnits = [
     { id: "grams", label: "Grams", grams: 1 },
@@ -546,10 +567,17 @@ function populateUnits(portions, overrides) {
     qtyAmount.value = 100;
   }
   updateGramsHint();
+  updateQtyPreview();
 }
 
-qtyAmount.addEventListener("input", updateGramsHint);
-qtyUnit.addEventListener("change", updateGramsHint);
+qtyAmount.addEventListener("input", () => {
+  updateGramsHint();
+  updateQtyPreview();
+});
+qtyUnit.addEventListener("change", () => {
+  updateGramsHint();
+  updateQtyPreview();
+});
 
 // USDA household-unit portions ("1 large", "1 slice") only come from the
 // full detail record, not search results — fetched here, lazily, only for
