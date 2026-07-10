@@ -192,6 +192,11 @@ button{font-family:inherit}
 }
 .result-kcal{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted2);flex-shrink:0}
 .search-status{font-size:12px;color:var(--muted2);padding:6px 2px}
+.manual-add-link{font-size:12px;color:var(--muted2);margin-top:10px}
+.manual-add-link a{cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.manual-macros-row{display:flex;gap:8px}
+.manual-macros-row>div{flex:1}
+.manual-error{color:var(--bad);font-size:12px;margin:-6px 0 12px}
 
 /* ── LOG LIST ── */
 .log-group{margin-bottom:18px}
@@ -330,6 +335,7 @@ button{font-family:inherit}
       </div>
       <div id="search-status" class="search-status" hidden></div>
       <div id="search-results"></div>
+      <div class="manual-add-link"><a id="manual-add-link">Can't find it? Add manually</a></div>
     </section>
 
     <section class="section">
@@ -374,6 +380,51 @@ button{font-family:inherit}
     <div class="modal-actions">
       <button class="btn-secondary" id="qty-cancel">Cancel</button>
       <button class="btn-primary" id="qty-confirm">Add to log</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="manual-modal" hidden>
+  <div class="modal-card">
+    <div class="modal-title">Add manually</div>
+    <div class="field">
+      <label for="manual-name">Name</label>
+      <input id="manual-name" type="text" placeholder="e.g. Chipotle bowl" autocomplete="off">
+    </div>
+    <div class="field">
+      <label for="manual-desc">Description (optional)</label>
+      <input id="manual-desc" type="text" placeholder="e.g. 1 bowl" autocomplete="off">
+    </div>
+    <div class="field">
+      <label for="manual-kcal">Calories</label>
+      <input id="manual-kcal" type="number" min="0" step="any" placeholder="0">
+    </div>
+    <div class="field manual-macros-row">
+      <div>
+        <label for="manual-protein">Protein (g)</label>
+        <input id="manual-protein" type="number" min="0" step="any" value="0">
+      </div>
+      <div>
+        <label for="manual-fat">Fat (g)</label>
+        <input id="manual-fat" type="number" min="0" step="any" value="0">
+      </div>
+      <div>
+        <label for="manual-carbs">Carbs (g)</label>
+        <input id="manual-carbs" type="number" min="0" step="any" value="0">
+      </div>
+    </div>
+    <div class="field">
+      <label for="manual-time">Time</label>
+      <input id="manual-time" type="datetime-local">
+    </div>
+    <div class="field">
+      <label for="manual-meal">Meal</label>
+      <select id="manual-meal"></select>
+    </div>
+    <div class="manual-error" id="manual-error" hidden></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="manual-cancel">Cancel</button>
+      <button class="btn-primary" id="manual-confirm">Add to log</button>
     </div>
   </div>
 </div>
