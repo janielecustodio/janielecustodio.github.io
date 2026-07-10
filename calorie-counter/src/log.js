@@ -32,6 +32,17 @@ async function ensureFoodCached(food) {
   return data.id;
 }
 
+// `food.micros` holds per-100g values, same as kcal_100g/protein_100g/etc —
+// scale them by the same quantity multiplier so the stored snapshot is the
+// actual amount logged, not the per-100g reference value.
+function scaleMicros(micros, mult) {
+  const out = {};
+  for (const [k, v] of Object.entries(micros || {})) {
+    if (typeof v === "number") out[k] = v * mult;
+  }
+  return out;
+}
+
 export async function addEntry(food, quantityG, loggedAt, mealType, quantityLabel) {
   const foodId = await ensureFoodCached(food);
   const {
@@ -51,7 +62,7 @@ export async function addEntry(food, quantityG, loggedAt, mealType, quantityLabe
     fat_g: food.fat_100g * mult,
     carbs_g: food.carbs_100g * mult,
     fiber_g: (food.fiber_100g || 0) * mult,
-    micros: food.micros || {},
+    micros: scaleMicros(food.micros, mult),
   });
   if (error) throw error;
 }
@@ -72,7 +83,7 @@ export async function updateEntry(id, food, quantityG, loggedAt, mealType, quant
       fat_g: food.fat_100g * mult,
       carbs_g: food.carbs_100g * mult,
       fiber_g: (food.fiber_100g || 0) * mult,
-      micros: food.micros || {},
+      micros: scaleMicros(food.micros, mult),
     })
     .eq("id", id);
   if (error) throw error;

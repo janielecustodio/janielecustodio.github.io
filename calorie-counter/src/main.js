@@ -153,6 +153,36 @@ function buildDonutSegments(macros) {
   });
 }
 
+const MICRO_LABELS = {
+  sodium_mg: { label: "Sodium", unit: "mg" },
+  sugars_g: { label: "Sugars", unit: "g" },
+  saturated_fat_g: { label: "Saturated fat", unit: "g" },
+  potassium_mg: { label: "Potassium", unit: "mg" },
+  calcium_mg: { label: "Calcium", unit: "mg" },
+  iron_mg: { label: "Iron", unit: "mg" },
+  vitamin_c_mg: { label: "Vitamin C", unit: "mg" },
+};
+
+function renderMicros(micros) {
+  const rows = Object.entries(MICRO_LABELS)
+    .filter(([key]) => typeof micros[key] === "number")
+    .map(
+      ([key, { label, unit }]) => `
+      <div class="micro-row">
+        <span class="micro-label">${label}</span>
+        <span class="micro-val">${micros[key].toFixed(1)} ${unit}</span>
+      </div>`
+    )
+    .join("");
+  if (!rows) return "";
+  return `
+    <details class="micros-details">
+      <summary>Micronutrients</summary>
+      <div class="micros-grid">${rows}</div>
+    </details>
+  `;
+}
+
 function renderSummary(entries) {
   const s = computeSummary(entries);
   const body = document.getElementById("summary-body");
@@ -201,6 +231,7 @@ function renderSummary(entries) {
       </div>
       <div class="donut-legend">${legend}</div>
     </div>
+    ${renderMicros(s.micros)}
   `;
 }
 
@@ -292,6 +323,16 @@ function foodFromEntry(entry) {
     if (typeof fallback100 === "number") return fallback100;
     return entry.quantity_g > 0 ? (snapshotVal / entry.quantity_g) * 100 : 0;
   };
+  // f.micros (from the foods join) is already per-100g, same as kcal_100g
+  // etc. If that join is missing, back-compute per-100g from the entry's
+  // own scaled snapshot instead of using the scaled values directly.
+  let micros = f.micros || {};
+  if (Object.keys(micros).length === 0 && entry.micros && entry.quantity_g > 0) {
+    micros = {};
+    for (const [k, v] of Object.entries(entry.micros)) {
+      if (typeof v === "number") micros[k] = (v / entry.quantity_g) * 100;
+    }
+  }
   return {
     source: f.source,
     source_id: f.source_id,
@@ -301,7 +342,7 @@ function foodFromEntry(entry) {
     fat_100g: per100(entry.fat_g, f.fat_100g),
     carbs_100g: per100(entry.carbs_g, f.carbs_100g),
     fiber_100g: per100(entry.fiber_g, f.fiber_100g) || 0,
-    micros: f.micros || entry.micros || {},
+    micros,
     portions: [],
   };
 }
