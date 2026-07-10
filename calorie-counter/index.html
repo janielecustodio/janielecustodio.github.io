@@ -207,6 +207,29 @@ button{font-family:inherit}
 .search-status{font-size:12px;color:var(--muted2);padding:6px 2px}
 .manual-add-link{font-size:12px;color:var(--muted2);margin-top:10px}
 .manual-add-link a{cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.link-sep{margin:0 6px}
+.recipe-ingredient-results{display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto;margin-bottom:8px}
+.recipe-result-item{
+  display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line);
+  border-radius:var(--r);cursor:pointer;font-size:13px;
+}
+.recipe-result-item:hover{border-color:var(--accent);background:rgba(140,158,255,.04)}
+.recipe-result-kcal{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted2);flex-shrink:0}
+.recipe-ingredient-list{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.recipe-ing-row{display:flex;align-items:center;gap:8px;font-size:13px}
+.recipe-ing-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.recipe-ing-grams{
+  width:64px;flex-shrink:0;background:var(--ink);border:1px solid var(--line2);
+  border-radius:var(--r);color:var(--head);padding:6px 8px;font-size:12px;font-family:inherit;
+}
+.recipe-ing-grams:focus{outline:none;border-color:var(--accent)}
+.recipe-ing-kcal{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted2);flex-shrink:0;width:56px;text-align:right}
+.recipe-ing-remove{
+  background:none;border:none;color:var(--muted2);cursor:pointer;font-size:14px;flex-shrink:0;
+  padding:2px 4px;line-height:1;
+}
+.recipe-ing-remove:hover{color:var(--bad)}
+.recipe-empty{font-size:12px;color:var(--muted2);margin-bottom:14px}
 .manual-macros-row{display:flex;gap:8px}
 .manual-macros-row>div{flex:1}
 .manual-error{color:var(--bad);font-size:12px;margin:-6px 0 12px}
@@ -348,7 +371,11 @@ button{font-family:inherit}
       </div>
       <div id="search-status" class="search-status" hidden></div>
       <div id="search-results"></div>
-      <div class="manual-add-link"><a id="manual-add-link">Can't find it? Add manually</a></div>
+      <div class="manual-add-link">
+        <a id="manual-add-link">Can't find it? Add manually</a>
+        <span class="link-sep">·</span>
+        <a id="create-recipe-link">Create a recipe</a>
+      </div>
     </section>
 
     <section class="section">
@@ -438,6 +465,39 @@ button{font-family:inherit}
     <div class="modal-actions">
       <button class="btn-secondary" id="manual-cancel">Cancel</button>
       <button class="btn-primary" id="manual-confirm">Add to log</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="recipe-modal" hidden>
+  <div class="modal-card">
+    <div class="modal-title">Create a recipe</div>
+    <div class="field">
+      <label for="recipe-name">Name</label>
+      <input id="recipe-name" type="text" placeholder="e.g. My protein shake" autocomplete="off">
+    </div>
+    <div class="field">
+      <label for="recipe-servings">Servings</label>
+      <input id="recipe-servings" type="number" min="0.1" step="any" value="1">
+    </div>
+    <div class="field">
+      <label for="recipe-ingredient-search">Add ingredient</label>
+      <input id="recipe-ingredient-search" type="text" placeholder="Search foods…" autocomplete="off">
+    </div>
+    <div id="recipe-ingredient-results" class="recipe-ingredient-results"></div>
+    <div id="recipe-ingredient-list" class="recipe-ingredient-list"></div>
+    <div class="qty-preview" id="recipe-preview">
+      <span class="qty-preview-kcal" id="recipe-preview-kcal">0 kcal / serving</span>
+      <span class="qty-preview-macros">
+        <span class="qty-preview-macro"><i class="qty-preview-dot" style="background:var(--series-protein)"></i>P <b id="recipe-preview-protein">0g</b></span>
+        <span class="qty-preview-macro"><i class="qty-preview-dot" style="background:var(--series-fat)"></i>F <b id="recipe-preview-fat">0g</b></span>
+        <span class="qty-preview-macro"><i class="qty-preview-dot" style="background:var(--series-carbs)"></i>C <b id="recipe-preview-carbs">0g</b></span>
+      </span>
+    </div>
+    <div class="manual-error" id="recipe-error" hidden></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="recipe-cancel">Cancel</button>
+      <button class="btn-primary" id="recipe-save">Save recipe</button>
     </div>
   </div>
 </div>
