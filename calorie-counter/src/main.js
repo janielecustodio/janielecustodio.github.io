@@ -17,6 +17,7 @@ import { computeSummary } from "./summary.js";
 import { MEAL_TYPES, inferMealType } from "./mealTypes.js";
 import { renderTrends } from "./trends.js";
 import { addWater, deleteWater, getWaterForDate, saveWeight, getWeightForDate } from "./bodyLog.js";
+import { getTargets, saveTargets, clearTargets } from "./targets.js";
 
 if (!isConfigured) {
   document.getElementById("config-warning").hidden = false;
@@ -74,6 +75,11 @@ document.getElementById("signout-btn").addEventListener("click", () => signOut()
 
 // ── Date navigation ──
 let currentDate = startOfDay(new Date());
+let currentTargets = null;
+
+async function loadTargets() {
+  currentTargets = await getTargets();
+}
 const dateLabel = document.getElementById("date-label");
 const dateFmt = new Intl.DateTimeFormat(undefined, {
   weekday: "short",
@@ -119,8 +125,9 @@ onAuthChange((session) => {
   document.getElementById("date-nav").hidden = !authed;
   document.getElementById("signout-btn").hidden = !authed;
   document.getElementById("trends-toggle-btn").hidden = !authed;
+  document.getElementById("targets-toggle-btn").hidden = !authed;
   if (authed) {
-    refresh();
+    loadTargets().then(refresh);
   } else {
     document.getElementById("auth-form").reset();
     clearAddTarget();
@@ -224,15 +231,15 @@ function renderMicros(micros) {
 function renderSummary(entries) {
   const s = computeSummary(entries);
   const body = document.getElementById("summary-body");
-  if (entries.length === 0) {
+  if (entries.length === 0 && !currentTargets) {
     body.innerHTML = `<div class="no-entries">No entries logged for this day yet.</div>`;
     return;
   }
 
   const macros = [
-    { key: "protein", label: "Protein", grams: s.protein_g, pct: s.pctProtein, colorVar: "--series-protein" },
-    { key: "carbs", label: "Carbs", grams: s.carbs_g, pct: s.pctCarbs, colorVar: "--series-carbs" },
-    { key: "fat", label: "Fat", grams: s.fat_g, pct: s.pctFat, colorVar: "--series-fat" },
+    { key: "protein", label: "Protein", grams: s.protein_g, pct: s.pctProtein, colorVar: "--series-protein", target: currentTargets?.protein_g },
+    { key: "carbs", label: "Carbs", grams: s.carbs_g, pct: s.pctCarbs, colorVar: "--series-carbs", target: currentTargets?.carbs_g },
+    { key: "fat", label: "Fat", grams: s.fat_g, pct: s.pctFat, colorVar: "--series-fat", target: currentTargets?.fat_g },
   ];
   const segments = buildDonutSegments(macros);
 
@@ -250,10 +257,24 @@ function renderSummary(entries) {
       <div class="legend-row">
         <span class="legend-swatch" style="background:var(${m.colorVar})"></span>
         <span class="legend-label">${m.label}</span>
-        <span class="legend-val">${m.grams.toFixed(1)} g · ${m.pct.toFixed(0)}%</span>
+        <span class="legend-val">${m.grams.toFixed(1)} g · ${m.pct.toFixed(0)}%${
+          m.target ? ` <span class="legend-target">/ ${m.target}g</span>` : ""
+        }</span>
       </div>`
     )
     .join("");
+
+  const targetKcal = currentTargets?.kcal;
+  const centerKcalText = targetKcal
+    ? `${Math.round(s.kcal).toLocaleString()} / ${Math.round(targetKcal).toLocaleString()}`
+    : Math.round(s.kcal).toLocaleString();
+  const centerKcalClass = [
+    "donut-center-kcal",
+    targetKcal ? "has-target" : "",
+    targetKcal && s.kcal > targetKcal ? "over-target" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   body.innerHTML = `
     <div class="summary-viz">
@@ -263,7 +284,7 @@ function renderSummary(entries) {
           ${arcs}
         </svg>
         <div class="donut-center">
-          <div class="donut-center-kcal">${Math.round(s.kcal)}</div>
+          <div class="${centerKcalClass}">${centerKcalText}</div>
           <div class="donut-center-label">kcal</div>
         </div>
       </div>
@@ -559,6 +580,44 @@ document.getElementById("weight-save-btn").addEventListener("click", async () =>
   await saveWeight(currentDate, kg);
   weightSavedNote.textContent = "Saved.";
   weightSavedNote.hidden = false;
+});
+
+// ── Targets/goals ──
+const targetsModal = document.getElementById("targets-modal");
+const targetKcalInput = document.getElementById("target-kcal");
+const targetProteinInput = document.getElementById("target-protein");
+const targetFatInput = document.getElementById("target-fat");
+const targetCarbsInput = document.getElementById("target-carbs");
+
+document.getElementById("targets-toggle-btn").addEventListener("click", () => {
+  targetKcalInput.value = currentTargets?.kcal ?? "";
+  targetProteinInput.value = currentTargets?.protein_g ?? "";
+  targetFatInput.value = currentTargets?.fat_g ?? "";
+  targetCarbsInput.value = currentTargets?.carbs_g ?? "";
+  targetsModal.hidden = false;
+});
+
+document.getElementById("targets-cancel").addEventListener("click", () => {
+  targetsModal.hidden = true;
+});
+
+document.getElementById("targets-save").addEventListener("click", async () => {
+  await saveTargets({
+    kcal: Number(targetKcalInput.value) || null,
+    protein_g: Number(targetProteinInput.value) || null,
+    fat_g: Number(targetFatInput.value) || null,
+    carbs_g: Number(targetCarbsInput.value) || null,
+  });
+  await loadTargets();
+  targetsModal.hidden = true;
+  refresh();
+});
+
+document.getElementById("targets-clear").addEventListener("click", async () => {
+  await clearTargets();
+  currentTargets = null;
+  targetsModal.hidden = true;
+  refresh();
 });
 
 function escapeHtml(s) {

@@ -61,6 +61,18 @@ create table if not exists public.water_logs (
 create index if not exists water_logs_user_date_idx
   on public.water_logs (user_id, logged_at);
 
+-- One settings-style row per user — not day-scoped like the log tables.
+-- Every column is nullable: an unset target just means "don't show it",
+-- not zero.
+create table if not exists public.user_targets (
+  user_id uuid primary key references auth.users (id) on delete cascade,
+  kcal numeric,
+  protein_g numeric,
+  fat_g numeric,
+  carbs_g numeric,
+  updated_at timestamptz not null default now()
+);
+
 -- One measurement per day (weigh-in), unlike water_logs — logging again
 -- the same day updates rather than adds a second row.
 create table if not exists public.weight_logs (
@@ -76,6 +88,7 @@ alter table public.foods enable row level security;
 alter table public.food_logs enable row level security;
 alter table public.water_logs enable row level security;
 alter table public.weight_logs enable row level security;
+alter table public.user_targets enable row level security;
 
 -- `foods` is a shared lookup cache, not per-user data: any authenticated
 -- user of this app can read it and add/refresh entries via search.
@@ -156,5 +169,29 @@ create policy weight_logs_insert_own
 drop policy if exists weight_logs_update_own on public.weight_logs;
 create policy weight_logs_update_own
   on public.weight_logs for update
+  to authenticated
+  using (user_id = auth.uid());
+
+drop policy if exists user_targets_select_own on public.user_targets;
+create policy user_targets_select_own
+  on public.user_targets for select
+  to authenticated
+  using (user_id = auth.uid());
+
+drop policy if exists user_targets_insert_own on public.user_targets;
+create policy user_targets_insert_own
+  on public.user_targets for insert
+  to authenticated
+  with check (user_id = auth.uid());
+
+drop policy if exists user_targets_update_own on public.user_targets;
+create policy user_targets_update_own
+  on public.user_targets for update
+  to authenticated
+  using (user_id = auth.uid());
+
+drop policy if exists user_targets_delete_own on public.user_targets;
+create policy user_targets_delete_own
+  on public.user_targets for delete
   to authenticated
   using (user_id = auth.uid());
