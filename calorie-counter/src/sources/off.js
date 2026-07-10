@@ -23,6 +23,26 @@ function parsePortion(product) {
   return null;
 }
 
+// OFF reports these per-100g fields in grams (not mg) regardless of name —
+// convert to mg to match USDA's units and typical serving-label scale.
+function parseMicros(n) {
+  const micros = {};
+  const addG = (key, field) => {
+    if (n[field] != null) micros[key] = n[field];
+  };
+  const addMgFromG = (key, field) => {
+    if (n[field] != null) micros[key] = n[field] * 1000;
+  };
+  addMgFromG("sodium_mg", "sodium_100g");
+  addG("sugars_g", "sugars_100g");
+  addG("saturated_fat_g", "saturated-fat_100g");
+  addMgFromG("potassium_mg", "potassium_100g");
+  addMgFromG("calcium_mg", "calcium_100g");
+  addMgFromG("iron_mg", "iron_100g");
+  addMgFromG("vitamin_c_mg", "vitamin-c_100g");
+  return micros;
+}
+
 function normalize(product) {
   const n = product.nutriments || {};
   const portion = parsePortion(product);
@@ -37,7 +57,7 @@ function normalize(product) {
     fat_100g: n["fat_100g"] ?? 0,
     carbs_100g: n["carbohydrates_100g"] ?? 0,
     fiber_100g: n["fiber_100g"] ?? 0,
-    micros: {},
+    micros: parseMicros(n),
     portions: portion ? [portion] : [],
   };
 }
