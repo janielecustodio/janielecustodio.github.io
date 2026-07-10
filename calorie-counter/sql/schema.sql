@@ -3,7 +3,7 @@
 
 create table if not exists public.foods (
   id uuid primary key default gen_random_uuid(),
-  source text not null check (source in ('usda', 'taco', 'tbca', 'off')),
+  source text not null check (source in ('usda', 'taco', 'tbca', 'off', 'manual')),
   source_id text not null,
   name text not null,
   brand text,
