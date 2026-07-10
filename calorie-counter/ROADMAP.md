@@ -8,19 +8,6 @@ Everything below needs a Supabase migration (unlike edit/log-again/
 frequent-foods/copy-day, which shipped without touching the schema at
 all). Pick any of these up whenever — say the word.
 
-## Micronutrients, actually wired up
-`micros jsonb` already exists on both `foods` and `food_logs` — it's
-just never populated. This is finishing something half-built, not a new
-feature.
-- USDA and OFF both expose sodium, sugar, saturated fat, potassium,
-  calcium, iron, vitamin C directly in the same responses already being
-  fetched — needs a few more fields parsed in `src/sources/usda.js` and
-  `src/sources/off.js`.
-- UI: a modest expandable "Micronutrients" section under the daily
-  summary — matches the original "approximate, nice-to-have" spec, not a
-  full dashboard.
-- Effort: medium, mostly in the two source parsers.
-
 ## Custom meals/recipes
 Combine several ingredients into one named thing (e.g. "My protein
 shake") that logs as a single tap instead of re-adding every ingredient

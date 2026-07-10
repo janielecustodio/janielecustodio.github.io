@@ -42,6 +42,25 @@ function parsePortions(food) {
   return portions.slice(0, 6);
 }
 
+// Approximate, nice-to-have micronutrients — not present on every record,
+// so each is left out of the `micros` object entirely (not defaulted to 0)
+// when USDA doesn't report it.
+function parseMicros(food) {
+  const micros = {};
+  const add = (key, names, unit) => {
+    const v = nutrient(food, names, unit);
+    if (v !== null) micros[key] = v;
+  };
+  add("sodium_mg", ["Sodium, Na"], "MG");
+  add("sugars_g", ["Sugars, total including NLEA", "Sugars, total"], "G");
+  add("saturated_fat_g", ["Fatty acids, total saturated"], "G");
+  add("potassium_mg", ["Potassium, K"], "MG");
+  add("calcium_mg", ["Calcium, Ca"], "MG");
+  add("iron_mg", ["Iron, Fe"], "MG");
+  add("vitamin_c_mg", ["Vitamin C, total ascorbic acid"], "MG");
+  return micros;
+}
+
 function normalize(food) {
   return {
     source: "usda",
@@ -54,7 +73,7 @@ function normalize(food) {
     fat_100g: nutrient(food, ["Total lipid (fat)"], "G") ?? 0,
     carbs_100g: nutrient(food, ["Carbohydrate, by difference"], "G") ?? 0,
     fiber_100g: nutrient(food, ["Fiber, total dietary"], "G") ?? 0,
-    micros: {},
+    micros: parseMicros(food),
     portions: parsePortions(food),
   };
 }
