@@ -13,7 +13,7 @@ import {
   copyDay,
   saveRecipe,
 } from "./log.js";
-import { computeSummary } from "./summary.js";
+import { computeSummary, KCAL_PER_G } from "./summary.js";
 import { MEAL_TYPES, inferMealType } from "./mealTypes.js";
 import { renderTrends } from "./trends.js";
 import { addWater, deleteWater, getWaterForDate, saveWeight, getWeightForDate } from "./bodyLog.js";
@@ -583,17 +583,91 @@ document.getElementById("weight-save-btn").addEventListener("click", async () =>
 });
 
 // ── Targets/goals ──
+// Macro targets are always stored as grams (no schema change for the %
+// entry mode) — "% of calories" is purely a UI input convenience that
+// converts to/from grams via the kcal target, using the same 4/4/9
+// kcal-per-gram constants the summary donut's percentages already use.
 const targetsModal = document.getElementById("targets-modal");
 const targetKcalInput = document.getElementById("target-kcal");
 const targetProteinInput = document.getElementById("target-protein");
 const targetFatInput = document.getElementById("target-fat");
 const targetCarbsInput = document.getElementById("target-carbs");
+const targetsError = document.getElementById("targets-error");
+const targetPctTotal = document.getElementById("target-pct-total");
+const TARGET_MACRO_FIELDS = [
+  { input: targetProteinInput, key: "protein", label: document.getElementById("target-protein-label") },
+  { input: targetFatInput, key: "fat", label: document.getElementById("target-fat-label") },
+  { input: targetCarbsInput, key: "carbs", label: document.getElementById("target-carbs-label") },
+];
+let targetMode = "grams";
+
+function setTargetMode(mode) {
+  targetMode = mode;
+  document.querySelectorAll(".target-mode-btn").forEach((b) => b.classList.toggle("active", b.dataset.mode === mode));
+  for (const f of TARGET_MACRO_FIELDS) {
+    f.label.textContent = `${f.label.textContent.replace(/\s*\(.*\)$/, "")} (${mode === "pct" ? "%" : "g"})`;
+  }
+  updateTargetHints();
+}
+
+function updateTargetHints() {
+  const kcal = Number(targetKcalInput.value) || 0;
+  let pctSum = 0;
+  let anySet = false;
+  for (const f of TARGET_MACRO_FIELDS) {
+    const val = Number(f.input.value) || 0;
+    const hint = document.getElementById(`target-${f.key}-hint`);
+    if (val > 0) anySet = true;
+    if (targetMode === "grams") {
+      const pct = kcal > 0 ? ((val * KCAL_PER_G[f.key]) / kcal) * 100 : 0;
+      hint.textContent = kcal > 0 && val > 0 ? `≈ ${pct.toFixed(0)}% of calories` : "";
+      pctSum += pct;
+    } else {
+      const grams = kcal > 0 ? ((val / 100) * kcal) / KCAL_PER_G[f.key] : 0;
+      hint.textContent = kcal > 0 && val > 0 ? `≈ ${grams.toFixed(0)}g` : "";
+      pctSum += val;
+    }
+  }
+  if (targetMode === "pct" && kcal <= 0) {
+    document.getElementById("target-protein-hint").textContent = "Set calories first";
+  }
+  if (kcal > 0 && anySet) {
+    targetPctTotal.hidden = false;
+    targetPctTotal.textContent = `${pctSum.toFixed(0)}% of calories allocated`;
+    targetPctTotal.classList.toggle("over", pctSum > 100.5);
+  } else {
+    targetPctTotal.hidden = true;
+  }
+}
+
+document.querySelectorAll(".target-mode-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const newMode = btn.dataset.mode;
+    if (newMode === targetMode) return;
+    const kcal = Number(targetKcalInput.value) || 0;
+    for (const f of TARGET_MACRO_FIELDS) {
+      const val = Number(f.input.value) || 0;
+      if (val <= 0 || kcal <= 0) continue;
+      f.input.value =
+        newMode === "pct"
+          ? Math.round(((val * KCAL_PER_G[f.key]) / kcal) * 100)
+          : Math.round(((val / 100) * kcal) / KCAL_PER_G[f.key]);
+    }
+    setTargetMode(newMode);
+  });
+});
+
+[targetKcalInput, targetProteinInput, targetFatInput, targetCarbsInput].forEach((el) =>
+  el.addEventListener("input", updateTargetHints)
+);
 
 document.getElementById("targets-toggle-btn").addEventListener("click", () => {
   targetKcalInput.value = currentTargets?.kcal ?? "";
   targetProteinInput.value = currentTargets?.protein_g ?? "";
   targetFatInput.value = currentTargets?.fat_g ?? "";
   targetCarbsInput.value = currentTargets?.carbs_g ?? "";
+  targetsError.hidden = true;
+  setTargetMode("grams");
   targetsModal.hidden = false;
 });
 
@@ -602,11 +676,25 @@ document.getElementById("targets-cancel").addEventListener("click", () => {
 });
 
 document.getElementById("targets-save").addEventListener("click", async () => {
+  const kcal = Number(targetKcalInput.value) || null;
+  if (targetMode === "pct" && !kcal) {
+    targetsError.textContent = "Set calories first — percentages need a calorie target to convert to grams.";
+    targetsError.hidden = false;
+    return;
+  }
+  targetsError.hidden = true;
+
+  const gramsFor = (input, key) => {
+    const val = Number(input.value) || 0;
+    if (!val) return null;
+    return targetMode === "grams" ? val : Math.round(((val / 100) * kcal) / KCAL_PER_G[key]);
+  };
+
   await saveTargets({
-    kcal: Number(targetKcalInput.value) || null,
-    protein_g: Number(targetProteinInput.value) || null,
-    fat_g: Number(targetFatInput.value) || null,
-    carbs_g: Number(targetCarbsInput.value) || null,
+    kcal,
+    protein_g: gramsFor(targetProteinInput, "protein"),
+    fat_g: gramsFor(targetFatInput, "fat"),
+    carbs_g: gramsFor(targetCarbsInput, "carbs"),
   });
   await loadTargets();
   targetsModal.hidden = true;

@@ -265,6 +265,16 @@ button{font-family:inherit}
 .manual-macros-row{display:flex;gap:8px}
 .manual-macros-row>div{flex:1}
 .manual-error{color:var(--bad);font-size:12px;margin:-6px 0 12px}
+.target-mode-toggle{display:flex;gap:6px;margin:-4px 0 14px}
+.target-mode-btn{
+  flex:1;border:1px solid var(--line2);border-radius:var(--r);background:none;color:var(--muted2);
+  font-size:11px;padding:6px 10px;cursor:pointer;font-family:'IBM Plex Mono',monospace;
+}
+.target-mode-btn:hover{color:var(--head);border-color:var(--muted)}
+.target-mode-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.target-macro-hint{font-size:10px;color:var(--muted2);margin-top:4px;font-family:'IBM Plex Mono',monospace}
+.target-pct-total{font-size:11px;color:var(--muted2);margin:-6px 0 12px;font-family:'IBM Plex Mono',monospace}
+.target-pct-total.over{color:var(--bad)}
 
 /* ── LOG LIST ── */
 .log-group{margin-bottom:18px}
@@ -602,20 +612,29 @@ button{font-family:inherit}
       <label for="target-kcal">Calories</label>
       <input id="target-kcal" type="number" min="0" step="any" placeholder="e.g. 2000">
     </div>
+    <div class="target-mode-toggle" id="target-mode-toggle">
+      <button type="button" class="target-mode-btn active" data-mode="grams">Grams</button>
+      <button type="button" class="target-mode-btn" data-mode="pct">% of calories</button>
+    </div>
     <div class="field manual-macros-row">
       <div>
-        <label for="target-protein">Protein (g)</label>
+        <label for="target-protein"><span id="target-protein-label">Protein (g)</span></label>
         <input id="target-protein" type="number" min="0" step="any" placeholder="e.g. 150">
+        <div class="target-macro-hint" id="target-protein-hint"></div>
       </div>
       <div>
-        <label for="target-fat">Fat (g)</label>
+        <label for="target-fat"><span id="target-fat-label">Fat (g)</span></label>
         <input id="target-fat" type="number" min="0" step="any" placeholder="e.g. 70">
+        <div class="target-macro-hint" id="target-fat-hint"></div>
       </div>
       <div>
-        <label for="target-carbs">Carbs (g)</label>
+        <label for="target-carbs"><span id="target-carbs-label">Carbs (g)</span></label>
         <input id="target-carbs" type="number" min="0" step="any" placeholder="e.g. 200">
+        <div class="target-macro-hint" id="target-carbs-hint"></div>
       </div>
     </div>
+    <div class="target-pct-total" id="target-pct-total" hidden></div>
+    <div class="manual-error" id="targets-error" hidden></div>
     <div class="manual-add-link"><a id="targets-clear">Clear targets</a></div>
     <div class="modal-actions">
       <button class="btn-secondary" id="targets-cancel">Cancel</button>
