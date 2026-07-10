@@ -1,4 +1,4 @@
-const KCAL_PER_G = { protein: 4, carbs: 4, fat: 9 };
+export const KCAL_PER_G = { protein: 4, carbs: 4, fat: 9 };
 
 export function computeSummary(entries) {
   const micros = {};
