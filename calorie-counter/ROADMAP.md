@@ -8,21 +8,6 @@ Everything below needs a Supabase migration (unlike edit/log-again/
 frequent-foods/copy-day, which shipped without touching the schema at
 all). Pick any of these up whenever — say the word.
 
-## Custom meals/recipes
-Combine several ingredients into one named thing (e.g. "My protein
-shake") that logs as a single tap instead of re-adding every ingredient
-each time.
-- Schema: one new nullable jsonb column on `foods`
-  (`recipe_ingredients`) — no separate table. A recipe is a `foods` row
-  with `source = 'recipe'` whose macros are pre-computed totals; it
-  slots into `food_logs` exactly like any other food, zero change there.
-- UI: a "Create recipe" flow (search/add multiple ingredients with
-  quantities, then name and save); recipes appear in search alongside
-  USDA/OFF/TACO, tagged distinctly. "1 serving" as a unit reuses the
-  existing amount/unit picker.
-- Effort: large — the biggest item here. New UI flow, and care needed on
-  how servings map to grams.
-
 ## Trends over time
 A week/month view — daily kcal as a line chart, macro trends over time.
 - Schema: none — aggregates existing `food_logs` by date over a range,

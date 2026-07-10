@@ -43,6 +43,71 @@ function scaleMicros(micros, mult) {
   return out;
 }
 
+// Combines several ingredients (each a normalized food + a gram amount)
+// into one named `foods` row with per-serving macros baked into
+// kcal_100g/etc, so it slots into food_logs exactly like any other food —
+// "1 serving" = 100g is a fiction reused from the manual quick-add trick,
+// never shown to the user (see recipes.js's portions array).
+export async function saveRecipe(name, servings, ingredients) {
+  const s = Math.max(Number(servings) || 1, 0.1);
+  const totals = { kcal: 0, protein_g: 0, fat_g: 0, carbs_g: 0, fiber_g: 0 };
+  const micros = {};
+  for (const { food, grams } of ingredients) {
+    const mult = grams / 100;
+    totals.kcal += (food.kcal_100g || 0) * mult;
+    totals.protein_g += (food.protein_100g || 0) * mult;
+    totals.fat_g += (food.fat_100g || 0) * mult;
+    totals.carbs_g += (food.carbs_100g || 0) * mult;
+    totals.fiber_g += (food.fiber_100g || 0) * mult;
+    for (const [k, v] of Object.entries(food.micros || {})) {
+      if (typeof v === "number") micros[k] = (micros[k] || 0) + v * mult;
+    }
+  }
+  const perServingMicros = {};
+  for (const [k, v] of Object.entries(micros)) perServingMicros[k] = v / s;
+
+  const recipe = {
+    source: "recipe",
+    source_id: crypto.randomUUID(),
+    name,
+    kcal_100g: totals.kcal / s,
+    protein_100g: totals.protein_g / s,
+    fat_100g: totals.fat_g / s,
+    carbs_100g: totals.carbs_g / s,
+    fiber_100g: totals.fiber_g / s,
+    micros: perServingMicros,
+    portions: [{ label: "1 serving", grams: 100 }],
+  };
+
+  const { data, error } = await supabase
+    .from("foods")
+    .upsert(
+      {
+        source: recipe.source,
+        source_id: recipe.source_id,
+        name: recipe.name,
+        kcal_100g: recipe.kcal_100g,
+        protein_100g: recipe.protein_100g,
+        fat_100g: recipe.fat_100g,
+        carbs_100g: recipe.carbs_100g,
+        fiber_100g: recipe.fiber_100g,
+        micros: recipe.micros,
+        recipe_ingredients: ingredients.map(({ food, grams }) => ({
+          name: food.name,
+          source: food.source,
+          source_id: food.source_id,
+          grams,
+        })),
+        synced_at: new Date().toISOString(),
+      },
+      { onConflict: "source,source_id" }
+    )
+    .select("id")
+    .single();
+  if (error) throw error;
+  return { ...recipe, id: data.id, cached: true };
+}
+
 export async function addEntry(food, quantityG, loggedAt, mealType, quantityLabel) {
   const foodId = await ensureFoodCached(food);
   const {

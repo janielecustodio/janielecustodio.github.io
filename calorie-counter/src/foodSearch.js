@@ -1,6 +1,7 @@
 import { searchUSDA, backfillMissingEnergy } from "./sources/usda.js";
 import { searchOFF } from "./sources/off.js";
 import { searchTaco } from "./sources/taco.js";
+import { searchRecipes } from "./sources/recipes.js";
 
 // How many top-ranked results get a USDA detail-fetch to backfill missing
 // calorie data. Bounded on purpose — backfilling every result in a page of
@@ -45,10 +46,11 @@ function relevanceScore(name, queryWords) {
 // CORS hiccup, USDA rate limit) never blocks the others — it's just
 // dropped, with a console warning for debugging.
 export async function searchAll(query) {
-  const [usda, off, taco] = await Promise.allSettled([
+  const [usda, off, taco, recipes] = await Promise.allSettled([
     searchUSDA(query),
     searchOFF(query),
     searchTaco(query),
+    searchRecipes(query),
   ]);
 
   const results = [];
@@ -56,6 +58,7 @@ export async function searchAll(query) {
     ["usda", usda],
     ["off", off],
     ["taco", taco],
+    ["recipes", recipes],
   ]) {
     if (outcome.status === "fulfilled") {
       results.push(...outcome.value);

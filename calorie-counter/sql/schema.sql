@@ -3,7 +3,7 @@
 
 create table if not exists public.foods (
   id uuid primary key default gen_random_uuid(),
-  source text not null check (source in ('usda', 'taco', 'tbca', 'off', 'manual')),
+  source text not null check (source in ('usda', 'taco', 'tbca', 'off', 'manual', 'recipe')),
   source_id text not null,
   name text not null,
   brand text,
@@ -14,6 +14,10 @@ create table if not exists public.foods (
   carbs_100g numeric not null default 0,
   fiber_100g numeric default 0,
   micros jsonb not null default '{}'::jsonb,
+  -- Only set for source = 'recipe': the ingredient list this recipe's
+  -- macros were computed from, kept for reference/future editing. Not
+  -- read at log time — kcal_100g etc already hold the per-serving totals.
+  recipe_ingredients jsonb,
   synced_at timestamptz not null default now(),
   unique (source, source_id)
 );
