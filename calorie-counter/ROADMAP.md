@@ -8,16 +8,6 @@ Everything below needs a Supabase migration (unlike edit/log-again/
 frequent-foods/copy-day, which shipped without touching the schema at
 all). Pick any of these up whenever — say the word.
 
-## Trends over time
-A week/month view — daily kcal as a line chart, macro trends over time.
-- Schema: none — aggregates existing `food_logs` by date over a range,
-  same math as the daily summary just repeated per day.
-- UI: a new view (line chart, maybe a 7-day rolling average), separate
-  from the single-day page that exists now. Should follow the same
-  dataviz process used for the donut (form → color → validate → marks).
-- Effort: medium-large. `main.js` is getting big enough that this is a
-  good point to split it into a few files rather than keep bolting on.
-
 ## Water intake / body weight log
 Both explicitly optional — only worth building if actually used, not
 worth building speculatively.

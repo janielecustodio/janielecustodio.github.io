@@ -179,6 +179,20 @@ export async function getEntriesForDate(date) {
   return data || [];
 }
 
+// Powers the Trends view — a wider window than getEntriesForDate, and no
+// foods join since trends only need each entry's own logged macro
+// snapshot (kcal/protein_g/fat_g/carbs_g/logged_at), not the food's name.
+export async function getEntriesForRange(startDate, endDateExclusive) {
+  const { data, error } = await supabase
+    .from("food_logs")
+    .select("*")
+    .gte("logged_at", startDate.toISOString())
+    .lt("logged_at", endDateExclusive.toISOString())
+    .order("logged_at", { ascending: true });
+  if (error) throw error;
+  return data || [];
+}
+
 // Most-logged foods for a meal type, newest-first among ties — powers the
 // quick-pick chips shown when a meal is pinned via + Add. Aggregated
 // client-side over recent history rather than a DB view, since this is a

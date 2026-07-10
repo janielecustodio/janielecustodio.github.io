@@ -154,6 +154,35 @@ button{font-family:inherit}
 .micro-label{color:var(--body)}
 .micro-val{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted2)}
 
+/* ── TRENDS ── */
+.trends-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:12px}
+.trends-back-btn{flex:0 0 auto;width:auto;padding:8px 14px}
+.trends-range-buttons{display:flex;gap:6px}
+.range-btn{
+  border:1px solid var(--line2);border-radius:var(--r);background:none;color:var(--muted2);
+  font-size:12px;padding:6px 12px;cursor:pointer;font-family:'IBM Plex Mono',monospace;
+}
+.range-btn:hover{color:var(--head);border-color:var(--muted)}
+.range-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.trend-chart-wrap{position:relative}
+.trend-svg{width:100%;height:auto;display:block}
+.trend-grid{stroke:var(--line);stroke-width:1}
+.trend-axis-label{font-family:'IBM Plex Mono',monospace;font-size:8px;fill:var(--muted2)}
+.trend-line{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.trend-dot{stroke:var(--ink2);stroke-width:2}
+.trend-end-label{font-family:'IBM Plex Mono',monospace;font-size:10px;fill:var(--head);font-weight:600}
+.trend-crosshair{stroke:var(--muted2);stroke-width:1}
+.trend-overlay{fill:transparent;cursor:crosshair}
+.trend-tooltip{
+  position:absolute;top:6px;transform:translateX(-50%);
+  background:var(--ink3);border:1px solid var(--line2);border-radius:6px;
+  padding:8px 10px;font-size:11px;pointer-events:none;white-space:nowrap;z-index:5;
+}
+.trend-tooltip-date{font-family:'IBM Plex Mono',monospace;color:var(--muted2);margin-bottom:4px}
+.trend-tooltip-row{display:flex;align-items:center;gap:6px;color:var(--body)}
+.trend-tooltip-key{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+.trend-legend{margin-top:12px;flex-direction:row;gap:16px;flex-wrap:wrap}
+
 /* ── SEARCH ── */
 .add-target{
   display:flex;align-items:center;gap:6px;margin-bottom:10px;
@@ -313,6 +342,7 @@ button{font-family:inherit}
     <button id="date-next" aria-label="Next day">›</button>
     <button class="date-today-btn" id="date-today">Today</button>
   </div>
+  <button class="date-today-btn" id="trends-toggle-btn" hidden>📈 Trends</button>
   <button class="theme-toggle" id="theme-toggle">
     <span id="theme-icon">☀</span>&nbsp;<span id="theme-label">Light</span>
   </button>
@@ -383,6 +413,17 @@ button{font-family:inherit}
       <button class="copy-day-btn" id="copy-day-btn" type="button">⧉ Copy yesterday's log</button>
       <div id="log-list"></div>
     </section>
+  </div>
+
+  <div id="trends-view" hidden>
+    <div class="trends-header">
+      <button class="btn-secondary trends-back-btn" id="trends-back-btn">‹ Today</button>
+      <div class="trends-range-buttons" id="trends-range-buttons">
+        <button class="range-btn active" data-days="7" type="button">7 days</button>
+        <button class="range-btn" data-days="30" type="button">30 days</button>
+      </div>
+    </div>
+    <div id="trends-body"></div>
   </div>
 
 </main>
