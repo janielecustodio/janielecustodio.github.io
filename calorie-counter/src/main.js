@@ -11,6 +11,7 @@ import {
   getEntriesForDate,
   getFrequentFoodsForMeal,
   copyDay,
+  saveRecipe,
 } from "./log.js";
 import { computeSummary } from "./summary.js";
 import { MEAL_TYPES, inferMealType } from "./mealTypes.js";
@@ -515,6 +516,10 @@ function debounce(fn, ms) {
 function renderResults(results) {
   searchResults.innerHTML = "";
   for (const food of results) {
+    // Recipes store per-serving macros in the same kcal_100g/etc fields
+    // (a "1 serving" = 100g fiction, see recipes.js) — label them as such
+    // rather than the misleading "per 100g" every other source uses.
+    const perUnit = food.source === "recipe" ? "serving" : "100g";
     const item = document.createElement("div");
     item.className = "result-item";
     item.innerHTML = `
@@ -523,11 +528,11 @@ function renderResults(results) {
         <div class="result-name">${escapeHtml(food.name)}${
       food.brand ? " · " + escapeHtml(food.brand) : ""
     }</div>
-        <div class="result-meta">per 100g · P ${food.protein_100g.toFixed(
+        <div class="result-meta">per ${perUnit} · P ${food.protein_100g.toFixed(
           0
         )} C ${food.carbs_100g.toFixed(0)} F ${food.fat_100g.toFixed(0)}</div>
       </div>
-      <div class="result-kcal">${Math.round(food.kcal_100g)} kcal/100g</div>
+      <div class="result-kcal">${Math.round(food.kcal_100g)} kcal/${perUnit}</div>
     `;
     item.addEventListener("click", () => openQtyModal(food));
     searchResults.appendChild(item);
@@ -608,6 +613,151 @@ manualConfirm.addEventListener("click", async () => {
   await addEntry(food, 100, loggedAt, manualMeal.value, manualDesc.value.trim() || null);
   manualModal.hidden = true;
   refresh();
+});
+
+// ── Custom meals / recipes ──
+// Combines several ingredients into one named `foods` row (source =
+// 'recipe') that then shows up in normal search like any other food —
+// this modal only builds and saves it, it doesn't log it directly.
+const recipeModal = document.getElementById("recipe-modal");
+const recipeName = document.getElementById("recipe-name");
+const recipeServings = document.getElementById("recipe-servings");
+const recipeIngredientSearch = document.getElementById("recipe-ingredient-search");
+const recipeIngredientResults = document.getElementById("recipe-ingredient-results");
+const recipeIngredientList = document.getElementById("recipe-ingredient-list");
+const recipeError = document.getElementById("recipe-error");
+const recipePreviewKcal = document.getElementById("recipe-preview-kcal");
+const recipePreviewProtein = document.getElementById("recipe-preview-protein");
+const recipePreviewFat = document.getElementById("recipe-preview-fat");
+const recipePreviewCarbs = document.getElementById("recipe-preview-carbs");
+const recipeSave = document.getElementById("recipe-save");
+let recipeIngredients = [];
+
+function renderIngredientList() {
+  if (recipeIngredients.length === 0) {
+    recipeIngredientList.innerHTML = `<div class="recipe-empty">No ingredients added yet.</div>`;
+    return;
+  }
+  recipeIngredientList.innerHTML = recipeIngredients
+    .map((ing, idx) => {
+      const kcal = Math.round((ing.food.kcal_100g || 0) * (ing.grams / 100));
+      return `
+      <div class="recipe-ing-row" data-idx="${idx}">
+        <span class="recipe-ing-name">${escapeHtml(ing.food.name)}</span>
+        <input type="number" class="recipe-ing-grams" min="0.1" step="any" value="${ing.grams}">
+        <span class="recipe-ing-kcal">${kcal} kcal</span>
+        <button class="recipe-ing-remove" type="button" aria-label="Remove ingredient">✕</button>
+      </div>`;
+    })
+    .join("");
+}
+
+function updateRecipePreview() {
+  const servings = Math.max(Number(recipeServings.value) || 1, 0.1);
+  const totals = { kcal: 0, protein: 0, fat: 0, carbs: 0 };
+  for (const ing of recipeIngredients) {
+    const mult = ing.grams / 100;
+    totals.kcal += (ing.food.kcal_100g || 0) * mult;
+    totals.protein += (ing.food.protein_100g || 0) * mult;
+    totals.fat += (ing.food.fat_100g || 0) * mult;
+    totals.carbs += (ing.food.carbs_100g || 0) * mult;
+  }
+  recipePreviewKcal.textContent = `${Math.round(totals.kcal / servings)} kcal / serving`;
+  recipePreviewProtein.textContent = `${(totals.protein / servings).toFixed(0)}g`;
+  recipePreviewFat.textContent = `${(totals.fat / servings).toFixed(0)}g`;
+  recipePreviewCarbs.textContent = `${(totals.carbs / servings).toFixed(0)}g`;
+}
+
+document.getElementById("create-recipe-link").addEventListener("click", () => {
+  recipeIngredients = [];
+  recipeName.value = "";
+  recipeServings.value = "1";
+  recipeIngredientSearch.value = "";
+  recipeIngredientResults.innerHTML = "";
+  recipeError.hidden = true;
+  renderIngredientList();
+  updateRecipePreview();
+  recipeModal.hidden = false;
+  recipeName.focus();
+});
+
+document.getElementById("recipe-cancel").addEventListener("click", () => {
+  recipeModal.hidden = true;
+});
+
+recipeIngredientSearch.addEventListener(
+  "input",
+  debounce(async () => {
+    const query = recipeIngredientSearch.value.trim();
+    recipeIngredientResults.innerHTML = "";
+    if (query.length < 2) return;
+    let results;
+    try {
+      results = await searchAll(query);
+    } catch {
+      return;
+    }
+    recipeIngredientResults.innerHTML = results
+      .map((food, idx) => {
+        const perUnit = food.source === "recipe" ? "serving" : "100g";
+        return `
+      <div class="recipe-result-item" data-idx="${idx}">
+        <span class="tag">${food.source}</span>
+        <span>${escapeHtml(food.name)}</span>
+        <span class="recipe-result-kcal">${Math.round(food.kcal_100g)} kcal/${perUnit}</span>
+      </div>`;
+      })
+      .join("");
+    recipeIngredientResults.querySelectorAll(".recipe-result-item").forEach((el, idx) => {
+      el.addEventListener("click", () => {
+        recipeIngredients.push({ food: results[idx], grams: 100 });
+        recipeIngredientSearch.value = "";
+        recipeIngredientResults.innerHTML = "";
+        renderIngredientList();
+        updateRecipePreview();
+      });
+    });
+  }, 350)
+);
+
+recipeIngredientList.addEventListener("input", (e) => {
+  if (!e.target.classList.contains("recipe-ing-grams")) return;
+  const idx = Number(e.target.closest(".recipe-ing-row").dataset.idx);
+  recipeIngredients[idx].grams = Number(e.target.value) || 0;
+  const kcalEl = e.target.closest(".recipe-ing-row").querySelector(".recipe-ing-kcal");
+  kcalEl.textContent = `${Math.round(
+    (recipeIngredients[idx].food.kcal_100g || 0) * (recipeIngredients[idx].grams / 100)
+  )} kcal`;
+  updateRecipePreview();
+});
+
+recipeIngredientList.addEventListener("click", (e) => {
+  if (!e.target.classList.contains("recipe-ing-remove")) return;
+  const idx = Number(e.target.closest(".recipe-ing-row").dataset.idx);
+  recipeIngredients.splice(idx, 1);
+  renderIngredientList();
+  updateRecipePreview();
+});
+
+recipeServings.addEventListener("input", updateRecipePreview);
+
+recipeSave.addEventListener("click", async () => {
+  const name = recipeName.value.trim();
+  if (!name) {
+    recipeError.textContent = "Name is required.";
+    recipeError.hidden = false;
+    return;
+  }
+  if (recipeIngredients.length === 0) {
+    recipeError.textContent = "Add at least one ingredient.";
+    recipeError.hidden = false;
+    return;
+  }
+  recipeError.hidden = true;
+  const servings = Math.max(Number(recipeServings.value) || 1, 0.1);
+  const recipe = await saveRecipe(name, servings, recipeIngredients);
+  recipeModal.hidden = true;
+  openQtyModal(recipe);
 });
 
 // ── Quantity modal ──
