@@ -359,6 +359,10 @@ button{font-family:inherit}
 }
 .btn-secondary:hover{border-color:var(--muted)}
 .modal-actions .btn-primary{flex:1;margin-top:0}
+#search-modal{z-index:190}
+.search-modal-card{max-width:440px;max-height:85vh;overflow-y:auto}
+.search-modal-card #search-input{background:var(--ink)}
+.search-modal-card .frequent-chip{background:var(--ink)}
 #scan-video{width:100%;border-radius:var(--r);background:#000;max-height:60vh}
 
 @media(max-width:560px){
@@ -428,25 +432,7 @@ button{font-family:inherit}
 
     <section class="section">
       <div class="section-title">Add Food</div>
-      <div id="add-target" class="add-target" hidden>
-        Adding to <strong id="add-target-label"></strong>
-        <button id="add-target-clear" class="add-target-clear" type="button" aria-label="Clear target meal">✕</button>
-      </div>
-      <div id="frequent-foods" class="frequent-foods" hidden>
-        <div class="frequent-label">Frequent for <span id="frequent-meal-label"></span></div>
-        <div class="frequent-chips" id="frequent-chips"></div>
-      </div>
-      <div class="search-row">
-        <input id="search-input" type="text" placeholder="Search foods (e.g. chicken breast, arroz)…" autocomplete="off">
-        <button class="btn-scan" id="scan-btn">📷 Scan</button>
-      </div>
-      <div id="search-status" class="search-status" hidden></div>
-      <div id="search-results"></div>
-      <div class="manual-add-link">
-        <a id="manual-add-link">Can't find it? Add manually</a>
-        <span class="link-sep">·</span>
-        <a id="create-recipe-link">Create a recipe</a>
-      </div>
+      <button class="btn-primary" id="add-food-trigger" type="button">🔍 Search &amp; Add Food</button>
     </section>
 
     <section class="section">
@@ -523,6 +509,34 @@ button{font-family:inherit}
     <div class="modal-actions">
       <button class="btn-secondary" id="qty-cancel">Cancel</button>
       <button class="btn-primary" id="qty-confirm">Add to log</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="search-modal" hidden>
+  <div class="modal-card search-modal-card">
+    <div class="modal-title">Add Food</div>
+    <div id="add-target" class="add-target" hidden>
+      Adding to <strong id="add-target-label"></strong>
+      <button id="add-target-clear" class="add-target-clear" type="button" aria-label="Clear target meal">✕</button>
+    </div>
+    <div id="frequent-foods" class="frequent-foods" hidden>
+      <div class="frequent-label">Frequent for <span id="frequent-meal-label"></span></div>
+      <div class="frequent-chips" id="frequent-chips"></div>
+    </div>
+    <div class="search-row">
+      <input id="search-input" type="text" placeholder="Search foods (e.g. chicken breast, arroz)…" autocomplete="off">
+      <button class="btn-scan" id="scan-btn">📷 Scan</button>
+    </div>
+    <div id="search-status" class="search-status" hidden></div>
+    <div id="search-results"></div>
+    <div class="manual-add-link">
+      <a id="manual-add-link">Can't find it? Add manually</a>
+      <span class="link-sep">·</span>
+      <a id="create-recipe-link">Create a recipe</a>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="search-modal-close">Close</button>
     </div>
   </div>
 </div>
