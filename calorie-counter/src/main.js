@@ -16,6 +16,7 @@ import {
 import { computeSummary } from "./summary.js";
 import { MEAL_TYPES, inferMealType } from "./mealTypes.js";
 import { renderTrends } from "./trends.js";
+import { addWater, deleteWater, getWaterForDate, saveWeight, getWeightForDate } from "./bodyLog.js";
 
 if (!isConfigured) {
   document.getElementById("config-warning").hidden = false;
@@ -132,6 +133,7 @@ async function refresh() {
   const entries = await getEntriesForDate(currentDate);
   renderSummary(entries);
   renderLog(entries);
+  refreshBodyLog();
 }
 
 // ── Today / Trends view switch ──
@@ -500,6 +502,64 @@ async function copyMealFromYesterday(mealId, mealLabel) {
   await copyDay(from, currentDate, mealId);
   refresh();
 }
+
+// ── Water & weight ──
+const waterTotalEl = document.getElementById("water-total");
+const waterEntriesEl = document.getElementById("water-entries");
+const weightInput = document.getElementById("weight-input");
+const weightSavedNote = document.getElementById("weight-saved-note");
+
+async function refreshBodyLog() {
+  const [water, weight] = await Promise.all([
+    getWaterForDate(currentDate),
+    getWeightForDate(currentDate),
+  ]);
+  renderWater(water);
+  weightInput.value = weight ? weight.kg : "";
+  weightSavedNote.hidden = true;
+}
+
+function renderWater(entries) {
+  const total = entries.reduce((sum, e) => sum + (Number(e.ml) || 0), 0);
+  waterTotalEl.textContent = `${total.toLocaleString()} ml today`;
+  waterEntriesEl.innerHTML = entries
+    .map((e) => {
+      const time = new Date(e.logged_at);
+      const timeLabel = new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(time);
+      return `
+      <div class="water-entry" data-id="${e.id}">
+        <span class="water-entry-ml">${e.ml} ml</span>
+        <span class="water-entry-time">${timeLabel}</span>
+        <button class="water-entry-del" type="button" aria-label="Remove water entry">✕</button>
+      </div>`;
+    })
+    .join("");
+}
+
+document.querySelectorAll(".water-btn").forEach((btn) => {
+  btn.addEventListener("click", async () => {
+    const now = new Date();
+    const loggedAt = new Date(currentDate);
+    loggedAt.setHours(now.getHours(), now.getMinutes(), 0, 0);
+    await addWater(Number(btn.dataset.ml), loggedAt);
+    refreshBodyLog();
+  });
+});
+
+waterEntriesEl.addEventListener("click", async (e) => {
+  if (!e.target.classList.contains("water-entry-del")) return;
+  const id = e.target.closest(".water-entry").dataset.id;
+  await deleteWater(id);
+  refreshBodyLog();
+});
+
+document.getElementById("weight-save-btn").addEventListener("click", async () => {
+  const kg = Number(weightInput.value);
+  if (!kg || kg <= 0) return;
+  await saveWeight(currentDate, kg);
+  weightSavedNote.textContent = "Saved.";
+  weightSavedNote.hidden = false;
+});
 
 function escapeHtml(s) {
   const div = document.createElement("div");
