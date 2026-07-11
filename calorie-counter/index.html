@@ -46,16 +46,21 @@ button{font-family:inherit}
 
 /* ── TOPBAR ── */
 .topbar{
-  display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  display:flex;flex-direction:column;gap:10px;
   padding:12px 20px;border-bottom:1px solid var(--line);
   background:var(--ink2);position:sticky;top:0;z-index:50;
 }
+.topbar-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .topbar-title{font-size:14px;font-weight:600;color:var(--head)}
 .date-nav{display:flex;align-items:center;gap:8px;margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:12px}
-.date-nav button{background:none;border:1px solid var(--line2);border-radius:var(--r);color:var(--muted2);width:26px;height:26px;cursor:pointer}
-.date-nav button:hover{color:var(--head);border-color:var(--muted)}
+.date-nav button:not(.date-today-btn){background:none;border:1px solid var(--line2);border-radius:var(--r);color:var(--muted2);width:26px;height:26px;cursor:pointer;flex-shrink:0}
+.date-nav button:not(.date-today-btn):hover{color:var(--head);border-color:var(--muted)}
 .date-nav-label{color:var(--body);min-width:118px;text-align:center}
-.date-today-btn{border:1px solid var(--line2);border-radius:var(--r);background:none;color:var(--muted2);font-size:11px;padding:4px 9px;cursor:pointer;font-family:'IBM Plex Mono',monospace}
+.date-today-btn{
+  border:1px solid var(--line2);border-radius:var(--r);background:none;color:var(--muted2);
+  font-size:11px;padding:6px 14px;cursor:pointer;font-family:'IBM Plex Mono',monospace;
+  white-space:nowrap;flex-shrink:0;
+}
 .date-today-btn:hover{color:var(--head);border-color:var(--muted)}
 .theme-toggle,.signout-btn{
   background:none;border:1px solid var(--line2);border-radius:var(--r);
@@ -371,19 +376,23 @@ button{font-family:inherit}
 <body>
 
 <div class="topbar">
-  <div class="topbar-title">Calorie Counter</div>
-  <div class="date-nav" id="date-nav" hidden>
-    <button id="date-prev" aria-label="Previous day">‹</button>
-    <span class="date-nav-label" id="date-label"></span>
-    <button id="date-next" aria-label="Next day">›</button>
-    <button class="date-today-btn" id="date-today">Today</button>
+  <div class="topbar-row">
+    <div class="topbar-title">Calorie Counter</div>
+    <div class="date-nav" id="date-nav" hidden>
+      <button id="date-prev" aria-label="Previous day">‹</button>
+      <span class="date-nav-label" id="date-label"></span>
+      <button id="date-next" aria-label="Next day">›</button>
+      <button class="date-today-btn" id="date-today">Today</button>
+    </div>
+    <button class="date-today-btn" id="trends-toggle-btn" hidden>Trends</button>
   </div>
-  <button class="date-today-btn" id="trends-toggle-btn" hidden>Trends</button>
-  <button class="date-today-btn" id="targets-toggle-btn" hidden>Targets</button>
-  <button class="theme-toggle" id="theme-toggle">
-    <span id="theme-label">Light</span>
-  </button>
-  <button class="signout-btn" id="signout-btn" hidden>Sign out</button>
+  <div class="topbar-row">
+    <button class="date-today-btn" id="targets-toggle-btn" hidden>Targets</button>
+    <button class="theme-toggle" id="theme-toggle">
+      <span id="theme-label">Light</span>
+    </button>
+    <button class="signout-btn" id="signout-btn" hidden>Sign out</button>
+  </div>
 </div>
 
 <main class="main">
