@@ -95,10 +95,10 @@ function startOfDay(d) {
 
 function renderDateLabel() {
   const today = startOfDay(new Date());
-  dateLabel.textContent =
-    currentDate.getTime() === today.getTime()
-      ? `Today · ${dateFmt.format(currentDate)}`
-      : dateFmt.format(currentDate);
+  const isToday = currentDate.getTime() === today.getTime();
+  dateLabel.textContent = isToday ? `Today · ${dateFmt.format(currentDate)}` : dateFmt.format(currentDate);
+  // Only useful as a way back to today when viewing some other day.
+  document.getElementById("date-today").hidden = isToday;
 }
 
 document.getElementById("date-prev").addEventListener("click", () => {
@@ -283,7 +283,7 @@ function renderSummary(entries) {
         <span class="legend-label">${m.label}</span>
         <span class="legend-val-col">
           <span class="legend-val">${m.grams.toFixed(1)} g · ${m.pct.toFixed(0)}%</span>
-          ${m.targetPct != null ? `<span class="legend-target">target ${m.targetPct.toFixed(0)}%</span>` : ""}
+          ${m.targetPct != null ? `<span class="legend-target">${m.targetPct.toFixed(0)}%</span>` : ""}
         </span>
       </div>`
     )
