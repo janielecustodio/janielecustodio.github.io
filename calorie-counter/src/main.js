@@ -373,13 +373,14 @@ function renderLog(entries) {
       )} · F ${e.fat_g.toFixed(0)}</div>
         </div>
         <div class="log-kcal">${Math.round(e.kcal)} kcal</div>
-        <button class="log-repeat" aria-label="Log again today" title="Log again today">↻</button>
+        <button class="log-del" aria-label="Delete entry">✕</button>
       `;
       wrap.innerHTML = `<div class="log-swipe-bg">Delete</div>`;
       wrap.appendChild(row);
-      row.querySelector(".log-repeat").addEventListener("click", async (ev) => {
+      row.querySelector(".log-del").addEventListener("click", async (ev) => {
         ev.stopPropagation();
-        await logAgain(e);
+        await deleteEntry(e.id);
+        refresh();
       });
       wireSwipeToDelete(wrap, row, async () => {
         await deleteEntry(e.id);
@@ -536,18 +537,6 @@ async function openEditModal(entry) {
     time: new Date(entry.logged_at),
     mealType: entry.meal_type || inferMealType(new Date(entry.logged_at)),
   });
-}
-
-async function logAgain(entry) {
-  const food = foodFromEntry(entry);
-  await addEntry(
-    food,
-    entry.quantity_g,
-    new Date(),
-    entry.meal_type || inferMealType(new Date()),
-    entry.quantity_label
-  );
-  refresh();
 }
 
 // ── Add-food target (pinned meal) ──
