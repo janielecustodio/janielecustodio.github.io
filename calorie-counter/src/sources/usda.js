@@ -4,11 +4,24 @@ const BASE = "https://api.nal.usda.gov/fdc/v1";
 
 // SR Legacy items often carry two "Energy" entries — one in kcal, one in kJ.
 // Matching on name alone risks grabbing the kJ value (~4.2x too high).
+//
+// The /foods/search endpoint returns flat nutrient objects
+// ({nutrientName, unitName, value}), but the /food/{fdcId} detail endpoint
+// nests the same info under `.nutrient` and uses `amount` instead of
+// `value` ({nutrient: {name, unitName}, amount}) — a real, documented USDA
+// FDC API inconsistency between the two endpoints. Handle both shapes so a
+// food parses the same regardless of which endpoint it came from; missing
+// this was silently zeroing out protein/fat/carbs (defaulted via `?? 0` in
+// normalize()) for anything fetched through fetchUsdaDetail, while kcal
+// happened to have its own null-fallback that masked the same failure.
 function nutrient(food, names, unit) {
-  const hit = food.foodNutrients?.find(
-    (n) => names.includes(n.nutrientName) && (!unit || n.unitName === unit)
-  );
-  return hit?.value ?? null;
+  const hit = food.foodNutrients?.find((n) => {
+    const name = n.nutrientName ?? n.nutrient?.name;
+    const unitName = n.unitName ?? n.nutrient?.unitName;
+    return names.includes(name) && (!unit || unitName === unit);
+  });
+  if (!hit) return null;
+  return hit.value ?? hit.amount ?? null;
 }
 
 // foodPortions only appears on the full /food/{fdcId} detail response, not
