@@ -353,6 +353,8 @@ function renderLog(entries) {
     group.querySelector(".log-group-copy").addEventListener("click", () => copyMealFromYesterday(id, label));
 
     for (const e of groupEntries) {
+      const wrap = document.createElement("div");
+      wrap.className = "log-item-wrap";
       const row = document.createElement("div");
       row.className = "log-item";
       row.innerHTML = `
@@ -367,22 +369,122 @@ function renderLog(entries) {
         </div>
         <div class="log-kcal">${Math.round(e.kcal)} kcal</div>
         <button class="log-repeat" aria-label="Log again today" title="Log again today">↻</button>
-        <button class="log-del" aria-label="Delete entry">✕</button>
       `;
-      row.addEventListener("click", () => openEditModal(e));
+      wrap.innerHTML = `<div class="log-swipe-bg">Delete</div>`;
+      wrap.appendChild(row);
       row.querySelector(".log-repeat").addEventListener("click", async (ev) => {
         ev.stopPropagation();
         await logAgain(e);
       });
-      row.querySelector(".log-del").addEventListener("click", async (ev) => {
-        ev.stopPropagation();
+      wireSwipeToDelete(wrap, row, async () => {
         await deleteEntry(e.id);
         refresh();
       });
-      group.appendChild(row);
+      row.addEventListener("click", () => {
+        if (row.dataset.suppressClick === "1") return;
+        if (wrap.classList.contains("swipe-open")) {
+          closeSwipeRow(wrap, row);
+          return;
+        }
+        openEditModal(e);
+      });
+      wrap.querySelector(".log-swipe-bg").addEventListener("click", async () => {
+        await deleteEntry(e.id);
+        refresh();
+      });
+      group.appendChild(wrap);
     }
     list.appendChild(group);
   }
+}
+
+// Swipe-to-delete: dragging a log row left reveals a "Delete" strip behind
+// it (tapping the strip deletes); dragging far enough past it deletes
+// immediately without needing a second tap. Only one row stays open at a
+// time — opening another closes it, matching the standard mobile pattern.
+const SWIPE_OPEN_PX = 88;
+const SWIPE_AUTO_DELETE_PX = 160;
+let openSwipeWrap = null;
+
+function closeSwipeRow(wrap, row) {
+  wrap.classList.remove("swipe-open");
+  row.style.transform = "";
+  if (openSwipeWrap === wrap) openSwipeWrap = null;
+}
+
+function wireSwipeToDelete(wrap, row, onDelete) {
+  let startX = 0;
+  let startY = 0;
+  let baseX = 0;
+  let dragging = false;
+  let decided = false;
+
+  row.addEventListener("pointerdown", (ev) => {
+    if (ev.target.closest("button")) return;
+    startX = ev.clientX;
+    startY = ev.clientY;
+    baseX = wrap.classList.contains("swipe-open") ? -SWIPE_OPEN_PX : 0;
+    decided = false;
+    dragging = false;
+  });
+
+  row.addEventListener("pointermove", (ev) => {
+    if (!startX && !startY) return;
+    const dx = ev.clientX - startX;
+    const dy = ev.clientY - startY;
+    if (!decided) {
+      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+      decided = true;
+      dragging = Math.abs(dx) > Math.abs(dy);
+      if (dragging) {
+        row.classList.add("swipe-dragging");
+        row.setPointerCapture(ev.pointerId);
+        if (openSwipeWrap && openSwipeWrap !== wrap) {
+          closeSwipeRow(openSwipeWrap, openSwipeWrap.querySelector(".log-item"));
+        }
+      }
+    }
+    if (!dragging) return;
+    ev.preventDefault();
+    const x = Math.min(0, Math.max(baseX + dx, -SWIPE_AUTO_DELETE_PX));
+    row.style.transform = `translateX(${x}px)`;
+  });
+
+  async function finishDrag() {
+    if (!dragging) {
+      startX = 0;
+      startY = 0;
+      return;
+    }
+    row.classList.remove("swipe-dragging");
+    row.dataset.suppressClick = "1";
+    setTimeout(() => delete row.dataset.suppressClick, 0);
+    const matrix = new DOMMatrixReadOnly(getComputedStyle(row).transform);
+    const currentX = matrix.m41;
+    if (currentX <= -SWIPE_AUTO_DELETE_PX + 8) {
+      await onDelete();
+    } else if (currentX <= -SWIPE_OPEN_PX / 2) {
+      wrap.classList.add("swipe-open");
+      row.style.transform = `translateX(${-SWIPE_OPEN_PX}px)`;
+      openSwipeWrap = wrap;
+    } else {
+      closeSwipeRow(wrap, row);
+    }
+    startX = 0;
+    startY = 0;
+    dragging = false;
+    decided = false;
+  }
+
+  row.addEventListener("pointerup", finishDrag);
+  row.addEventListener("pointercancel", () => {
+    row.classList.remove("swipe-dragging");
+    if (!wrap.classList.contains("swipe-open")) row.style.transform = "";
+    startX = 0;
+    startY = 0;
+    dragging = false;
+    decided = false;
+  });
 }
 
 // Reconstructs a food-shaped object (per-100g macros) from a food_logs row
