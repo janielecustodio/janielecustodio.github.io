@@ -68,6 +68,9 @@ function parseMicros(food) {
   };
   add("sodium_mg", ["Sodium, Na"], "MG");
   add("sugars_g", ["Sugars, total including NLEA", "Sugars, total"], "G");
+  // Only appears on Branded Foods (FDA label data) — Foundation/SR Legacy
+  // whole-food records don't carry it, correctly, since they have none.
+  add("added_sugars_g", ["Sugars, added"], "G");
   add("saturated_fat_g", ["Fatty acids, total saturated"], "G");
   add("potassium_mg", ["Potassium, K"], "MG");
   add("calcium_mg", ["Calcium, Ca"], "MG");
