@@ -35,6 +35,7 @@ function parseMicros(n) {
   };
   addMgFromG("sodium_mg", "sodium_100g");
   addG("sugars_g", "sugars_100g");
+  addG("added_sugars_g", "added-sugars_100g");
   addG("saturated_fat_g", "saturated-fat_100g");
   addMgFromG("potassium_mg", "potassium_100g");
   addMgFromG("calcium_mg", "calcium_100g");

@@ -17,14 +17,24 @@ export function computeSummary(entries) {
     { kcal: 0, protein_g: 0, fat_g: 0, carbs_g: 0, fiber_g: 0 }
   );
 
-  const pct = (grams, kcalPerG) =>
-    totals.kcal > 0 ? ((grams * kcalPerG) / totals.kcal) * 100 : 0;
+  // Percentages are normalized against the sum of macro-derived energy, not
+  // the food's own logged kcal — the two rarely match exactly (rounding,
+  // fiber's ~2kcal/g Atwater factor vs the general 4kcal/g used here, sugar
+  // alcohols, alcohol kcal, label rounding), so dividing by totals.kcal would
+  // keep undershooting 100% even with fully correct macros. Dividing by the
+  // macro-energy sum instead guarantees the three percentages always add up
+  // to exactly 100 (when any macro energy is present).
+  const proteinKcal = totals.protein_g * KCAL_PER_G.protein;
+  const carbsKcal = totals.carbs_g * KCAL_PER_G.carbs;
+  const fatKcal = totals.fat_g * KCAL_PER_G.fat;
+  const macroKcal = proteinKcal + carbsKcal + fatKcal;
+  const pct = (kcal) => (macroKcal > 0 ? (kcal / macroKcal) * 100 : 0);
 
   return {
     ...totals,
     micros,
-    pctProtein: pct(totals.protein_g, KCAL_PER_G.protein),
-    pctCarbs: pct(totals.carbs_g, KCAL_PER_G.carbs),
-    pctFat: pct(totals.fat_g, KCAL_PER_G.fat),
+    pctProtein: pct(proteinKcal),
+    pctCarbs: pct(carbsKcal),
+    pctFat: pct(fatKcal),
   };
 }
