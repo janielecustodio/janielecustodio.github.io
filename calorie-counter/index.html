@@ -313,20 +313,27 @@ button{font-family:inherit}
 .weight-save-btn{flex:0 0 auto;width:auto;padding:8px 16px}
 .weight-saved-note{font-size:11px;color:var(--good);margin-top:6px}
 
+.log-item-wrap{position:relative;overflow:hidden}
+.log-item-wrap:last-child .log-item{border-bottom:none}
+.log-swipe-bg{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:flex-end;
+  background:var(--bad);color:#fff;padding-right:22px;font-size:12px;font-weight:500;
+  font-family:'IBM Plex Mono',monospace;cursor:pointer;
+}
 .log-item{
   display:flex;align-items:center;gap:12px;padding:10px 0;cursor:pointer;
-  border-bottom:1px solid var(--line);font-size:13px;
+  border-bottom:1px solid var(--line);font-size:13px;position:relative;
+  background:var(--ink);touch-action:pan-y;user-select:none;
 }
-.log-item:last-child{border-bottom:none}
+.log-item:not(.swipe-dragging){transition:transform .2s ease}
 .log-item:hover .log-name{color:var(--accent)}
 .log-time{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);width:48px;flex-shrink:0}
 .log-body{flex:1;min-width:0}
 .log-name{color:var(--head);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:color .15s}
 .log-meta{font-size:11px;color:var(--muted2);font-family:'IBM Plex Mono',monospace;margin-top:2px}
 .log-kcal{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--body);flex-shrink:0}
-.log-repeat,.log-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:15px;flex-shrink:0;padding:2px 4px}
+.log-repeat{background:none;border:none;color:var(--muted);cursor:pointer;font-size:15px;flex-shrink:0;padding:2px 4px}
 .log-repeat:hover{color:var(--accent)}
-.log-del:hover{color:var(--bad)}
 
 /* ── MODAL ── */
 .modal-overlay{
