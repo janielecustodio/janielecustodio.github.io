@@ -133,8 +133,9 @@ button{font-family:inherit}
 .legend-row{display:flex;align-items:center;gap:9px;font-size:13px}
 .legend-swatch{width:10px;height:10px;border-radius:2px;flex-shrink:0}
 .legend-label{color:var(--body)}
-.legend-val{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted2)}
-.legend-target{color:var(--muted)}
+.legend-val-col{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.legend-val{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted2)}
+.legend-target{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted)}
 .no-entries{font-size:13px;color:var(--muted2)}
 .micros-details{margin-top:16px;border-top:1px solid var(--line);padding-top:12px}
 .micros-details summary{
@@ -327,7 +328,6 @@ button{font-family:inherit}
 }
 .log-item:not(.swipe-dragging){transition:transform .2s ease}
 .log-item:hover .log-name{color:var(--accent)}
-.log-time{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);width:48px;flex-shrink:0}
 .log-body{flex:1;min-width:0}
 .log-name{color:var(--head);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:color .15s}
 .log-meta{font-size:11px;color:var(--muted2);font-family:'IBM Plex Mono',monospace;margin-top:2px}
