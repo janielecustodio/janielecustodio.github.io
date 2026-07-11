@@ -251,10 +251,20 @@ function renderSummary(entries) {
     return;
   }
 
+  // Target percentages are derived from target grams the same way actual
+  // percentages are (macro-energy-sum denominator, not a separate stored
+  // field) — so the two %s being compared side by side are always computed
+  // the same way and a target set in grams still shows a comparable %.
+  const targetProteinKcal = (currentTargets?.protein_g || 0) * KCAL_PER_G.protein;
+  const targetCarbsKcal = (currentTargets?.carbs_g || 0) * KCAL_PER_G.carbs;
+  const targetFatKcal = (currentTargets?.fat_g || 0) * KCAL_PER_G.fat;
+  const targetMacroKcal = targetProteinKcal + targetCarbsKcal + targetFatKcal;
+  const targetPct = (kcal) => (targetMacroKcal > 0 ? (kcal / targetMacroKcal) * 100 : null);
+
   const macros = [
-    { key: "protein", label: "Protein", grams: s.protein_g, pct: s.pctProtein, colorVar: "--series-protein", target: currentTargets?.protein_g },
-    { key: "carbs", label: "Carbs", grams: s.carbs_g, pct: s.pctCarbs, colorVar: "--series-carbs", target: currentTargets?.carbs_g },
-    { key: "fat", label: "Fat", grams: s.fat_g, pct: s.pctFat, colorVar: "--series-fat", target: currentTargets?.fat_g },
+    { key: "protein", label: "Protein", grams: s.protein_g, pct: s.pctProtein, colorVar: "--series-protein", target: currentTargets?.protein_g, targetPct: targetPct(targetProteinKcal) },
+    { key: "carbs", label: "Carbs", grams: s.carbs_g, pct: s.pctCarbs, colorVar: "--series-carbs", target: currentTargets?.carbs_g, targetPct: targetPct(targetCarbsKcal) },
+    { key: "fat", label: "Fat", grams: s.fat_g, pct: s.pctFat, colorVar: "--series-fat", target: currentTargets?.fat_g, targetPct: targetPct(targetFatKcal) },
   ];
   const segments = buildDonutSegments(macros);
 
@@ -272,9 +282,14 @@ function renderSummary(entries) {
       <div class="legend-row">
         <span class="legend-swatch" style="background:var(${m.colorVar})"></span>
         <span class="legend-label">${m.label}</span>
-        <span class="legend-val">${m.grams.toFixed(1)} g · ${m.pct.toFixed(0)}%${
-          m.target ? ` <span class="legend-target">/ ${m.target}g</span>` : ""
-        }</span>
+        <span class="legend-val-col">
+          <span class="legend-val">${m.grams.toFixed(1)} g · ${m.pct.toFixed(0)}%</span>
+          ${
+            m.target
+              ? `<span class="legend-target">target ${m.target}g${m.targetPct != null ? ` · ${m.targetPct.toFixed(0)}%` : ""}</span>`
+              : ""
+          }
+        </span>
       </div>`
     )
     .join("");
@@ -340,9 +355,17 @@ function renderLog(entries) {
       groupEntries.length > 0
         ? `<span class="log-group-kcal">· ${Math.round(groupKcal)} kcal</span>`
         : "";
+    // One time per meal, not per food — the earliest entry logged in the
+    // group stands in for "when this meal happened."
+    const timeHtml =
+      groupEntries.length > 0
+        ? `<span class="log-group-kcal">· ${timeFmt.format(
+            new Date(Math.min(...groupEntries.map((e) => new Date(e.logged_at).getTime())))
+          )}</span>`
+        : "";
     group.innerHTML = `
       <div class="log-group-header">
-        <span>${label} ${kcalHtml}</span>
+        <span>${label} ${timeHtml} ${kcalHtml}</span>
         <span class="log-group-actions">
           <button class="log-group-copy" type="button" title="Copy from yesterday">⧉</button>
           <button class="log-group-add" type="button">+ Add</button>
@@ -358,7 +381,6 @@ function renderLog(entries) {
       const row = document.createElement("div");
       row.className = "log-item";
       row.innerHTML = `
-        <div class="log-time">${timeFmt.format(new Date(e.logged_at))}</div>
         <div class="log-body">
           <div class="log-name">${escapeHtml(e.foods?.name || "Food")}</div>
           <div class="log-meta">${escapeHtml(
