@@ -35,11 +35,12 @@
   --accent:#4a5cf0;--good:#1f9d52;--bad:#c8483d;
   --series-protein:#2a78d6;--series-carbs:#eda100;--series-fat:#e34948;
 }
-html{scroll-behavior:smooth}
+html{scroll-behavior:smooth;overflow-x:hidden}
 body{
   background:var(--ink);color:var(--body);
   font-family:'IBM Plex Sans',sans-serif;font-size:15px;line-height:1.6;
   min-height:100vh;-webkit-font-smoothing:antialiased;
+  overflow-x:hidden;width:100%;
 }
 a{color:var(--accent)}
 button{font-family:inherit}
@@ -346,7 +347,7 @@ button{font-family:inherit}
 }
 .modal-card{
   background:var(--ink2);border:1px solid var(--line);border-radius:8px;
-  padding:24px;width:100%;max-width:360px;min-width:0;position:relative;
+  padding:24px;width:100%;max-width:min(360px, calc(100vw - 40px));min-width:0;position:relative;
 }
 .modal-title{font-size:15px;font-weight:600;color:var(--head);margin-bottom:16px}
 .modal-close-x{
@@ -362,7 +363,7 @@ button{font-family:inherit}
 .btn-secondary:hover{border-color:var(--muted)}
 .modal-actions .btn-primary{flex:1;margin-top:0}
 #search-modal{z-index:190}
-.search-modal-card{max-width:440px;max-height:85vh;overflow-y:auto}
+.search-modal-card{max-width:min(440px, calc(100vw - 40px));max-height:85vh;overflow-y:auto}
 .search-modal-card #search-input{background:var(--ink)}
 .search-modal-card .frequent-chip{background:var(--ink)}
 #scan-video{width:100%;border-radius:var(--r);background:#000;max-height:60vh}
