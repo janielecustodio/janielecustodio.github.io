@@ -251,20 +251,10 @@ function renderSummary(entries) {
     return;
   }
 
-  // Target percentages are derived from target grams the same way actual
-  // percentages are (macro-energy-sum denominator, not a separate stored
-  // field) — so the two %s being compared side by side are always computed
-  // the same way and a target set in grams still shows a comparable %.
-  const targetProteinKcal = (currentTargets?.protein_g || 0) * KCAL_PER_G.protein;
-  const targetCarbsKcal = (currentTargets?.carbs_g || 0) * KCAL_PER_G.carbs;
-  const targetFatKcal = (currentTargets?.fat_g || 0) * KCAL_PER_G.fat;
-  const targetMacroKcal = targetProteinKcal + targetCarbsKcal + targetFatKcal;
-  const targetPct = (kcal) => (targetMacroKcal > 0 ? (kcal / targetMacroKcal) * 100 : null);
-
   const macros = [
-    { key: "protein", label: "Protein", grams: s.protein_g, pct: s.pctProtein, colorVar: "--series-protein", target: currentTargets?.protein_g, targetPct: targetPct(targetProteinKcal) },
-    { key: "carbs", label: "Carbs", grams: s.carbs_g, pct: s.pctCarbs, colorVar: "--series-carbs", target: currentTargets?.carbs_g, targetPct: targetPct(targetCarbsKcal) },
-    { key: "fat", label: "Fat", grams: s.fat_g, pct: s.pctFat, colorVar: "--series-fat", target: currentTargets?.fat_g, targetPct: targetPct(targetFatKcal) },
+    { key: "protein", label: "Protein", grams: s.protein_g, pct: s.pctProtein, colorVar: "--series-protein" },
+    { key: "carbs", label: "Carbs", grams: s.carbs_g, pct: s.pctCarbs, colorVar: "--series-carbs" },
+    { key: "fat", label: "Fat", grams: s.fat_g, pct: s.pctFat, colorVar: "--series-fat" },
   ];
   const segments = buildDonutSegments(macros);
 
@@ -282,22 +272,22 @@ function renderSummary(entries) {
       <div class="legend-row">
         <span class="legend-swatch" style="background:var(${m.colorVar})"></span>
         <span class="legend-label">${m.label}</span>
-        <span class="legend-val-col">
-          <span class="legend-val">${m.grams.toFixed(1)} g · ${m.pct.toFixed(0)}%</span>
-          ${
-            m.target
-              ? `<span class="legend-target">target ${m.target}g${m.targetPct != null ? ` · ${m.targetPct.toFixed(0)}%` : ""}</span>`
-              : ""
-          }
-        </span>
+        <span class="legend-val">${m.grams.toFixed(1)} g · ${m.pct.toFixed(0)}%</span>
       </div>`
     )
     .join("");
 
+  // The kcal-vs-target comparison is the one number worth making prominent —
+  // macro targets are already set via the Targets modal and don't need to be
+  // relitigated here too, that just crowded the legend with numbers to parse.
   const targetKcal = currentTargets?.kcal;
-  const centerKcalText = targetKcal
-    ? `${Math.round(s.kcal).toLocaleString()} / ${Math.round(targetKcal).toLocaleString()}`
-    : Math.round(s.kcal).toLocaleString();
+  const remaining = targetKcal ? Math.round(targetKcal - s.kcal) : null;
+  const remainingHtml =
+    remaining == null
+      ? ""
+      : remaining >= 0
+      ? `<div class="donut-center-remaining">${remaining.toLocaleString()} left</div>`
+      : `<div class="donut-center-remaining over">${Math.abs(remaining).toLocaleString()} over</div>`;
   const centerKcalClass = [
     "donut-center-kcal",
     targetKcal ? "has-target" : "",
@@ -314,8 +304,9 @@ function renderSummary(entries) {
           ${arcs}
         </svg>
         <div class="donut-center">
-          <div class="${centerKcalClass}">${centerKcalText}</div>
-          <div class="donut-center-label">kcal</div>
+          <div class="${centerKcalClass}">${Math.round(s.kcal).toLocaleString()}</div>
+          <div class="donut-center-label">${targetKcal ? `of ${Math.round(targetKcal).toLocaleString()} kcal` : "kcal"}</div>
+          ${remainingHtml}
         </div>
       </div>
       <div class="donut-legend">${legend}</div>
