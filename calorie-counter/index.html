@@ -68,6 +68,7 @@ button{font-family:inherit}
   font-family:'IBM Plex Mono',monospace;transition:color .15s,border-color .15s;
 }
 .theme-toggle:hover,.signout-btn:hover{color:var(--body);border-color:var(--muted)}
+.signout-btn{margin-left:auto}
 
 /* ── MAIN ── */
 .main{max-width:720px;margin:0 auto;padding:32px 20px 80px}
@@ -128,8 +129,6 @@ button{font-family:inherit}
   align-items:center;justify-content:center;pointer-events:none;
 }
 .donut-center-kcal{font-size:22px;font-weight:600;color:var(--head)}
-.donut-center-kcal.has-target{font-size:16px}
-.donut-center-kcal.over-target{color:var(--bad)}
 .donut-center-label{
   font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);
   text-transform:uppercase;letter-spacing:.08em;margin-top:2px;
@@ -384,9 +383,9 @@ button{font-family:inherit}
       <button id="date-next" aria-label="Next day">›</button>
       <button class="date-today-btn" id="date-today">Today</button>
     </div>
-    <button class="date-today-btn" id="trends-toggle-btn" hidden>Trends</button>
   </div>
   <div class="topbar-row">
+    <button class="date-today-btn" id="trends-toggle-btn" hidden>Trends</button>
     <button class="date-today-btn" id="targets-toggle-btn" hidden>Targets</button>
     <button class="theme-toggle" id="theme-toggle">
       <span id="theme-label">Light</span>
@@ -496,10 +495,6 @@ button{font-family:inherit}
       </span>
     </div>
     <div id="qty-micros"></div>
-    <div class="field">
-      <label for="qty-time">Time</label>
-      <input id="qty-time" type="datetime-local">
-    </div>
     <div class="field">
       <label for="qty-meal">Meal</label>
       <select id="qty-meal"></select>

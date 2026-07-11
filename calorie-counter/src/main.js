@@ -251,10 +251,19 @@ function renderSummary(entries) {
     return;
   }
 
+  // Target % is derived from target grams the same calorie-weighted way the
+  // actual % is (macro-energy-sum denominator, not a separate stored field),
+  // so the two %s being compared are always computed consistently.
+  const targetProteinKcal = (currentTargets?.protein_g || 0) * KCAL_PER_G.protein;
+  const targetCarbsKcal = (currentTargets?.carbs_g || 0) * KCAL_PER_G.carbs;
+  const targetFatKcal = (currentTargets?.fat_g || 0) * KCAL_PER_G.fat;
+  const targetMacroKcal = targetProteinKcal + targetCarbsKcal + targetFatKcal;
+  const targetPct = (kcal) => (targetMacroKcal > 0 ? (kcal / targetMacroKcal) * 100 : null);
+
   const macros = [
-    { key: "protein", label: "Protein", grams: s.protein_g, pct: s.pctProtein, colorVar: "--series-protein" },
-    { key: "carbs", label: "Carbs", grams: s.carbs_g, pct: s.pctCarbs, colorVar: "--series-carbs" },
-    { key: "fat", label: "Fat", grams: s.fat_g, pct: s.pctFat, colorVar: "--series-fat" },
+    { key: "protein", label: "Protein", grams: s.protein_g, pct: s.pctProtein, colorVar: "--series-protein", targetPct: targetPct(targetProteinKcal) },
+    { key: "carbs", label: "Carbs", grams: s.carbs_g, pct: s.pctCarbs, colorVar: "--series-carbs", targetPct: targetPct(targetCarbsKcal) },
+    { key: "fat", label: "Fat", grams: s.fat_g, pct: s.pctFat, colorVar: "--series-fat", targetPct: targetPct(targetFatKcal) },
   ];
   const segments = buildDonutSegments(macros);
 
@@ -272,29 +281,13 @@ function renderSummary(entries) {
       <div class="legend-row">
         <span class="legend-swatch" style="background:var(${m.colorVar})"></span>
         <span class="legend-label">${m.label}</span>
-        <span class="legend-val">${m.grams.toFixed(1)} g · ${m.pct.toFixed(0)}%</span>
+        <span class="legend-val-col">
+          <span class="legend-val">${m.grams.toFixed(1)} g · ${m.pct.toFixed(0)}%</span>
+          ${m.targetPct != null ? `<span class="legend-target">target ${m.targetPct.toFixed(0)}%</span>` : ""}
+        </span>
       </div>`
     )
     .join("");
-
-  // The kcal-vs-target comparison is the one number worth making prominent —
-  // macro targets are already set via the Targets modal and don't need to be
-  // relitigated here too, that just crowded the legend with numbers to parse.
-  const targetKcal = currentTargets?.kcal;
-  const remaining = targetKcal ? Math.round(targetKcal - s.kcal) : null;
-  const remainingHtml =
-    remaining == null
-      ? ""
-      : remaining >= 0
-      ? `<div class="donut-center-remaining">${remaining.toLocaleString()} left</div>`
-      : `<div class="donut-center-remaining over">${Math.abs(remaining).toLocaleString()} over</div>`;
-  const centerKcalClass = [
-    "donut-center-kcal",
-    targetKcal ? "has-target" : "",
-    targetKcal && s.kcal > targetKcal ? "over-target" : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
 
   body.innerHTML = `
     <div class="summary-viz">
@@ -304,9 +297,8 @@ function renderSummary(entries) {
           ${arcs}
         </svg>
         <div class="donut-center">
-          <div class="${centerKcalClass}">${Math.round(s.kcal).toLocaleString()}</div>
-          <div class="donut-center-label">${targetKcal ? `of ${Math.round(targetKcal).toLocaleString()} kcal` : "kcal"}</div>
-          ${remainingHtml}
+          <div class="donut-center-kcal">${Math.round(s.kcal).toLocaleString()}</div>
+          <div class="donut-center-label">kcal</div>
         </div>
       </div>
       <div class="donut-legend">${legend}</div>
@@ -1175,11 +1167,11 @@ const qtyPreviewKcal = document.getElementById("qty-preview-kcal");
 const qtyPreviewProtein = document.getElementById("qty-preview-protein");
 const qtyPreviewFat = document.getElementById("qty-preview-fat");
 const qtyPreviewCarbs = document.getElementById("qty-preview-carbs");
-const qtyTime = document.getElementById("qty-time");
 const qtyMeal = document.getElementById("qty-meal");
 const qtyConfirm = document.getElementById("qty-confirm");
 let pendingFood = null;
 let editingEntryId = null;
+let pendingLoggedAt = null;
 let currentUnits = [{ id: "grams", label: "Grams", grams: 1 }];
 
 qtyMeal.innerHTML = MEAL_TYPES.map((m) => `<option value="${m.id}">${m.label}</option>`).join("");
@@ -1277,7 +1269,7 @@ async function openQtyModal(food, overrides) {
       d.setHours(now.getHours(), now.getMinutes(), 0, 0);
       return d;
     })();
-  qtyTime.value = toLocalInputValue(defaultTime);
+  pendingLoggedAt = defaultTime;
   qtyMeal.value = overrides?.mealType || pinnedMealType || inferMealType(defaultTime);
 
   let portions = food.portions || [];
@@ -1309,22 +1301,13 @@ document.getElementById("qty-cancel").addEventListener("click", () => {
   editingEntryId = null;
 });
 
-// Re-infer the suggested meal whenever the time changes, so picking a
-// different time (e.g. logging breakfast retroactively) updates the
-// default — but only when nothing's pinned via a meal section's + Add.
-qtyTime.addEventListener("change", () => {
-  if (pinnedMealType) return;
-  const t = new Date(qtyTime.value);
-  if (!isNaN(t)) qtyMeal.value = inferMealType(t);
-});
-
 qtyConfirm.addEventListener("click", async () => {
   const amount = Number(qtyAmount.value);
   if (!pendingFood || !amount || amount <= 0) return;
   const grams = amount * selectedUnitGrams();
   const unit = currentUnits.find((u) => u.id === qtyUnit.value);
   const quantityLabel = qtyUnit.value === "grams" ? null : `${amount}× ${unit.label}`;
-  const loggedAt = new Date(qtyTime.value);
+  const loggedAt = pendingLoggedAt || new Date();
   if (editingEntryId) {
     await updateEntry(editingEntryId, pendingFood, grams, loggedAt, qtyMeal.value, quantityLabel);
     editingEntryId = null;
