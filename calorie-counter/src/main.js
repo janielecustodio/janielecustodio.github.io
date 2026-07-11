@@ -16,7 +16,7 @@ import {
 import { computeSummary, KCAL_PER_G } from "./summary.js";
 import { MEAL_TYPES, inferMealType } from "./mealTypes.js";
 import { renderTrends } from "./trends.js";
-import { addWater, deleteWater, getWaterForDate, saveWeight, getWeightForDate } from "./bodyLog.js";
+import { saveWeight, getWeightForDate } from "./bodyLog.js";
 import { getTargets, saveTargets, clearTargets } from "./targets.js";
 
 if (!isConfigured) {
@@ -147,23 +147,29 @@ async function refresh() {
 const trendsView = document.getElementById("trends-view");
 const trendsBody = document.getElementById("trends-body");
 let trendsRangeDays = 7;
+let trendsCurrentView = "calories";
 
+// Only ever reachable while authenticated (trends-toggle-btn is hidden
+// otherwise) — this must NOT touch #app/#date-nav's visibility itself.
+// It's also called from the sign-out path below just to clear a
+// still-open trends view; if it unhid #app/#date-nav there, it would
+// undo the auth handler's own hiding of them one line earlier.
 function showTodayView() {
   trendsView.hidden = true;
-  document.getElementById("app").hidden = false;
-  document.getElementById("date-nav").hidden = false;
 }
 
 function showTrendsView() {
   document.getElementById("app").hidden = true;
   document.getElementById("date-nav").hidden = true;
   trendsView.hidden = false;
-  renderTrends(trendsBody, trendsRangeDays);
+  renderTrends(trendsBody, trendsRangeDays, trendsCurrentView);
 }
 
 document.getElementById("trends-toggle-btn").addEventListener("click", showTrendsView);
 document.getElementById("trends-back-btn").addEventListener("click", () => {
   showTodayView();
+  document.getElementById("app").hidden = false;
+  document.getElementById("date-nav").hidden = false;
   refresh();
 });
 
@@ -172,7 +178,15 @@ document.getElementById("trends-range-buttons").addEventListener("click", (e) =>
   if (!btn) return;
   trendsRangeDays = Number(btn.dataset.days);
   document.querySelectorAll(".range-btn").forEach((b) => b.classList.toggle("active", b === btn));
-  renderTrends(trendsBody, trendsRangeDays);
+  renderTrends(trendsBody, trendsRangeDays, trendsCurrentView);
+});
+
+document.getElementById("trends-view-tabs").addEventListener("click", (e) => {
+  const btn = e.target.closest(".view-tab");
+  if (!btn) return;
+  trendsCurrentView = btn.dataset.view;
+  document.querySelectorAll(".view-tab").forEach((b) => b.classList.toggle("active", b === btn));
+  renderTrends(trendsBody, trendsRangeDays, trendsCurrentView);
 });
 
 // ── Summary (donut) ──
@@ -201,6 +215,7 @@ function buildDonutSegments(macros) {
 const MICRO_LABELS = {
   sodium_mg: { label: "Sodium", unit: "mg" },
   sugars_g: { label: "Sugars", unit: "g" },
+  added_sugars_g: { label: "Added sugars", unit: "g" },
   saturated_fat_g: { label: "Saturated fat", unit: "g" },
   potassium_mg: { label: "Potassium", unit: "mg" },
   calcium_mg: { label: "Calcium", unit: "mg" },
@@ -523,55 +538,15 @@ async function copyMealFromYesterday(mealId, mealLabel) {
   refresh();
 }
 
-// ── Water & weight ──
-const waterTotalEl = document.getElementById("water-total");
-const waterEntriesEl = document.getElementById("water-entries");
+// ── Weight ──
 const weightInput = document.getElementById("weight-input");
 const weightSavedNote = document.getElementById("weight-saved-note");
 
 async function refreshBodyLog() {
-  const [water, weight] = await Promise.all([
-    getWaterForDate(currentDate),
-    getWeightForDate(currentDate),
-  ]);
-  renderWater(water);
+  const weight = await getWeightForDate(currentDate);
   weightInput.value = weight ? weight.kg : "";
   weightSavedNote.hidden = true;
 }
-
-function renderWater(entries) {
-  const total = entries.reduce((sum, e) => sum + (Number(e.ml) || 0), 0);
-  waterTotalEl.textContent = `${total.toLocaleString()} ml today`;
-  waterEntriesEl.innerHTML = entries
-    .map((e) => {
-      const time = new Date(e.logged_at);
-      const timeLabel = new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(time);
-      return `
-      <div class="water-entry" data-id="${e.id}">
-        <span class="water-entry-ml">${e.ml} ml</span>
-        <span class="water-entry-time">${timeLabel}</span>
-        <button class="water-entry-del" type="button" aria-label="Remove water entry">✕</button>
-      </div>`;
-    })
-    .join("");
-}
-
-document.querySelectorAll(".water-btn").forEach((btn) => {
-  btn.addEventListener("click", async () => {
-    const now = new Date();
-    const loggedAt = new Date(currentDate);
-    loggedAt.setHours(now.getHours(), now.getMinutes(), 0, 0);
-    await addWater(Number(btn.dataset.ml), loggedAt);
-    refreshBodyLog();
-  });
-});
-
-waterEntriesEl.addEventListener("click", async (e) => {
-  if (!e.target.classList.contains("water-entry-del")) return;
-  const id = e.target.closest(".water-entry").dataset.id;
-  await deleteWater(id);
-  refreshBodyLog();
-});
 
 document.getElementById("weight-save-btn").addEventListener("click", async () => {
   const kg = Number(weightInput.value);
@@ -1128,6 +1103,12 @@ function updateQtyPreview() {
   qtyPreviewProtein.textContent = `${protein.toFixed(0)}g`;
   qtyPreviewFat.textContent = `${fat.toFixed(0)}g`;
   qtyPreviewCarbs.textContent = `${carbs.toFixed(0)}g`;
+
+  const scaledMicros = {};
+  for (const [k, v] of Object.entries(pendingFood.micros || {})) {
+    if (typeof v === "number") scaledMicros[k] = v * factor;
+  }
+  document.getElementById("qty-micros").innerHTML = renderMicros(scaledMicros);
 }
 
 function populateUnits(portions, overrides) {

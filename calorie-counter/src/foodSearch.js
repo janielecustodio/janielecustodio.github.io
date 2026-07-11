@@ -68,7 +68,15 @@ export async function searchAll(query) {
   }
 
   const queryWords = wordsOf(query);
-  results.sort(
+  // Every query word has to appear somewhere in the name (any order) — a
+  // source returning a loosely-related result (e.g. USDA's own search
+  // matching on just one of several query words) doesn't get a foot in
+  // the door just because it scores non-zero; it's excluded outright.
+  const matching = results.filter((r) => {
+    const nameWordSet = new Set(wordsOf(r.name));
+    return queryWords.every((w) => nameWordSet.has(w));
+  });
+  matching.sort(
     (a, b) => relevanceScore(b.name, queryWords) - relevanceScore(a.name, queryWords)
   );
 
@@ -77,10 +85,10 @@ export async function searchAll(query) {
   // out to have no usable calorie data are silently dropped (equivalent to
   // never having matched — nobody was going to scroll to them anyway).
   const visible = await Promise.all(
-    results
+    matching
       .slice(0, BACKFILL_LIMIT)
       .map((f) => (f.source === "usda" ? backfillMissingEnergy(f) : f))
   );
-  const rest = results.slice(BACKFILL_LIMIT);
+  const rest = matching.slice(BACKFILL_LIMIT);
   return [...visible, ...rest].filter((f) => f.kcal_100g !== null);
 }
