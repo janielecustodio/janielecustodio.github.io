@@ -40,6 +40,20 @@ Everything below is free. Total time: ~15 minutes.
    shown immediately and emailed to you.
 3. Paste it into `src/config.js` as `USDA_API_KEY`.
 
+**Before you commit this**, understand the tradeoff: this site is classic
+branch-deployed GitHub Pages with no build step, so whatever is committed
+to `src/config.js` is served as plain client JS — visible in the repo,
+its history, and to anyone who views source on the live site. USDA (and
+GitHub's own secret scanning) actively scan public repos for exactly this
+pattern and will revoke a key within minutes of it being pushed, which is
+exactly what happened the first time around. If that's an acceptable
+tradeoff for a free, individually-rate-limited key on a personal project,
+committing it is fine and matches how this app was originally designed to
+work. If not, the key needs to move behind a server component (e.g. a
+Supabase Edge Function, since this app already uses Supabase) so it never
+ships to the client at all — that's a real code change, not a config one,
+so ask for it explicitly if you want it built.
+
 ## 3. Open Food Facts
 
 Nothing to do — it's a public API with no key required, already wired up
