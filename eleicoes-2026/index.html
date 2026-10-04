@@ -90,6 +90,19 @@ h1{font-size:22px;font-weight:600;color:var(--head);margin-top:6px}
 .region .ap{font:11px 'IBM Plex Mono',monospace;color:var(--muted2);margin:6px 0 2px;display:flex;justify-content:space-between}
 .region .falta{font:11px 'IBM Plex Mono',monospace;color:var(--muted2);margin-top:6px;display:flex;justify-content:space-between}
 .region .falta b{color:var(--head);font-weight:500}
+.region .pj{font:11px 'IBM Plex Mono',monospace;color:var(--muted2);margin-top:10px;padding-top:8px;border-top:1px dashed var(--line2);line-height:1.6}
+.region .pj b{color:var(--head);font-weight:500}
+.proj{margin-top:18px}
+.proj-note{font-size:12px;color:var(--muted2);line-height:1.5;margin-bottom:14px}
+.projgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:22px}
+@media(max-width:900px){.projgrid{grid-template-columns:1fr}}
+.proj-sub{font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2);margin-bottom:10px}
+.preg{display:grid;grid-template-columns:96px minmax(0,1fr);gap:8px;align-items:center;margin-bottom:10px;font-size:12px}
+.preg .rn{color:var(--head);font-weight:500}
+.stack{display:flex;height:16px;border-radius:3px;overflow:hidden;background:var(--empty)}
+.stack i{display:block;height:100%}
+.preg .lg{grid-column:2;font:11px 'IBM Plex Mono',monospace;color:var(--muted2);margin-top:-4px}
+.verdict{font-size:12px;color:var(--head);margin-top:12px;padding:8px 10px;border:1px solid var(--line2);border-radius:var(--r);background:var(--ink3)}
 .region .cands{margin-top:12px;gap:7px}
 .region .cand .nm{font-size:12px}
 .region .cand .pc{font-size:12px}
@@ -142,6 +155,17 @@ tr.click:hover td{background:var(--ink3)}
       <h2><span id="detailTitle">Brasil</span><small id="detailAp"></small></h2>
       <div id="detailBar" class="bar" style="margin:-2px 0 14px"><i></i></div>
       <div class="cands" id="detail"></div>
+    </div>
+  </div>
+
+  <div class="card proj">
+    <h2><span>Projeção do resultado final</span><small id="projInfo"></small></h2>
+    <p class="proj-note">Se, em cada estado, os eleitores que faltam apurar votarem na mesma proporção dos já apurados.
+      Os votos de cada estado são multiplicados por eleitorado ÷ eleitorado apurado (mantém a abstenção, os brancos e os nulos do estado) e depois somados.
+      É uma extrapolação simples, não uma pesquisa: a apuração não avança de forma uniforme dentro de cada estado (capitais × interior).</p>
+    <div class="projgrid">
+      <div><div class="proj-sub">Brasil</div><div class="cands" id="projBR"></div></div>
+      <div><div class="proj-sub">Por região</div><div id="projReg"></div></div>
     </div>
   </div>
 
@@ -266,7 +290,7 @@ tr.click:hover td{background:var(--ink3)}
 
   function load(){
     $('dot').className = 'dot';
-    var abrs = ['br'].concat(UFS.map(function(u){ return u.toLowerCase(); }));
+    var abrs = ['br', 'zz'].concat(UFS.map(function(u){ return u.toLowerCase(); }));
     var failures = 0, firstErr = null;
     return Promise.all(abrs.map(function(a){
       return fetchOne(a).catch(function(err){ failures++; firstErr = firstErr || err; return undefined; });
@@ -320,6 +344,28 @@ tr.click:hover td{background:var(--ink3)}
   // Voters in sections not yet counted (eleitorado apto minus eleitorado apurado).
   function falta(d){ return d && d.e ? Math.max(0, d.e - d.ea) : 0; }
 
+  // Projection: assume each state's uncounted voters behave like its counted ones, i.e. scale the
+  // state's votes by eleitorado / eleitorado apurado, then sum states. States with nothing counted
+  // yet cannot be projected and are reported as missing.
+  function project(keys){
+    var byN = {}, missing = [], eTot = 0, eCovered = 0;
+    keys.forEach(function(k){
+      var d = state.data[k];
+      if (d && d.e) eTot += d.e;
+      if (!d || !d.ea || !d.cands.length) { if (k !== 'ZZ') missing.push(k); return; }
+      var f = d.e / d.ea; eCovered += d.e;
+      d.cands.forEach(function(c){
+        if (!byN[c.n]) byN[c.n] = { n:c.n, nm:c.nm, partido:c.partido, votos:0, atual:0 };
+        byN[c.n].votos += c.votos * f; byN[c.n].atual += c.votos;
+      });
+    });
+    var cands = Object.keys(byN).map(function(k){ return byN[k]; });
+    var vv = cands.reduce(function(s, c){ return s + c.votos; }, 0);
+    cands.forEach(function(c){ c.pct = vv ? c.votos / vv * 100 : 0; });
+    cands.sort(function(a, b){ return b.votos - a.votos; });
+    return { cands: cands, vv: vv, missing: missing, eTot: eTot, eCovered: eCovered };
+  }
+
   function national(){
     // Prefer the official BR file (includes votes abroad); fall back to the sum of the states.
     return state.data.BR && state.data.BR.cands.length ? state.data.BR : aggregate(UFS);
@@ -346,6 +392,7 @@ tr.click:hover td{background:var(--ink3)}
     renderMap();
     renderDetail();
     renderRegions();
+    renderProjection();
     renderTable();
     if (!hasData && state.lastOk) $('detail').innerHTML = '<div class="empty">A totalização ainda não começou ou não há votos apurados.</div>';
   }
@@ -440,6 +487,45 @@ tr.click:hover td{background:var(--ink3)}
     $('detail').innerHTML = d ? candRows(d.cands) : '<div class="empty">Sem dados para este local ainda.</div>';
   }
 
+  function stackBar(cands){
+    return '<div class="stack">' + cands.slice(0, 4).map(function(c){
+      return '<i style="width:' + c.pct + '%;background:' + colorOf(c.n) + '" title="' + esc(c.nm) + ' ' + fmtPct(c.pct) + '"></i>';
+    }).join('') + '</div>';
+  }
+
+  function projLine(r){
+    var c = project(r.ufs).cands;
+    if (!c.length) return '';
+    return '<div class="pj">Projeção final: ' + c.slice(0, 2).map(function(x){ return '<b>' + esc(x.nm) + ' ' + fmtPct(x.pct, 1) + '</b>'; }).join(' · ') + '</div>';
+  }
+
+  function renderProjection(){
+    var ufKeys = UFS.concat(['ZZ']);
+    var P = project(ufKeys);
+    if (!P.cands.length) {
+      $('projBR').innerHTML = '<div class="empty">Sem votos apurados para projetar ainda.</div>';
+      $('projReg').innerHTML = ''; $('projInfo').textContent = ''; return;
+    }
+    $('projInfo').textContent = P.missing.length ? 'sem dados ainda: ' + P.missing.join(', ') : 'todos os estados';
+    $('projBR').innerHTML = P.cands.slice(0, 6).map(function(c){
+      return '<div class="cand"><div class="nm"><i class="sw" style="background:' + colorOf(c.n) + '"></i>' + esc(c.nm) +
+        (c.partido ? ' <em>' + esc(c.partido) + '</em>' : '') + '</div><div class="pc">' + fmtPct(c.pct) + '</div>' +
+        '<div class="bar"><i style="width:' + Math.min(100, c.pct) + '%;background:' + colorOf(c.n) + '"></i></div>' +
+        '<div class="vt">~' + fmtInt(c.votos) + ' votos projetados (' + fmtInt(c.atual) + ' já apurados)</div></div>';
+    }).join('');
+    var top = P.cands[0], second = P.cands[1];
+    var verdict = top.pct > 50
+      ? esc(top.nm) + ' teria mais de 50% dos votos válidos e venceria no 1º turno.'
+      : 'Ninguém passaria de 50% dos válidos: haveria 2º turno entre ' + esc(top.nm) + (second ? ' e ' + esc(second.nm) : '') + '.';
+    if (state.eleicao === '6258') verdict = esc(top.nm) + ' venceria, com ' + fmtPct(top.pct) + ' dos votos válidos.';
+    $('projBR').innerHTML += '<div class="verdict">' + verdict + (P.missing.length ? ' (faltam estados sem nenhum voto apurado)' : '') + '</div>';
+    $('projReg').innerHTML = REGIONS.map(function(r){
+      var R = project(r.ufs), c = R.cands;
+      return '<div class="preg"><span class="rn">' + r.nm + '</span>' + (c.length ? stackBar(c) : '<span class="empty" style="padding:0">sem dados</span>') +
+        (c.length ? '<span class="lg">' + c.slice(0, 2).map(function(x){ return esc(x.nm) + ' ' + fmtPct(x.pct, 1); }).join(' · ') + '</span>' : '') + '</div>';
+    }).join('');
+  }
+
   function renderRegions(){
     $('regions').innerHTML = REGIONS.map(function(r){
       var d = aggregate(r.ufs);
@@ -448,7 +534,7 @@ tr.click:hover td{background:var(--ink3)}
         '<div class="ap"><span>Eleitorado apurado</span><b>' + fmtPct(d.pea) + '</b></div>' +
         '<div class="bar"><i style="width:' + (d.pea || 0) + '%"></i></div>' +
         '<div class="falta"><span>Faltam apurar</span><b>' + (d.e ? fmtInt(falta(d)) + ' eleitores' : '—') + '</b></div>' +
-        '<div class="cands">' + candRows(d.cands, 3) + '</div></div>';
+        '<div class="cands">' + candRows(d.cands, 3) + '</div>' + projLine(r) + '</div>';
     }).join('');
   }
 
@@ -513,6 +599,7 @@ tr.click:hover td{background:var(--ink3)}
   var DEMO_ELEITORADO = {AC:600000,AL:2400000,AM:2700000,AP:550000,BA:11300000,CE:6800000,DF:2200000,ES:2900000,GO:4900000,MA:5000000,MG:16300000,MS:2000000,MT:2500000,PA:6100000,PB:3100000,PE:7000000,PI:2600000,PR:8500000,RJ:12800000,RN:2600000,RO:1200000,RR:370000,RS:8600000,SC:5600000,SE:1700000,SP:34600000,TO:1100000};
   function demoFile(abr){
     var uf = abr.toUpperCase(), ufs = uf === 'BR' ? UFS : [uf];
+    if (uf === 'ZZ') return null;
     var mins = Math.floor(Date.now() / 60000);
     var votes = [0,0,0,0], e = 0, ea = 0;
     ufs.forEach(function(u){
