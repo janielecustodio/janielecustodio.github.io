@@ -152,7 +152,7 @@ tr.click:hover td{background:var(--ink3)}
 
   <p class="foot">
     Fonte: arquivos públicos de divulgação do <a href="https://resultados.tse.jus.br/oficial/app/index.html" target="_blank" rel="noopener">TSE</a>
-    (<span class="mono">/oficial/ele2026/{eleição}/dados-simplificados</span>). Atualiza a cada 30 s com a aba aberta.<br>
+    (<span class="mono">/oficial/ele2026/{eleição}/dados</span>). Atualiza a cada 30 s com a aba aberta.<br>
     <b>% apurado do eleitorado</b> = eleitores das seções já totalizadas ÷ eleitorado apto (é o que reflete a população já contada; o % de seções aparece ao lado).
     Os totais por região somam os votos de cada estado; o voto no exterior entra só no total do Brasil.
     Projeto independente, sem vínculo com a Justiça Eleitoral.
@@ -163,6 +163,7 @@ tr.click:hover td{background:var(--ink3)}
 <script>
 (function(){
   var BASE = 'https://resultados.tse.jus.br/oficial/ele2026/';
+  if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname) && new URLSearchParams(location.search).get('base')) BASE = new URLSearchParams(location.search).get('base');
   var REFRESH_MS = 30000;
   var UF_NAMES = {AC:'Acre',AL:'Alagoas',AM:'Amazonas',AP:'Amapá',BA:'Bahia',CE:'Ceará',DF:'Distrito Federal',ES:'Espírito Santo',GO:'Goiás',MA:'Maranhão',MG:'Minas Gerais',MS:'Mato Grosso do Sul',MT:'Mato Grosso',PA:'Pará',PB:'Paraíba',PE:'Pernambuco',PI:'Piauí',PR:'Paraná',RJ:'Rio de Janeiro',RN:'Rio Grande do Norte',RO:'Rondônia',RR:'Roraima',RS:'Rio Grande do Sul',SC:'Santa Catarina',SE:'Sergipe',SP:'São Paulo',TO:'Tocantins'};
   var REGIONS = [
@@ -192,33 +193,73 @@ tr.click:hover td{background:var(--ink3)}
   function fmtPct(n, d){ return n == null || isNaN(n) ? '—' : n.toLocaleString('pt-BR',{minimumFractionDigits:d==null?2:d,maximumFractionDigits:d==null?2:d}) + '%'; }
   function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
   function pad(e){ return ('000000' + e).slice(-6); }
-  function url(abr){ return BASE + state.eleicao + '/dados-simplificados/' + abr + '/' + abr + '-c0001-e' + pad(state.eleicao) + '-r.json'; }
+  // TSE publishes two variants of each result: the full "unificado" file (dados/…-u.json, used by
+  // the official app) and the lighter "dados-simplificados/…-r.json". Try the full one first.
+  function urls(abr){
+    var e = state.eleicao, base = BASE + e;
+    return [
+      base + '/dados/' + abr + '/' + abr + '-c0001-e' + pad(e) + '-u.json',
+      base + '/dados-simplificados/' + abr + '/' + abr + '-c0001-e' + pad(e) + '-r.json'
+    ];
+  }
 
-  // Normalise one TSE "dados simplificados" file into what the page needs.
+  // Candidates live in carg[0].agr[].par[].cand[] in the full file, or in a flat cand[] in the
+  // simplified one. Totals are grouped under s (seções), e (eleitorado) and v (votos).
+  function rawCands(j){
+    var out = [];
+    ((j.carg && j.carg[0] && j.carg[0].agr) || []).forEach(function(agr){
+      (agr.par || []).forEach(function(par){
+        (par.cand || []).forEach(function(c){ out.push({ c: c, partido: par.sg || agr.com || '' }); });
+      });
+    });
+    (j.cand || []).forEach(function(c){ out.push({ c: c, partido: c.cc || c.sg || '' }); });
+    return out;
+  }
+
   function parse(j){
-    var cands = (j.cand || []).filter(function(c){ return c.n || c.nm; }).map(function(c){
-      return { n: String(c.n), nm: c.nm || ('Nº ' + c.n), partido: c.cc || '', votos: num(c.vap), pct: pct(c.pvap), eleito: c.e === 'S', st: c.st || '' };
+    var cands = rawCands(j).filter(function(x){ return x.c.n || x.c.nm; }).map(function(x){
+      var c = x.c, valido = !c.dvt || /^v[áa]lido/i.test(c.dvt);
+      return { n: String(c.n), nm: c.nmu || c.nm || ('Nº ' + c.n), partido: x.partido, votos: valido ? num(c.vap) : 0,
+               pct: valido ? pct(c.pvap) : 0, eleito: /^s$/i.test(c.e || ''), st: c.st || '' };
     }).sort(function(a,b){ return b.votos - a.votos; });
-    var e = num(j.e), ea = num(j.ea);
-    var pea = pct(j.pea);
+    var S = j.s && typeof j.s === 'object' ? j.s : null;
+    var E = j.e && typeof j.e === 'object' ? j.e : null;
+    var V = j.v && typeof j.v === 'object' ? j.v : j;
+    var Ec = E || j;
+    var e = E ? num(E.te) : num(j.e), ea = E ? num(E.est) : num(j.ea);
+    var pea = pct(E ? E.pest : j.pea);
     if (pea == null && e) pea = ea / e * 100;
-    var sec = num(j.s), st = num(j.st), pst = pct(j.pst);
+    var sec = S ? num(S.ts) : num(j.s), st = S ? num(S.st) : num(j.st), pst = pct(S ? S.pst : j.pst);
     if (pst == null && sec) pst = st / sec * 100;
     return {
       cands: cands, e: e, ea: ea, pea: pea,
       s: sec, st: st, pst: pst,
-      vv: num(j.vv), vb: num(j.vb), vn: num(j.vn) || num(j.tvn), c: num(j.c), pc: pct(j.pc), a: num(j.a), pa: pct(j.pa),
-      when: [j.dt || j.dg, j.ht || j.hg].filter(Boolean).join(' ')
+      vv: num(V.vv), vb: num(V.vb), vn: num(V.tvn) || num(V.vn), c: num(Ec.c), pc: pct(Ec.pc), a: num(Ec.a), pa: pct(Ec.pa),
+      when: [j.dt || j.dg, j.ht || j.hg].filter(Boolean).join(' '),
+      ts: Date.parse((j.dt || j.dg || '').split('/').reverse().join('-') + 'T' + (j.ht || j.hg || '00:00:00')) || 0
     };
   }
 
-  function fetchOne(abr){
-    if (state.demo) return Promise.resolve(demoFile(abr));
-    return fetch(url(abr), { cache: 'no-cache' }).then(function(r){
-      if (r.status === 404) return null;           // file not published yet
+  function getJson(u){
+    return fetch(u, { cache: 'no-cache' }).then(function(r){
+      if (r.status === 404 || r.status === 403) return null;   // not published (yet)
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return r.json();
-    }).then(function(j){ return j ? parse(j) : null; });
+    });
+  }
+
+  // Fetch both variants and keep whichever is further along in the count.
+  function fetchOne(abr){
+    if (state.demo) return Promise.resolve(demoFile(abr));
+    var errs = 0, lastErr = null;
+    return Promise.all(urls(abr).map(function(u){
+      return getJson(u).then(function(j){ return j ? parse(j) : null; }, function(err){ errs++; lastErr = err; return null; });
+    })).then(function(rs){
+      if (errs === rs.length) throw lastErr;
+      var best = null;
+      rs.forEach(function(r){ if (r && (!best || (r.pst || 0) > (best.pst || 0) || ((r.pst || 0) === (best.pst || 0) && r.ts > best.ts))) best = r; });
+      return best;
+    });
   }
 
   function load(){
@@ -238,7 +279,8 @@ tr.click:hover td{background:var(--ink3)}
         return;
       }
       state.data = data; state.lastOk = new Date();
-      if (!state.demo) showBanner('', false);
+      var found = Object.keys(data).filter(function(k){ return data[k]; }).length;
+      if (!state.demo) showBanner(found ? '' : 'O TSE respondeu, mas os arquivos deste turno ainda não foram publicados. A página tenta de novo a cada 30 s.', false);
       render();
     });
   }
@@ -478,9 +520,9 @@ tr.click:hover td{background:var(--ink3)}
     var tot = votes.reduce(function(s, v){ return s + v; }, 0);
     var nm = [['Candidato A','PARTIDO A'],['Candidato B','PARTIDO B'],['Candidato C','PARTIDO C'],['Candidato D','PARTIDO D']];
     return parse({
-      e: String(e), ea: String(Math.round(ea)), s: String(Math.round(e / 350)), st: String(Math.round(ea / 350)),
+      e: { te: String(e), est: String(Math.round(ea)) }, s: { ts: String(Math.round(e / 350)), st: String(Math.round(ea / 350)) },
       dt: new Date().toLocaleDateString('pt-BR'), ht: new Date().toLocaleTimeString('pt-BR'),
-      cand: votes.map(function(v, i){ return { n: String(10 + i * 11), nm: nm[i][0], cc: nm[i][1], vap: String(Math.round(v)), pvap: (v / tot * 100).toFixed(2).replace('.', ',') }; })
+      cand: votes.map(function(v, i){ return { n: String(10 + i * 11), nm: nm[i][0], sg: nm[i][1], vap: String(Math.round(v)), pvap: (v / tot * 100).toFixed(2).replace('.', ',') }; })
     });
   }
 
