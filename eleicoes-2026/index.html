@@ -202,7 +202,10 @@ tr.click:hover td{background:var(--ink3)}
   var UF_REGION = {}; REGIONS.forEach(function(r){ r.ufs.forEach(function(u){ UF_REGION[u]=r; }); });
   var UFS = Object.keys(UF_NAMES).sort();
   // Distinct, colour-blind-friendly hues assigned to candidates by national rank.
-  var PALETTE = ['#e5534b','#4a8cff','#2fb67c','#f0a830','#a371f7','#22b8cf','#e8769a','#9aa36b','#c28a5b','#7a8299'];
+  // Fixed colours by ballot number so a candidate keeps the same colour whatever their rank:
+  // 13 (PT, Lula) red, 22 (PL) blue. Everyone else takes the remaining hues by national rank.
+  var FIXED_COLORS = { '13': '#e5534b', '22': '#4a8cff' };
+  var PALETTE = ['#2fb67c','#f0a830','#a371f7','#22b8cf','#e8769a','#9aa36b','#c28a5b','#7a8299'];
 
   var params = new URLSearchParams(location.search);
   var state = {
@@ -374,7 +377,10 @@ tr.click:hover td{background:var(--ink3)}
   function assignColors(){
     var nat = national();
     state.colors = {};
-    nat.cands.forEach(function(c, i){ state.colors[c.n] = PALETTE[Math.min(i, PALETTE.length - 1)]; });
+    var i = 0;
+    nat.cands.forEach(function(c){
+      state.colors[c.n] = FIXED_COLORS[c.n] || PALETTE[Math.min(i++, PALETTE.length - 1)];
+    });
   }
   function colorOf(n){ return state.colors[n] || '#7a8299'; }
 
