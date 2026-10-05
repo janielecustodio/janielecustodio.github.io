@@ -71,6 +71,7 @@ h1{font-size:22px;font-weight:600;color:var(--head);margin-top:6px}
 .legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;font-size:12px}
 .legend span{display:inline-flex;align-items:center;gap:6px}
 .sw{width:11px;height:11px;border-radius:3px;display:inline-block;flex-shrink:0}
+.legend .grad{width:90px;height:10px;border-radius:3px;background:linear-gradient(90deg,rgba(140,158,255,.18),#8c9eff)}
 
 /* candidate rows */
 .cands{display:flex;flex-direction:column;gap:9px}
@@ -135,6 +136,7 @@ tr.click:hover td{background:var(--ink3)}
       <div class="seg" id="mode">
         <button data-m="uf" class="on">Por estado</button>
         <button data-m="reg">Por região</button>
+        <button data-m="abs">Abstenção</button>
       </div>
       <button class="btn" id="refresh">Atualizar</button>
       <button class="btn" id="theme" aria-label="Alternar tema">◐</button>
@@ -263,7 +265,7 @@ tr.click:hover td{background:var(--ink3)}
     return {
       cands: cands, e: e, ea: ea, pea: pea,
       s: sec, st: st, pst: pst,
-      vv: num(V.vv), vb: num(V.vb), vn: num(V.tvn) || num(V.vn), c: num(Ec.c), pc: pct(Ec.pc), a: num(Ec.a), pa: pct(Ec.pa),
+      vv: num(V.vv), vb: num(V.vb), vn: num(V.tvn) || num(V.vn), c: num(Ec.c), pc: pct(Ec.pc), a: num(Ec.a), pa: pct(Ec.pa) != null ? pct(Ec.pa) : (ea ? num(Ec.a) / ea * 100 : null),
       when: [j.dt || j.dg, j.ht || j.hg].filter(Boolean).join(' '),
       ts: Date.parse((j.dt || j.dg || '').split('/').reverse().join('-') + 'T' + (j.ht || j.hg || '00:00:00')) || 0
     };
@@ -327,10 +329,10 @@ tr.click:hover td{background:var(--ink3)}
 
   // ── aggregation by region (sum of state files) ──
   function aggregate(ufs){
-    var tot = { e:0, ea:0, s:0, st:0, vv:0, have:0 }, byN = {};
+    var tot = { e:0, ea:0, s:0, st:0, vv:0, a:0, have:0 }, byN = {};
     ufs.forEach(function(u){
       var d = state.data[u]; if (!d) return;
-      tot.have++; tot.e += d.e; tot.ea += d.ea; tot.s += d.s; tot.st += d.st;
+      tot.have++; tot.e += d.e; tot.ea += d.ea; tot.s += d.s; tot.st += d.st; tot.a += d.a || 0;
       d.cands.forEach(function(c){
         if (!byN[c.n]) byN[c.n] = { n:c.n, nm:c.nm, partido:c.partido, votos:0 };
         byN[c.n].votos += c.votos;
@@ -341,7 +343,8 @@ tr.click:hover td{background:var(--ink3)}
     cands.forEach(function(c){ c.pct = vv ? c.votos / vv * 100 : 0; });
     cands.sort(function(a,b){ return b.votos - a.votos; });
     return { cands: cands, e: tot.e, ea: tot.ea, pea: tot.e ? tot.ea / tot.e * 100 : null,
-             s: tot.s, st: tot.st, pst: tot.s ? tot.st / tot.s * 100 : null, vv: vv, have: tot.have };
+             s: tot.s, st: tot.st, pst: tot.s ? tot.st / tot.s * 100 : null, vv: vv, have: tot.have,
+             a: tot.a, pa: tot.ea ? tot.a / tot.ea * 100 : null };
   }
 
   // Voters in sections not yet counted (eleitorado apto minus eleitorado apurado).
@@ -413,7 +416,7 @@ tr.click:hover td{background:var(--ink3)}
     top.slice(0, 2).forEach(function(c){
       tiles.push({ lbl: c.nm, val: fmtPct(c.pct), sub: fmtInt(c.votos) + ' votos' + (c.eleito ? ' · eleito' : ''), bar: c.pct, color: colorOf(c.n) });
     });
-    if (nat.pc != null && nat.c) tiles.push({ lbl:'Comparecimento', val: fmtPct(nat.pc), sub: fmtInt(nat.c) + ' eleitores', bar: nat.pc });
+    if (nat.pc != null && nat.c) tiles.push({ lbl:'Comparecimento', val: fmtPct(nat.pc), sub: fmtInt(nat.c) + ' eleitores' + (nat.pa != null ? ' · abstenção ' + fmtPct(nat.pa, 1) : ''), bar: nat.pc });
     $('summary').innerHTML = tiles.map(function(t){
       return '<div class="tile"><div class="lbl">' + esc(t.lbl) + '</div><div class="val">' + t.val + '</div><div class="sub">' + esc(t.sub) + '</div>' +
         '<div class="bar"><i style="width:' + Math.max(0, Math.min(100, t.bar || 0)) + '%' + (t.color ? ';background:' + t.color : '') + '"></i></div></div>';
@@ -448,11 +451,13 @@ tr.click:hover td{background:var(--ink3)}
     }
     var regAgg = {};
     if (state.mode === 'reg') REGIONS.forEach(function(r){ regAgg[r.id] = aggregate(r.ufs); });
-    $('mapTitle').textContent = state.mode === 'reg' ? 'Quem lidera em cada região' : 'Quem lidera em cada estado';
+    $('mapTitle').textContent = state.mode === 'reg' ? 'Quem lidera em cada região' : state.mode === 'abs' ? 'Abstenção por estado' : 'Quem lidera em cada estado';
+    var absVals = UFS.map(function(u){ return state.data[u] && state.data[u].ea ? state.data[u].pa : null; }).filter(function(v){ return v != null; });
+    var absMin = absVals.length ? Math.min.apply(null, absVals) : 0, absMax = absVals.length ? Math.max.apply(null, absVals) : 0;
     Array.prototype.forEach.call(svg.querySelectorAll('g.uf'), function(g){
       var uf = g.getAttribute('data-uf');
       var d = state.mode === 'reg' ? regAgg[UF_REGION[uf].id] : state.data[uf];
-      var sh = leaderShade(d);
+      var sh = state.mode === 'abs' ? absShade(d, absMin, absMax) : leaderShade(d);
       var p = g.querySelector('path');
       p.style.fill = sh ? sh.color : 'var(--empty)';
       p.style.fillOpacity = sh ? sh.op : 1;
@@ -460,12 +465,26 @@ tr.click:hover td{background:var(--ink3)}
       g.classList.toggle('sel', !!selected);
       var lead = d && d.cands[0];
       g.querySelector('title').textContent = (state.mode === 'reg' ? UF_REGION[uf].nm : UF_NAMES[uf]) +
-        (lead && lead.votos ? ' — ' + lead.nm + ' ' + fmtPct(lead.pct) : '') + (d ? ' · apurado ' + fmtPct(d.pea, 1) : '');
+        (state.mode === 'abs' ? (d && d.ea ? ' — abstenção ' + fmtPct(d.pa, 1) : '') : (lead && lead.votos ? ' — ' + lead.nm + ' ' + fmtPct(lead.pct) : '')) +
+        (d ? ' · apurado ' + fmtPct(d.pea, 1) : '');
     });
     var nat = national();
+    if (state.mode === 'abs') {
+      $('legend').innerHTML = absVals.length
+        ? '<span>' + fmtPct(absMin, 1) + '</span><span class="grad"></span><span>' + fmtPct(absMax, 1) + '</span><span style="color:var(--muted2)">abstenção entre os eleitores das seções já apuradas</span>'
+        : '<span style="color:var(--muted2)">sem dados de abstenção ainda</span>';
+      return;
+    }
     $('legend').innerHTML = (nat.cands || []).filter(function(c){ return c.votos; }).slice(0, 6).map(function(c){
       return '<span><i class="sw" style="background:' + colorOf(c.n) + '"></i>' + esc(c.nm) + '</span>';
     }).join('') + '<span style="color:var(--muted2)">cor mais forte = vantagem maior</span>';
+  }
+
+  var ABS_COLOR = '#8c9eff';
+  function absShade(d, lo, hi){
+    if (!d || !d.ea || d.pa == null) return null;
+    var t = hi > lo ? (d.pa - lo) / (hi - lo) : 0.5;
+    return { color: ABS_COLOR, op: 0.18 + t * 0.82 };
   }
 
   function candRows(cands, limit){
@@ -488,7 +507,7 @@ tr.click:hover td{background:var(--ink3)}
   function renderDetail(){
     var cur = current(), d = cur.d;
     $('detailTitle').textContent = cur.title;
-    $('detailAp').textContent = d ? 'eleitorado apurado ' + fmtPct(d.pea) + ' · faltam ' + fmtInt(falta(d)) + ' eleitores' : '';
+    $('detailAp').textContent = d ? 'eleitorado apurado ' + fmtPct(d.pea) + ' · faltam ' + fmtInt(falta(d)) + ' eleitores' + (d.ea ? ' · abstenção ' + fmtPct(d.pa, 1) : '') : '';
     $('detailBar').firstChild.style.width = (d && d.pea || 0) + '%';
     $('detail').innerHTML = d ? candRows(d.cands) : '<div class="empty">Sem dados para este local ainda.</div>';
   }
@@ -540,18 +559,19 @@ tr.click:hover td{background:var(--ink3)}
         '<div class="ap"><span>Eleitorado apurado</span><b>' + fmtPct(d.pea) + '</b></div>' +
         '<div class="bar"><i style="width:' + (d.pea || 0) + '%"></i></div>' +
         '<div class="falta"><span>Faltam apurar</span><b>' + (d.e ? fmtInt(falta(d)) + ' eleitores' : '—') + '</b></div>' +
+        '<div class="falta"><span>Abstenção</span><b>' + (d.ea ? fmtPct(d.pa, 1) + ' (' + fmtInt(d.a) + ')' : '—') + '</b></div>' +
         '<div class="cands">' + candRows(d.cands, 3) + '</div>' + projLine(r) + '</div>';
     }).join('');
   }
 
   var COLS = [
     { k:'uf', t:'UF' }, { k:'reg', t:'Região' }, { k:'pea', t:'% eleitorado', n:1 }, { k:'pst', t:'% seções', n:1 },
-    { k:'lead', t:'1º colocado' }, { k:'lp', t:'%', n:1 }, { k:'sec', t:'2º colocado' }, { k:'sp', t:'%', n:1 }, { k:'e', t:'Eleitores', n:1 }, { k:'fal', t:'Faltam', n:1 }
+    { k:'lead', t:'1º colocado' }, { k:'lp', t:'%', n:1 }, { k:'sec', t:'2º colocado' }, { k:'sp', t:'%', n:1 }, { k:'pa', t:'Abstenção', n:1 }, { k:'e', t:'Eleitores', n:1 }, { k:'fal', t:'Faltam', n:1 }
   ];
   function renderTable(){
     var rows = UFS.map(function(u){
       var d = state.data[u] || { cands:[] }, a = d.cands[0] || {}, b = d.cands[1] || {};
-      return { uf:u, reg:UF_REGION[u].nm, pea:d.pea, pst:d.pst, lead:a.nm || '', ln:a.n, lp:a.pct, sec:b.nm || '', sn:b.n, sp:b.pct, e:d.e, fal:d.e ? falta(d) : null };
+      return { uf:u, reg:UF_REGION[u].nm, pea:d.pea, pst:d.pst, lead:a.nm || '', ln:a.n, lp:a.pct, sec:b.nm || '', sn:b.n, sp:b.pct, pa:d.ea ? d.pa : null, e:d.e, fal:d.e ? falta(d) : null };
     });
     var k = state.sortKey, dir = state.sortDir;
     rows.sort(function(x, y){ var a = x[k], b = y[k]; if (a == null) return 1; if (b == null) return -1; return (a > b ? 1 : a < b ? -1 : 0) * dir; });
@@ -562,7 +582,7 @@ tr.click:hover td{background:var(--ink3)}
         '<td class="n">' + fmtPct(r.pea, 1) + '</td><td class="n">' + fmtPct(r.pst, 1) + '</td>' +
         '<td>' + (r.lead ? '<i class="sw" style="background:' + colorOf(r.ln) + ';margin-right:6px"></i>' + esc(r.lead) : '—') + '</td><td class="n">' + fmtPct(r.lp, 1) + '</td>' +
         '<td>' + (r.sec ? '<i class="sw" style="background:' + colorOf(r.sn) + ';margin-right:6px"></i>' + esc(r.sec) : '—') + '</td><td class="n">' + fmtPct(r.sp, 1) + '</td>' +
-        '<td class="n">' + (r.e ? fmtInt(r.e) : '—') + '</td><td class="n">' + (r.fal != null ? fmtInt(r.fal) : '—') + '</td></tr>';
+        '<td class="n">' + fmtPct(r.pa, 1) + '</td><td class="n">' + (r.e ? fmtInt(r.e) : '—') + '</td><td class="n">' + (r.fal != null ? fmtInt(r.fal) : '—') + '</td></tr>';
     }).join('') + '</tbody>';
   }
 
@@ -607,11 +627,11 @@ tr.click:hover td{background:var(--ink3)}
     var uf = abr.toUpperCase(), ufs = uf === 'BR' ? UFS : [uf];
     if (uf === 'ZZ') return null;
     var mins = Math.floor(Date.now() / 60000);
-    var votes = [0,0,0,0], e = 0, ea = 0;
+    var votes = [0,0,0,0], e = 0, ea = 0, abs = 0;
     ufs.forEach(function(u){
       var h = 0; for (var i = 0; i < u.length; i++) h = (h * 31 + u.charCodeAt(i)) % 997;
       var ap = Math.min(1, 0.35 + ((h % 40) + (mins % 60)) / 160);
-      var el = DEMO_ELEITORADO[u]; e += el; ea += el * ap;
+      var el = DEMO_ELEITORADO[u]; e += el; ea += el * ap; abs += el * ap * (0.14 + (h % 11) / 100);
       var lean = { N:.02, NE:.18, CO:-.12, SE:-.03, S:-.15 }[UF_REGION[u].id] + ((h % 13) - 6) / 100;
       var vv = el * ap * 0.72;
       var A = 0.44 + lean, B = 0.44 - lean, C = 0.07, D = 0.05;
@@ -620,7 +640,7 @@ tr.click:hover td{background:var(--ink3)}
     var tot = votes.reduce(function(s, v){ return s + v; }, 0);
     var nm = [['Candidato A','PARTIDO A'],['Candidato B','PARTIDO B'],['Candidato C','PARTIDO C'],['Candidato D','PARTIDO D']];
     return parse({
-      e: { te: String(e), est: String(Math.round(ea)) }, s: { ts: String(Math.round(e / 350)), st: String(Math.round(ea / 350)) },
+      e: { te: String(e), est: String(Math.round(ea)), a: String(Math.round(abs)) }, s: { ts: String(Math.round(e / 350)), st: String(Math.round(ea / 350)) },
       dt: new Date().toLocaleDateString('pt-BR'), ht: new Date().toLocaleTimeString('pt-BR'),
       cand: votes.map(function(v, i){ return { n: String(10 + i * 11), nm: nm[i][0], sg: nm[i][1], vap: String(Math.round(v)), pvap: (v / tot * 100).toFixed(2).replace('.', ',') }; })
     });
