@@ -50,6 +50,15 @@ h1{font-size:22px;font-weight:600;color:var(--head);margin-top:6px}
 
 /* national summary */
 .summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:18px}
+.duel{grid-column:1/-1}
+.duel-names{display:flex;justify-content:space-between;gap:12px;margin:8px 0 6px;font-size:15px;color:var(--head);font-weight:500}
+.duel-names span{display:inline-flex;align-items:center;gap:7px;min-width:0}
+.duel-names b{font:600 22px 'IBM Plex Mono',monospace}
+.duel-bar{position:relative;display:flex;height:18px;border-radius:4px;overflow:hidden;background:var(--empty)}
+.duel-bar i{display:block;height:100%;transition:width .5s}
+.duel-bar .half{position:absolute;left:50%;top:-2px;bottom:-2px;width:2px;background:var(--head);opacity:.7}
+.duel .sub{margin-top:8px}
+@media(max-width:600px){.duel-names{font-size:13px}.duel-names b{font-size:17px}}
 .tile{background:var(--ink2);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px}
 .tile .lbl{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2)}
 .tile .val{font-size:26px;font-weight:600;color:var(--head);margin-top:4px;font-variant-numeric:tabular-nums}
@@ -125,12 +134,12 @@ tr.click:hover td{background:var(--ink3)}
   <div class="topbar">
     <div>
       <a class="back" href="/vibing/">← Vibing</a>
-      <h1>Apuração 2026 · Presidente</h1>
+      <h1>Apuração 2026 · Presidente <span id="turnoLbl"></span></h1>
       <div class="status"><span class="dot" id="dot"></span><span id="status">Carregando dados do TSE…</span></div>
     </div>
     <div class="controls">
       <div class="seg" id="turno">
-        <button data-e="6257" class="on">1º turno</button>
+        <button data-e="6257">1º turno</button>
         <button data-e="6258">2º turno</button>
       </div>
       <div class="seg" id="mode">
@@ -203,15 +212,26 @@ tr.click:hover td{background:var(--ink3)}
   ];
   var UF_REGION = {}; REGIONS.forEach(function(r){ r.ufs.forEach(function(u){ UF_REGION[u]=r; }); });
   var UFS = Object.keys(UF_NAMES).sort();
-  // Distinct, colour-blind-friendly hues assigned to candidates by national rank.
   // Fixed colours by ballot number so a candidate keeps the same colour whatever their rank:
   // 13 (PT, Lula) red, 22 (PL) blue. Everyone else takes the remaining hues by national rank.
   var FIXED_COLORS = { '13': '#e5534b', '22': '#4a8cff' };
   var PALETTE = ['#2fb67c','#f0a830','#a371f7','#22b8cf','#e8769a','#9aa36b','#c28a5b','#7a8299'];
 
   var params = new URLSearchParams(location.search);
+  var E1 = '6257', E2 = '6258';               // presidente, 1º e 2º turno (ele-c.json)
+  var RUNOFF_DAY = '2026-10-25';
+  function todayBrasilia(){
+    try { return new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' }); }
+    catch (e) { return new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10); }
+  }
+  function initialElection(){
+    if (params.get('e')) return params.get('e');
+    if (params.get('turno') === '1') return E1;
+    if (params.get('turno') === '2') return E2;
+    return todayBrasilia() >= RUNOFF_DAY ? E2 : E1;
+  }
   var state = {
-    eleicao: params.get('e') || '6257',
+    eleicao: initialElection(), ref: {},
     mode: 'uf', sel: null, data: {}, colors: {}, sortKey: 'uf', sortDir: 1,
     demo: params.get('demo') === '1', timer: null, lastOk: null
   };
@@ -226,8 +246,8 @@ tr.click:hover td{background:var(--ink3)}
   function pad(e){ return ('000000' + e).slice(-6); }
   // TSE publishes two variants of each result: the full "unificado" file (dados/…-u.json, used by
   // the official app) and the lighter "dados-simplificados/…-r.json". Try the full one first.
-  function urls(abr){
-    var e = state.eleicao, base = BASE + e;
+  function urls(abr, e){
+    var base = BASE + e;
     return [
       base + '/dados/' + abr + '/' + abr + '-c0001-e' + pad(e) + '-u.json',
       base + '/dados-simplificados/' + abr + '/' + abr + '-c0001-e' + pad(e) + '-r.json'
@@ -280,10 +300,11 @@ tr.click:hover td{background:var(--ink3)}
   }
 
   // Fetch both variants and keep whichever is further along in the count.
-  function fetchOne(abr){
-    if (state.demo) return Promise.resolve(demoFile(abr));
+  function fetchOne(abr, e){
+    e = e || state.eleicao;
+    if (state.demo) return Promise.resolve(demoFile(abr, e));
     var errs = 0, lastErr = null;
-    return Promise.all(urls(abr).map(function(u){
+    return Promise.all(urls(abr, e).map(function(u){
       return getJson(u).then(function(j){ return j ? parse(j) : null; }, function(err){ errs++; lastErr = err; return null; });
     })).then(function(rs){
       if (errs === rs.length) throw lastErr;
@@ -311,7 +332,9 @@ tr.click:hover td{background:var(--ink3)}
       }
       state.data = data; state.lastOk = new Date();
       var found = Object.keys(data).filter(function(k){ return data[k]; }).length;
-      if (!state.demo) showBanner(found ? '' : 'O TSE respondeu, mas os arquivos deste turno ainda não foram publicados. A página tenta de novo a cada 30 s.', false);
+      if (!state.demo) showBanner(found ? '' : isRunoff()
+        ? 'O 2º turno é no domingo, <b>25 de outubro</b>. A votação vai das 8h às 17h (horário de Brasília) e o TSE começa a divulgar os resultados a partir das 17h. Esta página atualiza sozinha a cada 30 s.'
+        : 'O TSE respondeu, mas os arquivos deste turno ainda não foram publicados. A página tenta de novo a cada 30 s.', false);
       render();
     });
   }
@@ -372,6 +395,30 @@ tr.click:hover td{background:var(--ink3)}
     return { cands: cands, vv: vv, missing: missing, eTot: eTot, eCovered: eCovered };
   }
 
+  function isRunoff(){ return state.eleicao === E2; }
+
+  // In the runoff, also load the (final) 1st-round files once, to show each finalist's 1st-round share.
+  function loadRef(){
+    if (!isRunoff() || state.refLoaded) return;
+    state.refLoaded = true;
+    var abrs = ['br'].concat(UFS.map(function(u){ return u.toLowerCase(); }));
+    Promise.all(abrs.map(function(a){
+      return fetchOne(a, E1).catch(function(){ return null; });
+    })).then(function(rs){
+      abrs.forEach(function(a, i){ if (rs[i]) state.ref[a.toUpperCase()] = rs[i]; });
+      if (isRunoff()) render();
+    });
+  }
+  // 1st-round share of candidate n in a state key or a list of states (summed).
+  function refPct(keys, n){
+    var tot = 0, mine = 0, any = false;
+    [].concat(keys).forEach(function(k){
+      var d = state.ref[k]; if (!d) return; any = true;
+      d.cands.forEach(function(c){ tot += c.votos; if (c.n === n) mine += c.votos; });
+    });
+    return any && tot ? mine / tot * 100 : null;
+  }
+
   function national(){
     // Prefer the official BR file (includes votes abroad); fall back to the sum of the states.
     return state.data.BR && state.data.BR.cands.length ? state.data.BR : aggregate(UFS);
@@ -380,9 +427,13 @@ tr.click:hover td{background:var(--ink3)}
   function assignColors(){
     var nat = national();
     state.colors = {};
-    var i = 0;
+    // Fixed colours first; then red/blue if a pinned candidate is absent (so a runoff is always
+    // red vs blue), then the rest of the palette by rank.
+    var used = {};
+    nat.cands.forEach(function(c){ if (FIXED_COLORS[c.n]) { state.colors[c.n] = FIXED_COLORS[c.n]; used[FIXED_COLORS[c.n]] = 1; } });
+    var free = ['#e5534b', '#4a8cff'].concat(PALETTE).filter(function(col){ return !used[col]; }), i = 0;
     nat.cands.forEach(function(c){
-      state.colors[c.n] = FIXED_COLORS[c.n] || PALETTE[Math.min(i++, PALETTE.length - 1)];
+      if (!state.colors[c.n]) state.colors[c.n] = free[Math.min(i++, free.length - 1)];
     });
   }
   function colorOf(n){ return state.colors[n] || '#7a8299'; }
@@ -407,17 +458,28 @@ tr.click:hover td{background:var(--ink3)}
   }
 
   function renderSummary(nat){
-    var top = nat.cands || [];
+    var top = nat.cands || [], duel = '';
     var tiles = [
       { lbl:'Eleitorado apurado', val: fmtPct(nat.pea), sub: nat.e ? fmtInt(nat.ea) + ' de ' + fmtInt(nat.e) + ' eleitores' : 'aguardando', bar: nat.pea },
       { lbl:'Faltam apurar', val: nat.e ? fmtInt(falta(nat)) : '—', sub: nat.e ? 'eleitores (' + fmtPct(100 - (nat.pea || 0)) + ' do eleitorado)' : '', bar: nat.e ? 100 - (nat.pea || 0) : 0 },
       { lbl:'Seções totalizadas', val: fmtPct(nat.pst), sub: nat.s ? fmtInt(nat.st) + ' de ' + fmtInt(nat.s) : '', bar: nat.pst }
     ];
-    top.slice(0, 2).forEach(function(c){
+    if (isRunoff() && top.length >= 2) {
+      var a = top[0], b = top[1];
+      // keep a stable left/right order (by ballot number) so the bar doesn't flip when the lead changes
+      if (+a.n > +b.n) { var t = a; a = b; b = t; }
+      var diff = Math.abs(a.votos - b.votos), lead = a.votos >= b.votos ? a : b;
+      duel = '<div class="tile duel"><div class="lbl">2º turno · votos válidos</div>' +
+        '<div class="duel-names"><span><i class="sw" style="background:' + colorOf(a.n) + '"></i>' + esc(a.nm) + ' <b>' + fmtPct(a.pct) + '</b></span>' +
+        '<span><b>' + fmtPct(b.pct) + '</b> ' + esc(b.nm) + '<i class="sw" style="background:' + colorOf(b.n) + '"></i></span></div>' +
+        '<div class="duel-bar"><i style="width:' + (a.pct || 0) + '%;background:' + colorOf(a.n) + '"></i><i style="width:' + (b.pct || 0) + '%;background:' + colorOf(b.n) + '"></i><span class="half"></span></div>' +
+        '<div class="sub">' + (diff ? esc(lead.nm) + ' à frente por ' + fmtInt(diff) + ' votos (' + fmtPct(Math.abs(a.pct - b.pct), 2).replace('%', ' p.p.') + ')' : 'empate') +
+        (lead.eleito ? ' · ELEITO' : '') + '</div></div>';
+    } else top.slice(0, 2).forEach(function(c){
       tiles.push({ lbl: c.nm, val: fmtPct(c.pct), sub: fmtInt(c.votos) + ' votos' + (c.eleito ? ' · eleito' : ''), bar: c.pct, color: colorOf(c.n) });
     });
     if (nat.pc != null && nat.c) tiles.push({ lbl:'Comparecimento', val: fmtPct(nat.pc), sub: fmtInt(nat.c) + ' eleitores' + (nat.pa != null ? ' · abstenção ' + fmtPct(nat.pa, 1) : ''), bar: nat.pc });
-    $('summary').innerHTML = tiles.map(function(t){
+    $('summary').innerHTML = duel + tiles.map(function(t){
       return '<div class="tile"><div class="lbl">' + esc(t.lbl) + '</div><div class="val">' + t.val + '</div><div class="sub">' + esc(t.sub) + '</div>' +
         '<div class="bar"><i style="width:' + Math.max(0, Math.min(100, t.bar || 0)) + '%' + (t.color ? ';background:' + t.color : '') + '"></i></div></div>';
     }).join('');
@@ -487,21 +549,22 @@ tr.click:hover td{background:var(--ink3)}
     return { color: ABS_COLOR, op: 0.18 + t * 0.82 };
   }
 
-  function candRows(cands, limit){
+  function candRows(cands, limit, refKeys){
     if (!cands || !cands.length) return '<div class="empty">Sem votos apurados ainda.</div>';
     return cands.slice(0, limit || 99).map(function(c){
       return '<div class="cand"><div class="nm"><i class="sw" style="background:' + colorOf(c.n) + '"></i>' + esc(c.nm) +
         (c.partido ? ' <em>' + esc(c.partido) + '</em>' : '') + '</div><div class="pc">' + fmtPct(c.pct) + '</div>' +
         '<div class="bar"><i style="width:' + Math.min(100, c.pct || 0) + '%;background:' + colorOf(c.n) + '"></i></div>' +
-        '<div class="vt">' + fmtInt(c.votos) + ' votos' + (c.eleito ? ' · ELEITO' : (c.st && /turno/i.test(c.st) ? ' · ' + esc(c.st) : '')) + '</div></div>';
+        '<div class="vt">' + fmtInt(c.votos) + ' votos' + (c.eleito ? ' · ELEITO' : (c.st && /turno/i.test(c.st) ? ' · ' + esc(c.st) : '')) +
+        (refKeys && refPct(refKeys, c.n) != null ? ' · 1º turno ' + fmtPct(refPct(refKeys, c.n), 1) : '') + '</div></div>';
     }).join('');
   }
 
   function current(){
-    if (!state.sel) return { title: 'Brasil', d: national() };
+    if (!state.sel) return { title: 'Brasil', d: national(), keys: 'BR' };
     var reg = REGIONS.filter(function(r){ return r.id === state.sel; })[0];
-    if (reg) return { title: 'Região ' + reg.nm, d: aggregate(reg.ufs) };
-    return { title: UF_NAMES[state.sel] || state.sel, d: state.data[state.sel] };
+    if (reg) return { title: 'Região ' + reg.nm, d: aggregate(reg.ufs), keys: reg.ufs };
+    return { title: UF_NAMES[state.sel] || state.sel, d: state.data[state.sel], keys: state.sel };
   }
 
   function renderDetail(){
@@ -509,7 +572,7 @@ tr.click:hover td{background:var(--ink3)}
     $('detailTitle').textContent = cur.title;
     $('detailAp').textContent = d ? 'eleitorado apurado ' + fmtPct(d.pea) + ' · faltam ' + fmtInt(falta(d)) + ' eleitores' + (d.ea ? ' · abstenção ' + fmtPct(d.pa, 1) : '') : '';
     $('detailBar').firstChild.style.width = (d && d.pea || 0) + '%';
-    $('detail').innerHTML = d ? candRows(d.cands) : '<div class="empty">Sem dados para este local ainda.</div>';
+    $('detail').innerHTML = d ? candRows(d.cands, 0, isRunoff() ? cur.keys : null) : '<div class="empty">Sem dados para este local ainda.</div>';
   }
 
   function stackBar(cands){
@@ -560,7 +623,7 @@ tr.click:hover td{background:var(--ink3)}
         '<div class="bar"><i style="width:' + (d.pea || 0) + '%"></i></div>' +
         '<div class="falta"><span>Faltam apurar</span><b>' + (d.e ? fmtInt(falta(d)) + ' eleitores' : '—') + '</b></div>' +
         '<div class="falta"><span>Abstenção</span><b>' + (d.ea ? fmtPct(d.pa, 1) + ' (' + fmtInt(d.a) + ')' : '—') + '</b></div>' +
-        '<div class="cands">' + candRows(d.cands, 3) + '</div>' + projLine(r) + '</div>';
+        '<div class="cands">' + candRows(d.cands, 3, isRunoff() ? r.ufs : null) + '</div>' + projLine(r) + '</div>';
     }).join('');
   }
 
@@ -607,11 +670,19 @@ tr.click:hover td{background:var(--ink3)}
     var b = ev.target.closest('button'); if (!b) return;
     setMode(b.getAttribute('data-m')); state.sel = null; renderMap(); renderDetail(); renderRegions();
   });
+  function syncTurnoUI(){
+    Array.prototype.forEach.call($('turno').children, function(x){ x.classList.toggle('on', x.getAttribute('data-e') === state.eleicao); });
+    $('turnoLbl').textContent = isRunoff() ? '· 2º turno' : '· 1º turno';
+  }
   $('turno').addEventListener('click', function(ev){
     var b = ev.target.closest('button'); if (!b) return;
     state.eleicao = b.getAttribute('data-e'); state.data = {}; state.lastOk = null; state.sel = null;
-    Array.prototype.forEach.call($('turno').children, function(x){ x.classList.toggle('on', x === b); });
-    setStatus('', 'Carregando dados do TSE…'); render(); load().then(schedule, schedule);
+    syncTurnoUI();
+    try {
+      var q = new URLSearchParams(location.search); q.delete('e'); q.set('turno', isRunoff() ? '2' : '1');
+      history.replaceState(null, '', '?' + q.toString());
+    } catch (e) {}
+    setStatus('', 'Carregando dados do TSE…'); render(); load().then(schedule, schedule); loadRef();
   });
   $('refresh').addEventListener('click', function(){ load().then(schedule, schedule); });
   $('theme').addEventListener('click', function(){
@@ -623,7 +694,8 @@ tr.click:hover td{background:var(--ink3)}
 
   // ── demo data (only with ?demo=1; clearly labelled as simulated) ──
   var DEMO_ELEITORADO = {AC:600000,AL:2400000,AM:2700000,AP:550000,BA:11300000,CE:6800000,DF:2200000,ES:2900000,GO:4900000,MA:5000000,MG:16300000,MS:2000000,MT:2500000,PA:6100000,PB:3100000,PE:7000000,PI:2600000,PR:8500000,RJ:12800000,RN:2600000,RO:1200000,RR:370000,RS:8600000,SC:5600000,SE:1700000,SP:34600000,TO:1100000};
-  function demoFile(abr){
+  function demoFile(abr, e){
+    var runoff = e === E2;
     var uf = abr.toUpperCase(), ufs = uf === 'BR' ? UFS : [uf];
     if (uf === 'ZZ') return null;
     var mins = Math.floor(Date.now() / 60000);
@@ -634,7 +706,7 @@ tr.click:hover td{background:var(--ink3)}
       var el = DEMO_ELEITORADO[u]; e += el; ea += el * ap; abs += el * ap * (0.14 + (h % 11) / 100);
       var lean = { N:.02, NE:.18, CO:-.12, SE:-.03, S:-.15 }[UF_REGION[u].id] + ((h % 13) - 6) / 100;
       var vv = el * ap * 0.72;
-      var A = 0.44 + lean, B = 0.44 - lean, C = 0.07, D = 0.05;
+      var A = runoff ? 0.5 + lean : 0.44 + lean, B = runoff ? 0.5 - lean : 0.44 - lean, C = runoff ? 0 : 0.07, D = runoff ? 0 : 0.05;
       votes[0] += vv * A; votes[1] += vv * B; votes[2] += vv * C; votes[3] += vv * D;
     });
     var tot = votes.reduce(function(s, v){ return s + v; }, 0);
@@ -642,12 +714,14 @@ tr.click:hover td{background:var(--ink3)}
     return parse({
       e: { te: String(e), est: String(Math.round(ea)), a: String(Math.round(abs)) }, s: { ts: String(Math.round(e / 350)), st: String(Math.round(ea / 350)) },
       dt: new Date().toLocaleDateString('pt-BR'), ht: new Date().toLocaleTimeString('pt-BR'),
-      cand: votes.map(function(v, i){ return { n: String(10 + i * 11), nm: nm[i][0], sg: nm[i][1], vap: String(Math.round(v)), pvap: (v / tot * 100).toFixed(2).replace('.', ',') }; })
+      cand: votes.slice(0, runoff ? 2 : 4).map(function(v, i){ return { n: String(10 + i * 11), nm: nm[i][0], sg: nm[i][1], vap: String(Math.round(v)), pvap: (v / tot * 100).toFixed(2).replace('.', ',') }; })
     });
   }
 
+  syncTurnoUI();
   render();
   load().then(schedule, schedule);
+  loadRef();
 })();
 </script>
 </body>
