@@ -71,7 +71,7 @@ h1{font-size:22px;font-weight:600;color:var(--head);margin-top:6px}
 .bar>i{display:block;height:100%;background:var(--accent);border-radius:3px;transition:width .5s}
 
 .grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:18px;align-items:start}
-@media(max-width:900px){.grid{grid-template-columns:1fr}}
+@media(max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
 .card{background:var(--ink2);border:1px solid var(--line);border-radius:var(--r);padding:14px}
 .card h2{font-size:13px;font-weight:600;color:var(--head);margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;gap:8px}
 .card h2 small{font:400 11px 'IBM Plex Mono',monospace;color:var(--muted2)}
@@ -144,6 +144,18 @@ h1{font-size:22px;font-weight:600;color:var(--head);margin-top:6px}
 .hist .cn{stroke:var(--line2);stroke-width:2}
 .hist .nl{stroke:var(--muted2);stroke-width:1;stroke-dasharray:3 3}
 .seg.sm button{padding:3px 9px;font-size:11px}
+#tab-ext{position:relative}
+#world{width:100%;height:auto;display:block}
+#world path{stroke:var(--ink2);stroke-width:.5;stroke-linejoin:round}
+#world .ct{fill:var(--empty)}
+#world .has{cursor:pointer}
+#world .has:hover{opacity:.8}
+#world .sel{stroke:var(--head);stroke-width:1.5}
+#world circle{stroke:var(--ink2);stroke-width:1}
+#extSel{max-width:180px;padding:3px 6px;background:var(--ink2);color:var(--body)}
+.citylist{margin-top:16px;overflow-x:auto}
+.card h2{flex-wrap:wrap;row-gap:6px}
+.citylist table{font-size:12px}
 #histTable td.yr{font-weight:600;color:var(--head)}
 #histTable td small{color:var(--muted2);font-size:11px}
 #histTable tr.live td{background:var(--ink3)}
@@ -198,6 +210,7 @@ tr.click:hover td{background:var(--ink3)}
 
   <nav class="tabs" id="tabs" role="tablist">
     <a href="#apuracao" data-tab="live" role="tab">Apuração ao vivo</a>
+    <a href="#exterior" data-tab="ext" role="tab">Exterior</a>
     <a href="#historico" data-tab="hist" role="tab">Histórico</a>
   </nav>
 
@@ -245,6 +258,47 @@ tr.click:hover td{background:var(--ink3)}
     Os totais por região somam os votos de cada estado; o voto no exterior entra só no total do Brasil.
     Projeto independente, sem vínculo com a Justiça Eleitoral.
   </p>
+  </div>
+
+  <div id="tab-ext" hidden>
+    <div class="summary" id="extSummary"></div>
+
+    <div class="grid">
+      <div class="card">
+        <h2><span id="extMapTitle">Quem lidera em cada país</span>
+          <span class="seg sm" id="extMode"><button data-m="lead" class="on">Líder</button><button data-m="abs">Abstenção</button></span></h2>
+        <svg id="world" role="img" aria-label="Mapa-múndi dos votos de brasileiros no exterior"></svg>
+        <div class="legend" id="extLegend"></div>
+      </div>
+      <div class="card">
+        <h2><span id="extTitle">Exterior · todos os países</span>
+          <select id="extSel" class="btn" aria-label="Escolher país"></select></h2>
+        <div class="proj-sub" id="extAp" style="margin:-4px 0 8px"></div>
+        <div id="extBar" class="bar" style="margin:0 0 14px"><i></i></div>
+        <div class="cands" id="extDetail"></div>
+        <div id="extCities"></div>
+      </div>
+    </div>
+
+    <div class="card hist" id="extHistCard" style="margin-top:18px">
+      <h2><span id="extHistTitle">Histórico no exterior</span><small>TSE, 1998–2022 · 2026 ao vivo</small></h2>
+      <div class="histgrid">
+        <figure><figcaption>Eleitores aptos (mil)</figcaption><svg id="extEl" role="img" aria-label="Eleitores no exterior por ano"></svg></figure>
+        <figure><figcaption>Abstenção · 1º turno / 2º turno</figcaption><svg id="extAbs" role="img" aria-label="Abstenção no exterior por ano"></svg></figure>
+      </div>
+      <div class="tablewrap" style="margin-top:12px"><table id="extHistTable"></table></div>
+      <p class="proj-note" style="margin:10px 0 0">1998–2006 o TSE registra o voto no exterior por país; a partir de 2010, por cidade (agrupei as cidades por país).
+        Antes de 1998 não há detalhamento por país. Abstenção no exterior é historicamente alta: muitos eleitores mudam de país sem transferir o título.</p>
+    </div>
+
+    <div class="card tablewrap">
+      <h2>Por país <small id="extLoad">clique no cabeçalho para ordenar · clique na linha para ver o país</small></h2>
+      <table id="extTable"></table>
+    </div>
+    <div class="histtip" id="exttip" hidden></div>
+    <p class="foot">Resultados ao vivo: arquivos do TSE por cidade do exterior (<span class="mono">/dados/zz/zz{cidade}-c0001-…</span>) e o resumo
+      <span class="mono">zz-e…-ab.json</span>, atualizados a cada minuto com esta aba aberta. O país de cada cidade foi atribuído por mim a partir do nome
+      da cidade (o TSE não informa o país).</p>
   </div>
 
   <div id="tab-hist" hidden>
@@ -331,6 +385,8 @@ tr.click:hover td{background:var(--ink3)}
 
 <script src="map-data.js"></script>
 <script src="historico-data.js"></script>
+<script src="world-data.js"></script>
+<script src="exterior-data.js"></script>
 <script>
 (function(){
   var BASE = 'https://resultados.tse.jus.br/oficial/ele2026/';
@@ -485,10 +541,11 @@ tr.click:hover td{background:var(--ink3)}
   function showBanner(html, demo){ var b = $('banner'); b.innerHTML = html; b.className = 'banner' + (html ? ' show' : '') + (demo ? ' demo' : ''); }
 
   // ── aggregation by region (sum of state files) ──
-  function aggregate(ufs){
+  function aggregate(ufs){ return aggList(ufs.map(function(u){ return state.data[u]; })); }
+  function aggList(list){
     var tot = { e:0, ea:0, s:0, st:0, vv:0, a:0, have:0 }, byN = {};
-    ufs.forEach(function(u){
-      var d = state.data[u]; if (!d) return;
+    list.forEach(function(d){
+      if (!d) return;
       tot.have++; tot.e += d.e; tot.ea += d.ea; tot.s += d.s; tot.st += d.st; tot.a += d.a || 0;
       d.cands.forEach(function(c){
         if (!byN[c.n]) byN[c.n] = { n:c.n, nm:c.nm, partido:c.partido, votos:0 };
@@ -588,6 +645,7 @@ tr.click:hover td{background:var(--ink3)}
     renderRegions();
     renderProjection();
     renderHistory();
+    renderExt();
     renderTable();
     if (!hasData && state.lastOk) $('detail').innerHTML = '<div class="empty">A totalização ainda não começou ou não há votos apurados.</div>';
   }
@@ -1028,14 +1086,16 @@ tr.click:hover td{background:var(--ink3)}
 
   // ── tabs (hash routing so #historico can be shared) ──
   function showTab(){
-    var hist = location.hash === '#historico';
-    $('tab-live').hidden = hist; $('tab-hist').hidden = !hist;
-    $('mode').style.display = hist ? 'none' : '';
+    var tab = location.hash === '#historico' ? 'hist' : location.hash === '#exterior' ? 'ext' : 'live';
+    $('tab-live').hidden = tab !== 'live'; $('tab-hist').hidden = tab !== 'hist'; $('tab-ext').hidden = tab !== 'ext';
+    $('mode').style.display = tab === 'live' ? '' : 'none';
     Array.prototype.forEach.call($('tabs').children, function(a){
-      var on = a.getAttribute('data-tab') === (hist ? 'hist' : 'live');
+      var on = a.getAttribute('data-tab') === tab;
       a.classList.toggle('on', on); a.setAttribute('aria-selected', on);
     });
-    if (hist) { loadRef(); renderHistory(); } else render();
+    if (tab === 'hist') { loadRef(); renderHistory(); }
+    else if (tab === 'ext') { window.scrollTo(0, 0); renderExt(); loadExt().then(scheduleExt, scheduleExt); }
+    else render();
   }
   window.addEventListener('hashchange', showTab);
   $('dmTurno').addEventListener('click', function(ev){
@@ -1062,7 +1122,266 @@ tr.click:hover td{background:var(--ink3)}
     var rt; window.addEventListener('resize', function(){ clearTimeout(rt); rt = setTimeout(renderHistory, 150); });
   })();
 
+  // ── Exterior ──
+  var EXT_C = window.EXT_CIDADES || {}, PAISES = window.PAISES || {}, HEXT = window.HIST_EXTERIOR || { anos: {}, nomes: {} };
+  state.ext = { cities: {}, sig: {}, sel: null, mode: 'lead', timer: null, eleicao: null, sortKey: 'e', sortDir: -1 };
+
+  function extUrlAb(e){ return BASE + e + '/dados/zz/zz-e' + pad(e) + '-ab.json'; }
+  function extUrlCity(e, cd){ return BASE + e + '/dados/zz/zz' + cd + '-c0001-e' + pad(e) + '-u.json'; }
+
+  // Run promise-returning jobs with limited concurrency (186 city files).
+  function pool(jobs, n){
+    var i = 0;
+    function next(){ if (i >= jobs.length) return Promise.resolve(); var j = jobs[i++]; return j().then(next, next); }
+    var ws = []; for (var k = 0; k < n; k++) ws.push(next());
+    return Promise.all(ws);
+  }
+
+  function demoCity(cd){
+    var h = 0; for (var i = 0; i < cd.length; i++) h = (h * 31 + cd.charCodeAt(i)) % 9973;
+    var el = 300 + (h % 40) * 900, ap = Math.min(1, 0.3 + (h % 50) / 70), ea = el * ap, abs = ea * (0.4 + (h % 20) / 100), vv = (ea - abs) * 0.95;
+    var A = 0.35 + (h % 30) / 100, runoff = state.eleicao === E2;
+    var v = runoff ? [vv * A, vv * (1 - A)] : [vv * A, vv * (0.9 - A), vv * 0.06, vv * 0.04];
+    var nm = ['Candidato A', 'Candidato B', 'Candidato C', 'Candidato D'];
+    return parse({ e: { te: String(el), est: String(Math.round(ea)), a: String(Math.round(abs)) },
+      s: { ts: String(Math.ceil(el / 300)), st: String(Math.round(Math.ceil(el / 300) * ap)) },
+      cand: v.map(function(x, i){ return { n: String(10 + i * 11), nm: nm[i], sg: 'PARTIDO ' + 'ABCD'[i], vap: String(Math.round(x)), pvap: (x / vv * 100).toFixed(2).replace('.', ',') }; }) });
+  }
+
+  // Load the per-city progress summary, then (re)load only the cities whose numbers changed.
+  function loadExt(){
+    var X = state.ext, e = state.eleicao;
+    if (X.eleicao !== e) { X.cities = {}; X.sig = {}; X.eleicao = e; X.sel = X.sel; }
+    if (state.demo) {
+      Object.keys(EXT_C).forEach(function(cd){ X.cities[cd] = demoCity(cd); });
+      X.lastOk = new Date(); renderExt(); return Promise.resolve();
+    }
+    return getJson(extUrlAb(e)).then(function(ab){
+      if (!ab) { X.lastOk = new Date(); renderExt(); return; }
+      var todo = [];
+      (ab.abr || []).forEach(function(m){
+        if (m.tpabr !== 'mun') return;
+        var cd = m.cdabr, sig = (m.s && m.s.st) + '|' + m.ht;
+        if (!X.cities[cd]) X.cities[cd] = parse(m);           // progress numbers right away
+        if (X.sig[cd] !== sig && m.s && +m.s.st > 0) todo.push(function(){
+          return getJson(extUrlCity(e, cd)).then(function(j){ if (j && state.eleicao === e) { X.cities[cd] = parse(j); X.sig[cd] = sig; } });
+        });
+      });
+      X.pending = todo.length; X.total = todo.length;
+      renderExt();
+      todo = todo.map(function(job){ return function(){ return job().then(function(){ X.pending--; if (X.pending % 20 === 0) renderExt(); }); }; });
+      return pool(todo, 8).then(function(){ X.pending = 0; X.lastOk = new Date(); renderExt(); });
+    }).catch(function(){ renderExt(); });
+  }
+  function scheduleExt(){
+    clearTimeout(state.ext.timer);
+    state.ext.timer = setTimeout(function tick(){
+      if ($('tab-ext').hidden) return;
+      if (document.hidden) { state.ext.timer = setTimeout(tick, 5000); return; }
+      loadExt().then(scheduleExt, scheduleExt);
+    }, 60000);
+  }
+
+  function extCountries(){
+    var by = {};
+    Object.keys(state.ext.cities).forEach(function(cd){
+      var iso = EXT_C[cd] && EXT_C[cd][1]; if (!iso) return;
+      (by[iso] = by[iso] || []).push(state.ext.cities[cd]);
+    });
+    var out = {};
+    Object.keys(by).forEach(function(iso){ out[iso] = aggList(by[iso]); out[iso].n = by[iso].length; });
+    return out;
+  }
+  function paisNm(iso){ return (PAISES[iso] && PAISES[iso][0]) || iso; }
+
+  function renderExt(){
+    if ($('tab-ext').hidden) return;
+    assignColors();
+    var C = extCountries(), X = state.ext;
+    // official exterior total when available; otherwise the sum of cities (progress is complete from the summary file,
+    // candidate votes only once every city file has arrived)
+    var tot = state.data.ZZ && state.data.ZZ.e ? state.data.ZZ : aggList(Object.keys(X.cities).map(function(k){ return X.cities[k]; }));
+    if (tot !== state.data.ZZ && X.pending) tot.cands = [];
+    // summary tiles
+    var top = tot.cands || [], tiles = [
+      { lbl: 'Eleitores no exterior', val: tot.e ? fmtInt(tot.e) : '—', sub: Object.keys(C).length + ' países · ' + Object.keys(X.cities).length + ' cidades' },
+      { lbl: 'Eleitorado apurado', val: fmtPct(tot.pea), sub: tot.e ? 'faltam ' + fmtInt(falta(tot)) + ' eleitores' : 'aguardando', bar: tot.pea },
+      { lbl: 'Abstenção', val: tot.ea ? fmtPct(tot.pa, 1) : '—', sub: tot.ea ? fmtInt(tot.a) + ' eleitores' : '', bar: tot.ea ? tot.pa : 0 }
+    ];
+    top.slice(0, 2).forEach(function(c){ tiles.push({ lbl: c.nm, val: fmtPct(c.pct), sub: fmtInt(c.votos) + ' votos', bar: c.pct, color: colorOf(c.n) }); });
+    $('extSummary').innerHTML = tiles.map(function(t){
+      return '<div class="tile"><div class="lbl">' + esc(t.lbl) + '</div><div class="val">' + t.val + '</div><div class="sub">' + esc(t.sub) + '</div>' +
+        (t.bar != null ? '<div class="bar"><i style="width:' + Math.max(0, Math.min(100, t.bar || 0)) + '%' + (t.color ? ';background:' + t.color : '') + '"></i></div>' : '') + '</div>';
+    }).join('');
+    $('extLoad').textContent = X.pending ? 'carregando votos por cidade: ' + (X.total - X.pending) + '/' + X.total : 'clique no cabeçalho para ordenar · clique na linha para ver o país';
+    renderWorld(C);
+    renderExtDetail(C, tot);
+    renderExtTable(C);
+    renderExtHistory();
+  }
+
+  function renderWorld(C){
+    var svg = $('world'), Wm = window.WORLD_MAP;
+    if (!Wm) return;
+    if (!svg.firstChild) {
+      svg.setAttribute('viewBox', '0 0 ' + Wm.w + ' ' + Wm.h);
+      var h = '', dots = '';
+      Object.keys(Wm.c).forEach(function(iso){
+        var c = Wm.c[iso];
+        h += '<path class="ct" data-iso="' + iso + '" d="' + c.d + '"><title></title></path>';
+        if (c.dot && PAISES[iso]) dots += '<circle class="ct" data-iso="' + iso + '" cx="' + c.c[0] + '" cy="' + c.c[1] + '" r="4"><title></title></circle>';
+      });
+      svg.innerHTML = h + dots;
+      svg.addEventListener('click', function(ev){
+        var el = ev.target.closest('[data-iso]'); if (!el || !el.classList.contains('has')) return;
+        selectCountry(state.ext.sel === el.getAttribute('data-iso') ? null : el.getAttribute('data-iso'));
+      });
+    }
+    var vals = Object.keys(C).filter(function(k){ return C[k].ea; }).map(function(k){ return C[k].pa; });
+    var lo = vals.length ? Math.min.apply(null, vals) : 0, hi = vals.length ? Math.max.apply(null, vals) : 0;
+    Array.prototype.forEach.call(svg.querySelectorAll('[data-iso]'), function(el){
+      var iso = el.getAttribute('data-iso'), d = C[iso];
+      var sh = d ? (state.ext.mode === 'abs' ? absShade(d, lo, hi) : leaderShade(d)) : null;
+      el.classList.toggle('has', !!d);
+      el.classList.toggle('sel', state.ext.sel === iso);
+      el.style.fill = sh ? sh.color : '';
+      el.style.fillOpacity = sh ? sh.op : '';
+      if (d && !sh) el.style.fill = 'var(--line2)';
+      var lead = d && d.cands[0];
+      el.querySelector('title').textContent = paisNm(iso) + (d ? (state.ext.mode === 'abs' ? (d.ea ? ' — abstenção ' + fmtPct(d.pa, 1) : '') :
+        (lead && lead.votos ? ' — ' + lead.nm + ' ' + fmtPct(lead.pct) : '')) + ' · ' + fmtInt(d.e) + ' eleitores' : ' — sem eleitores brasileiros cadastrados');
+    });
+    var nat = national();
+    $('extMapTitle').textContent = state.ext.mode === 'abs' ? 'Abstenção por país' : 'Quem lidera em cada país';
+    $('extLegend').innerHTML = state.ext.mode === 'abs'
+      ? (vals.length ? '<span>' + fmtPct(lo, 1) + '</span><span class="grad"></span><span>' + fmtPct(hi, 1) + '</span><span style="color:var(--muted2)">entre os eleitores das seções já apuradas</span>' : '<span style="color:var(--muted2)">sem dados de abstenção ainda</span>')
+      : (nat.cands || []).filter(function(c){ return c.votos; }).slice(0, 4).map(function(c){ return '<span><i class="sw" style="background:' + colorOf(c.n) + '"></i>' + esc(c.nm) + '</span>'; }).join('') +
+        '<span style="color:var(--muted2)">cinza = há eleitores, sem votos apurados ainda</span>';
+  }
+
+  function renderExtDetail(C, tot){
+    var X = state.ext, iso = X.sel, d = iso ? C[iso] : tot;
+    var sel = $('extSel'), opts = Object.keys(C).sort(function(a, b){ return C[b].e - C[a].e; });
+    if (sel.options.length !== opts.length + 1) {
+      sel.innerHTML = '<option value="">Todos os países</option>' + opts.map(function(k){ return '<option value="' + k + '">' + esc(paisNm(k)) + '</option>'; }).join('');
+    }
+    sel.value = iso || '';
+    $('extTitle').textContent = iso ? paisNm(iso) : 'Exterior · todos os países';
+    $('extAp').textContent = d && d.e ? 'eleitorado apurado ' + fmtPct(d.pea) + ' · faltam ' + fmtInt(falta(d)) + ' · abstenção ' + (d.ea ? fmtPct(d.pa, 1) : '—') : '';
+    $('extBar').firstChild.style.width = (d && d.pea || 0) + '%';
+    $('extDetail').innerHTML = d ? candRows(d.cands, iso ? 0 : 5) : '<div class="empty">Sem dados ainda.</div>';
+    if (!iso) { $('extCities').innerHTML = ''; return; }
+    var rows = Object.keys(X.cities).filter(function(cd){ return EXT_C[cd] && EXT_C[cd][1] === iso; })
+      .map(function(cd){ return { nm: EXT_C[cd][0], d: X.cities[cd] }; }).sort(function(a, b){ return b.d.e - a.d.e; });
+    $('extCities').innerHTML = '<div class="citylist"><div class="proj-sub">Cidades (' + rows.length + ')</div><table><thead><tr><th>Cidade</th><th style="text-align:right">Eleitores</th>' +
+      '<th style="text-align:right">Apurado</th><th>1º colocado</th><th style="text-align:right">%</th><th style="text-align:right">Abstenção</th></tr></thead><tbody>' +
+      rows.map(function(r){ var a = r.d.cands[0];
+        return '<tr><td>' + esc(r.nm) + '</td><td class="n">' + fmtInt(r.d.e) + '</td><td class="n">' + fmtPct(r.d.pea, 0) + '</td>' +
+          '<td>' + (a && a.votos ? '<i class="sw" style="background:' + colorOf(a.n) + ';margin-right:6px"></i>' + esc(a.nm) : '—') + '</td>' +
+          '<td class="n">' + (a && a.votos ? fmtPct(a.pct, 1) : '—') + '</td><td class="n">' + (r.d.ea ? fmtPct(r.d.pa, 1) : '—') + '</td></tr>';
+      }).join('') + '</tbody></table></div>';
+  }
+
+  function renderExtTable(C){
+    var X = state.ext, k = X.sortKey, dir = X.sortDir;
+    var rows = Object.keys(C).map(function(iso){
+      var d = C[iso], a = d.cands[0] || {}, b = d.cands[1] || {};
+      return { iso: iso, nm: paisNm(iso), cont: (PAISES[iso] || [])[1] || '', n: d.n, e: d.e, pea: d.pea, fal: falta(d), lead: a.votos ? a.nm : '', ln: a.n, lp: a.votos ? a.pct : null,
+               sec: b.votos ? b.nm : '', sn: b.n, sp: b.votos ? b.pct : null, pa: d.ea ? d.pa : null };
+    });
+    rows.sort(function(x, y){ var a = x[k], b = y[k]; if (a == null || a === '') return 1; if (b == null || b === '') return -1; return (a > b ? 1 : a < b ? -1 : 0) * dir; });
+    var cols = [['nm','País'],['cont','Continente'],['e','Eleitores',1],['pea','% apurado',1],['fal','Faltam',1],['lead','1º colocado'],['lp','%',1],['sec','2º colocado'],['sp','%',1],['pa','Abstenção',1]];
+    $('extTable').innerHTML = '<thead><tr>' + cols.map(function(c){
+      return '<th data-k="' + c[0] + '"' + (c[2] ? ' style="text-align:right"' : '') + '>' + c[1] + (k === c[0] ? (dir > 0 ? ' ↑' : ' ↓') : '') + '</th>'; }).join('') +
+      '</tr></thead><tbody>' + rows.map(function(r){
+        return '<tr class="click" data-iso="' + r.iso + '"><td><b>' + esc(r.nm) + '</b>' + (r.n > 1 ? ' <small style="color:var(--muted2)">' + r.n + ' cidades</small>' : '') + '</td><td>' + r.cont + '</td>' +
+          '<td class="n">' + fmtInt(r.e) + '</td><td class="n">' + fmtPct(r.pea, 1) + '</td><td class="n">' + fmtInt(r.fal) + '</td>' +
+          '<td>' + (r.lead ? '<i class="sw" style="background:' + colorOf(r.ln) + ';margin-right:6px"></i>' + esc(r.lead) : '—') + '</td><td class="n">' + fmtPct(r.lp, 1) + '</td>' +
+          '<td>' + (r.sec ? '<i class="sw" style="background:' + colorOf(r.sn) + ';margin-right:6px"></i>' + esc(r.sec) : '—') + '</td><td class="n">' + fmtPct(r.sp, 1) + '</td>' +
+          '<td class="n">' + fmtPct(r.pa, 1) + '</td></tr>';
+      }).join('') + '</tbody>';
+  }
+
+  // History abroad: whole exterior or the selected country.
+  function extHistRound(yr, t, iso){
+    if (yr === 2026) {
+      if ((t === 2) !== isRunoff()) return null;
+      var d = iso ? extCountries()[iso] : state.data.ZZ;
+      if (!d || !d.e) return null;
+      return { aptos: d.e, abst: d.ea ? d.pa : null, cands: (d.cands || []).filter(function(c){ return c.votos; }).slice(0, 2).map(function(c){ return { nm: c.nm, pct: c.pct }; }), partial: (d.pst || 0) < 100 };
+    }
+    var Y = HEXT.anos[yr], R = Y && Y[t]; if (!R) return null;
+    var keys = iso ? [iso] : Object.keys(R), ap = 0, ab = 0, vv = 0, by = {};
+    keys.forEach(function(k){ var r = R[k]; if (!r) return; ap += r.aptos; ab += r.abst; vv += r.vv; r.cand.forEach(function(c){ by[c[0]] = (by[c[0]] || 0) + c[1]; }); });
+    if (!ap) return null;
+    var nomes = HEXT.nomes[yr] || {};
+    var cands = Object.keys(by).sort(function(a, b){ return by[b] - by[a]; }).slice(0, 2).map(function(n){ return { nm: nomes[n] || n, pct: vv ? by[n] / vv * 100 : 0 }; });
+    return { aptos: ap, abst: ab / ap * 100, cands: iso ? cands : cands, partial: false };
+  }
+
+  function renderExtHistory(){
+    var iso = state.ext.sel, YRS = [1998, 2002, 2006, 2010, 2014, 2018, 2022, 2026];
+    $('extHistTitle').textContent = 'Histórico · ' + (iso ? paisNm(iso) : 'todo o exterior');
+    var saveYears = HIST_YEARS; HIST_YEARS = YRS;                         // drawBars iterates HIST_YEARS
+    try {
+      var el = {}; YRS.forEach(function(y){ var r = extHistRound(y, 1, iso) || extHistRound(y, 2, iso); el[y] = r && r.aptos / 1000; });
+      var mx = Math.max.apply(null, YRS.map(function(y){ return el[y] || 0; })) || 1, mxr = Math.ceil(mx / Math.pow(10, Math.floor(Math.log10(mx)))) * Math.pow(10, Math.floor(Math.log10(mx)));
+      drawBars($('extEl'), { max: mxr, ticks: [0, mxr / 2, mxr], missing: function(){ return 'sem dados'; }, item: function(y){
+        if (el[y] == null) return null;
+        return { parts: [{ v: el[y], color: 'var(--accent)' }], partial: false, tip: y + ' · ' + fmtInt(el[y] * 1000) + ' eleitores', label: (y === 1998 || y === 2026 || y === 2022) ? f1(el[y]).replace(',0', '') : '' };
+      }});
+      drawBars($('extAbs'), { max: 80, ticks: [0, 40, 80], unit: '%', missing: function(){ return 'sem dados'; }, item: function(y){
+        var r1 = extHistRound(y, 1, iso), r2 = extHistRound(y, 2, iso), r = r2 && r2.abst != null ? r2 : r1;
+        if (!r1 && !r2) return null;
+        var v1 = r1 && r1.abst, v2 = r2 && r2.abst;
+        var v = v1 != null ? v1 : v2; if (v == null) return null;
+        return { parts: [{ v: v, color: 'var(--accent)' }], partial: !!(y === 2026 && (r1 || r2).partial),
+                 tip: y + ' · 1º turno ' + (v1 != null ? fmtPct(v1, 1) : '—') + ' · 2º turno ' + (v2 != null ? fmtPct(v2, 1) : '—'), label: f1(v) };
+      }});
+    } finally { HIST_YEARS = saveYears; }
+    $('extHistTable').innerHTML = '<thead><tr><th>Ano</th><th style="text-align:right">Eleitores</th><th style="text-align:right">Abstenção 1º / 2º</th><th>Mais votado · 1º turno</th><th>Mais votado · 2º turno</th></tr></thead><tbody>' +
+      YRS.slice().reverse().map(function(y){
+        var r1 = extHistRound(y, 1, iso), r2 = extHistRound(y, 2, iso), r = r1 || r2; if (!r) return '';
+        var w = function(rr){ if (!rr || !rr.cands.length) return '—'; var a = rr.cands[0], b = rr.cands[1];
+          return esc(a.nm) + ' ' + f1(a.pct) + '%' + (b ? ' <small>× ' + esc(b.nm) + ' ' + f1(b.pct) + '%</small>' : '') + (rr.partial ? '*' : ''); };
+        return '<tr' + (y === 2026 ? ' class="live"' : '') + '><td class="yr">' + y + '</td><td class="n">' + fmtInt(r.aptos) + '</td>' +
+          '<td class="n">' + (r1 && r1.abst != null ? f1(r1.abst) + '%' : '—') + ' / ' + (r2 && r2.abst != null ? f1(r2.abst) + '%' : '—') + '</td><td>' + w(r1) + '</td><td>' + w(r2) + '</td></tr>';
+      }).join('') + '</tbody>';
+  }
+
+  function selectCountry(iso){ state.ext.sel = iso; renderExt(); }
+  $('extSel').addEventListener('change', function(){ selectCountry(this.value || null); });
+  $('extMode').addEventListener('click', function(ev){
+    var b = ev.target.closest('button'); if (!b) return;
+    state.ext.mode = b.getAttribute('data-m');
+    Array.prototype.forEach.call($('extMode').children, function(x){ x.classList.toggle('on', x === b); });
+    renderExt();
+  });
+  $('extTable').addEventListener('click', function(ev){
+    var th = ev.target.closest('th'), X = state.ext;
+    if (th) { var k = th.getAttribute('data-k'); X.sortDir = X.sortKey === k ? -X.sortDir : (k === 'nm' || k === 'cont' ? 1 : -1); X.sortKey = k; renderExt(); return; }
+    var tr = ev.target.closest('tr.click'); if (tr) { selectCountry(tr.getAttribute('data-iso')); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+  });
+  (function(){
+    var box = $('tab-ext'), tip = $('exttip');
+    box.addEventListener('mousemove', function(ev){
+      var g = ev.target.closest && ev.target.closest('g[data-tip]');
+      if (!g) { tip.hidden = true; return; }
+      tip.textContent = g.getAttribute('data-tip').split(' ¦ ').join('\n'); tip.hidden = false;
+      var br = box.getBoundingClientRect(), gr = g.getBoundingClientRect();
+      tip.style.left = Math.max(4, Math.min(br.width - tip.offsetWidth - 4, gr.left + gr.width / 2 - br.left - tip.offsetWidth / 2)) + 'px';
+      tip.style.top = (gr.top - br.top - tip.offsetHeight + 8) + 'px';
+    });
+    box.addEventListener('mouseleave', function(){ tip.hidden = true; });
+  })();
+
   function renderRegions(){
+    var zz = state.data.ZZ;
+    var extCard = '<a class="region" href="#exterior" style="text-decoration:none;color:inherit;display:block">' +
+      '<h3>Exterior<small>' + (zz && zz.e ? fmtInt(zz.e) + ' eleitores' : 'eleitores fora do Brasil') + '</small></h3>' +
+      (zz && zz.e ? '<div class="ap"><span>Eleitorado apurado</span><b>' + fmtPct(zz.pea) + '</b></div><div class="bar"><i style="width:' + (zz.pea || 0) + '%"></i></div>' +
+        '<div class="falta"><span>Abstenção</span><b>' + (zz.ea ? fmtPct(zz.pa, 1) : '—') + '</b></div><div class="cands">' + candRows(zz.cands, 2) + '</div>' : '') +
+      '<div class="pj">Ver por país →</div></a>';
     $('regions').innerHTML = REGIONS.map(function(r){
       var d = aggregate(r.ufs);
       return '<div class="region' + (state.sel === r.id ? ' sel' : '') + '" data-r="' + r.id + '">' +
@@ -1072,7 +1391,7 @@ tr.click:hover td{background:var(--ink3)}
         '<div class="falta"><span>Faltam apurar</span><b>' + (d.e ? fmtInt(falta(d)) + ' eleitores' : '—') + '</b></div>' +
         '<div class="falta"><span>Abstenção</span><b>' + (d.ea ? fmtPct(d.pa, 1) + ' (' + fmtInt(d.a) + ')' : '—') + '</b></div>' +
         '<div class="cands">' + candRows(d.cands, 3, isRunoff() ? r.ufs : null) + '</div>' + projLine(r) + '</div>';
-    }).join('');
+    }).join('') + extCard;
   }
 
   var COLS = [
@@ -1101,7 +1420,7 @@ tr.click:hover td{background:var(--ink3)}
 
   // ── events ──
   $('regions').addEventListener('click', function(ev){
-    var el = ev.target.closest('.region'); if (!el) return;
+    var el = ev.target.closest('.region[data-r]'); if (!el) return;
     var id = el.getAttribute('data-r'); select(state.sel === id ? null : id);
   });
   $('table').addEventListener('click', function(ev){
@@ -1131,6 +1450,7 @@ tr.click:hover td{background:var(--ink3)}
       history.replaceState(null, '', '?' + q.toString());
     } catch (e) {}
     setStatus('', 'Carregando dados do TSE…'); render(); load().then(schedule, schedule); loadRef();
+    if (!$('tab-ext').hidden) loadExt().then(scheduleExt, scheduleExt);
   });
   $('refresh').addEventListener('click', function(){ load().then(schedule, schedule); });
   $('theme').addEventListener('click', function(){
