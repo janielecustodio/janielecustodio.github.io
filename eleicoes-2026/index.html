@@ -17,6 +17,8 @@
   --muted:#505775;--muted2:#7a8299;
   --body:#b2bace;--head:#e2e6f2;
   --accent:#8c9eff;--empty:#262b3b;--r:6px;
+  --rg-N:#3987e5;--rg-NE:#d95926;--rg-CO:#199e70;--rg-SE:#c98500;--rg-S:#d55181;
+  --sq1:#3a4377;--sq2:#5563b3;--sq3:#7b8ae6;--sq4:#b0bbff;
 }
 [data-theme="light"]{
   --ink:#f7f8fc;--ink2:#eef0f7;--ink3:#e6e8f2;
@@ -24,6 +26,8 @@
   --muted:#9299b0;--muted2:#626882;
   --body:#474e68;--head:#1a1d2e;
   --accent:#4a5cf0;--empty:#dde0ea;
+  --rg-N:#2a78d6;--rg-NE:#eb6834;--rg-CO:#1baf7a;--rg-SE:#eda100;--rg-S:#e87ba4;
+  --sq1:#c9cff8;--sq2:#93a0f0;--sq3:#5b6be0;--sq4:#2f3fb8;
 }
 body{background:var(--ink);color:var(--body);font-family:'IBM Plex Sans',sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh}
 a{color:var(--accent);text-decoration:none}
@@ -122,9 +126,24 @@ h1{font-size:22px;font-weight:600;color:var(--head);margin-top:6px}
 .hist .vl{font:500 10px 'IBM Plex Mono',monospace;fill:var(--head)}
 .hist g.bar path{opacity:.5;transition:opacity .15s}
 .hist g.bar.now path{opacity:1}
-.hist g.bar:hover path{opacity:1}
+.hist g.bar:hover path,.hist g.bar.solid path{opacity:1}
 .hist .hit{fill:transparent}
-.histtip{position:absolute;pointer-events:none;background:var(--ink3);border:1px solid var(--line2);border-radius:var(--r);padding:5px 8px;font:11px 'IBM Plex Mono',monospace;color:var(--head);white-space:nowrap;z-index:5}
+.histtip{white-space:pre;position:absolute;pointer-events:none;background:var(--ink3);border:1px solid var(--line2);border-radius:var(--r);padding:5px 8px;font:11px 'IBM Plex Mono',monospace;color:var(--head);z-index:5}
+.hist .ln{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.hist .ln.part{stroke-dasharray:4 3}
+.hist .dot{stroke:var(--ink2);stroke-width:2}
+.hist .el{font:500 10px 'IBM Plex Sans',sans-serif;fill:var(--body)}
+.hist .xh{stroke:var(--line2);stroke-width:1;opacity:0}
+.hist g.col:hover .xh{opacity:1}
+.sec-title{font-size:15px;font-weight:600;color:var(--head);margin:30px 0 4px}
+.sec-sub{font-size:12px;color:var(--muted2);margin-bottom:0}
+.dmgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px}
+@media(max-width:900px){.dmgrid{grid-template-columns:1fr}}
+.hist .rl{font:12px 'IBM Plex Sans',sans-serif;fill:var(--body)}
+.hist .rl.fac{fill:var(--muted2)}
+.hist .cn{stroke:var(--line2);stroke-width:2}
+.hist .nl{stroke:var(--muted2);stroke-width:1;stroke-dasharray:3 3}
+.seg.sm button{padding:3px 9px;font-size:11px}
 #histTable td.yr{font-weight:600;color:var(--head)}
 #histTable td small{color:var(--muted2);font-size:11px}
 #histTable tr.live td{background:var(--ink3)}
@@ -243,6 +262,16 @@ tr.click:hover td{background:var(--ink3)}
     </div>
 
     <div class="card hist">
+      <h2><span>Abstenção por região</span><small>% do eleitorado apto da região</small></h2>
+      <div class="legend" id="rgLegend" style="margin:0 0 8px"></div>
+      <div class="histgrid">
+        <figure><figcaption>1º turno</figcaption><svg id="rg1" role="img" aria-label="Abstenção por região no 1º turno"></svg></figure>
+        <figure><figcaption>2º turno</figcaption><svg id="rg2" role="img" aria-label="Abstenção por região no 2º turno"></svg></figure>
+      </div>
+      <p class="proj-note" style="margin:8px 0 0" id="rgNote"></p>
+    </div>
+
+    <div class="card hist">
       <h2><span>Votos brancos e nulos</span><small>% dos votos (comparecimento)</small></h2>
       <div class="legend" style="margin:0 0 8px"><span><i class="sw" style="background:var(--accent)"></i>Nulos</span><span><i class="sw" style="background:var(--muted2)"></i>Brancos</span></div>
       <div class="histgrid">
@@ -260,6 +289,32 @@ tr.click:hover td{background:var(--ink3)}
         <h2><span>Eleitorado apto</span><small>milhões de eleitores</small></h2>
         <svg id="eleit" role="img" aria-label="Eleitorado apto por ano"></svg>
       </div>
+    </div>
+
+    <h3 class="sec-title">Demografia do eleitorado</h3>
+    <p class="sec-sub">Perfil de quem está apto a votar e de quem deixa de votar. Fonte: TSE (perfil do eleitorado e perfil de comparecimento e abstenção).</p>
+
+    <div class="card hist">
+      <h2><span>Quem deixa de votar</span>
+        <span class="seg sm" id="dmTurno"><button data-t="1" class="on">1º turno</button><button data-t="2">2º turno</button></span></h2>
+      <div class="legend" id="dmLegend" style="margin:0 0 10px"></div>
+      <div class="dmgrid">
+        <figure><figcaption>Idade</figcaption><svg id="dmIdade" role="img" aria-label="Abstenção por faixa etária"></svg></figure>
+        <figure><figcaption>Escolaridade</figcaption><svg id="dmEsc" role="img" aria-label="Abstenção por escolaridade"></svg></figure>
+        <figure><figcaption>Gênero</figcaption><svg id="dmGen" role="img" aria-label="Abstenção por gênero"></svg></figure>
+      </div>
+      <p class="proj-note" style="margin:10px 0 0">% de abstenção dentro de cada grupo; a linha tracejada é a média nacional de 2022. Em cinza, faixas com <b>voto facultativo</b>
+        (16–17 anos e 70 anos ou mais), o que explica boa parte da abstenção alta acima dos 70; o voto também é facultativo para analfabetos, que o TSE agrupa com quem “lê e escreve”. Dados por perfil existem desde 2014;
+        o TSE não preencheu cor/raça nesses arquivos. Pela forma como o TSE monta este arquivo, o total pode diferir em até 0,02 p.p. do resultado oficial.</p>
+    </div>
+
+    <div class="card hist">
+      <h2><span>Quem é o eleitorado</span><small>% do eleitorado apto</small></h2>
+      <div class="histgrid">
+        <figure><figcaption>Idade</figcaption><div class="legend" id="peIdadeLg" style="margin:0 0 6px"></div><svg id="peIdade" role="img" aria-label="Eleitorado por faixa etária"></svg></figure>
+        <figure><figcaption>Escolaridade</figcaption><div class="legend" id="peEscLg" style="margin:0 0 6px"></div><svg id="peEsc" role="img" aria-label="Eleitorado por escolaridade"></svg></figure>
+      </div>
+      <p class="proj-note" style="margin:10px 0 0" id="peNote"></p>
     </div>
 
     <div class="histtip" id="histtip" hidden></div>
@@ -736,10 +791,10 @@ tr.click:hover td{background:var(--ink3)}
       var hit = '<rect class="hit" x="' + (cx - step / 2) + '" y="' + T + '" width="' + step + '" height="' + (H - T - B) + '"/>';
       if (!it) {
         out += '<text class="ax" x="' + cx + '" y="' + (y(0) - 4) + '" text-anchor="middle" opacity=".6">–</text>' +
-          '<g data-tip="' + yr + ' · ' + (yr === 2026 ? 'aguardando dados' : 'sem 2º turno') + '">' + hit + '</g>';
+          '<g data-tip="' + yr + ' · ' + (cfg.missing ? cfg.missing(yr) : yr === 2026 ? 'aguardando dados' : 'sem 2º turno') + '">' + hit + '</g>';
         return;
       }
-      var g = '<g class="bar' + (yr === 2026 ? ' now' : '') + '" data-tip="' + esc(it.tip) + '">' + hit, base = 0, n = it.parts.length;
+      var g = '<g class="bar' + (yr === 2026 ? ' now' : '') + (cfg.solid ? ' solid' : '') + '" data-tip="' + esc(it.tip) + '">' + hit, base = 0, n = it.parts.length;
       it.parts.forEach(function(pt, k){
         var y0 = y(base), y1 = y(base + pt.v), x0 = cx - bw / 2, x1 = cx + bw / 2;
         if (k > 0) y0 -= 2;                                   // 2px surface gap between stacked segments
@@ -754,6 +809,141 @@ tr.click:hover td{background:var(--ink3)}
     });
     svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
     svg.innerHTML = out;
+  }
+
+  // Regional abstention: TSE totals by UF for 1989-2022; 2026 from the live per-state files.
+  var HIST_REG = window.HIST_REGIOES || {};
+  function regAbst(yr, t, rid){
+    if (yr === 2026) {
+      var src = t === 1 ? (isRunoff() ? state.ref : state.data) : (isRunoff() ? state.data : null);
+      if (!src) return null;
+      var reg = REGIONS.filter(function(r){ return r.id === rid; })[0], ea = 0, a = 0, e = 0, st = 0, s = 0;
+      reg.ufs.forEach(function(u){ var d = src[u]; if (d) { ea += d.ea; a += d.a || 0; e += d.e; st += d.st; s += d.s; } });
+      return ea ? { v: a / ea * 100, partial: s ? st < s : true } : null;
+    }
+    var v = HIST_REG[yr] && HIST_REG[yr][t] && HIST_REG[yr][t][rid];
+    return v ? { v: v[1] / v[0] * 100, partial: false } : null;
+  }
+
+  // Multi-series line chart over HIST_YEARS; gaps (no runoff) break the line, a partial 2026 point is dashed.
+  function drawLines(svg, cfg){
+    var W = Math.max(260, Math.round(svg.getBoundingClientRect().width) || 320), H = cfg.h || 170, L = 34, R = 74, T = 10, B = 18;
+    var step = (W - L - R) / (HIST_YEARS.length - 1);
+    var x = function(i){ return L + step * i; }, y = function(v){ return T + (H - T - B) * (1 - v / cfg.max); };
+    var out = '';
+    cfg.ticks.forEach(function(v){
+      out += '<line class="gl" x1="' + L + '" x2="' + (W - R) + '" y1="' + y(v) + '" y2="' + y(v) + '"/>' +
+        '<text class="ax" x="' + (L - 5) + '" y="' + (y(v) + 3) + '" text-anchor="end">' + v + '%</text>';
+    });
+    HIST_YEARS.forEach(function(yr, i){
+      out += '<text class="ax" x="' + x(i) + '" y="' + (H - 4) + '" text-anchor="middle">\'' + String(yr).slice(2) + '</text>';
+    });
+    var ends = [];
+    cfg.series.forEach(function(sr){
+      var pts = HIST_YEARS.map(function(yr, i){ var p = cfg.value(yr, sr.id); return p ? { i: i, v: p.v, partial: p.partial } : null; });
+      var d = '', dp = '', prev = null;
+      pts.forEach(function(p){
+        if (!p) { prev = null; return; }
+        if (p.partial && prev) dp += 'M' + x(prev.i) + ' ' + y(prev.v) + 'L' + x(p.i) + ' ' + y(p.v);
+        else d += (prev ? 'L' : 'M') + x(p.i) + ' ' + y(p.v);
+        prev = p;
+      });
+      out += '<path class="ln" d="' + d + '" style="stroke:' + sr.color + '"/>';
+      if (dp) out += '<path class="ln part" d="' + dp + '" style="stroke:' + sr.color + '"/>';
+      pts.forEach(function(p){ if (p) out += '<circle class="dot" cx="' + x(p.i) + '" cy="' + y(p.v) + '" r="4" style="fill:' + sr.color + '"/>'; });
+      var last = pts.filter(Boolean).pop();
+      if (last) ends.push({ nm: sr.nm, y: y(last.v), x: x(last.i), color: sr.color });
+    });
+    // direct end labels, nudged apart so they never overlap
+    ends.sort(function(a, b){ return a.y - b.y; });
+    for (var k = 1; k < ends.length; k++) if (ends[k].y - ends[k - 1].y < 11) ends[k].y = ends[k - 1].y + 11;
+    var over = ends.length ? ends[ends.length - 1].y - (H - B) : 0;
+    if (over > 0) ends.forEach(function(e){ e.y -= over; });
+    ends.forEach(function(e){ out += '<text class="el" x="' + (W - R + 8) + '" y="' + (e.y + 3) + '">' + e.nm + '</text>'; });
+    // hover columns: one tooltip per year listing every series
+    HIST_YEARS.forEach(function(yr, i){
+      var lines = cfg.series.map(function(sr){ var p = cfg.value(yr, sr.id); return p ? sr.nm + ': ' + fmtPct(p.v, 1) + (p.partial ? '*' : '') : null; }).filter(Boolean);
+      var tip = yr + (lines.length ? ' ¦ ' + lines.join(' ¦ ') : ' · ' + (yr === 2026 ? 'aguardando dados' : 'sem 2º turno'));
+      out += '<g class="col" data-tip="' + esc(tip) + '"><line class="xh" x1="' + x(i) + '" x2="' + x(i) + '" y1="' + T + '" y2="' + (H - B) + '"/>' +
+        '<rect class="hit" x="' + (x(i) - step / 2) + '" y="' + T + '" width="' + step + '" height="' + (H - T - B) + '"/></g>';
+    });
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    svg.innerHTML = out;
+  }
+
+  // ── Demografia ──
+  var PERFIL = window.HIST_PERFIL || { comp: {}, eleitorado: {} };
+  var DM_YEARS = ['2014', '2018', '2022'], DM_COLORS = { '2014': 'var(--sq1)', '2018': 'var(--sq2)', '2022': 'var(--sq4)' };
+  var AGE = [['16-17', '16–17', 1], ['18-24', '18–24'], ['25-34', '25–34'], ['35-44', '35–44'], ['45-59', '45–59'], ['60-69', '60–69'], ['70+', '70+', 1]];
+  var ESC = [['ate_le', 'Analfabeto / lê e escreve'], ['fund', 'Fundamental'], ['medio', 'Médio'], ['sup', 'Superior']];
+  var GEN = [['F', 'Mulheres'], ['M', 'Homens']];
+  state.dmTurno = '1';
+
+  // Dot plot: one row per group, one dot per election year (sequential shade = time), joined by a thin range line.
+  function drawDots(svg, dim, cats, t){
+    var W = Math.max(260, Math.round(svg.getBoundingClientRect().width) || 300), LW = dim === 'escolaridade' ? 150 : 70, R = 34, T = 6, rowH = 24;
+    var H = T + cats.length * rowH + 18, max = 70;
+    var x = function(v){ return LW + (W - LW - R) * v / max; };
+    var out = '';
+    [0, 20, 40, 60].forEach(function(v){
+      out += '<line class="gl" x1="' + x(v) + '" x2="' + x(v) + '" y1="' + T + '" y2="' + (H - 16) + '"/>' +
+        '<text class="ax" x="' + x(v) + '" y="' + (H - 4) + '" text-anchor="middle">' + v + '%</text>';
+    });
+    var tot = HIST_BY[2022] && HIST_BY[2022].turnos[t];
+    if (tot) { var nv = tot.abstencoes / tot.aptos * 100;
+      out += '<line class="nl" x1="' + x(nv) + '" x2="' + x(nv) + '" y1="' + T + '" y2="' + (H - 16) + '"/>'; }
+    cats.forEach(function(c, i){
+      var cy = T + rowH * i + rowH / 2;
+      var vals = DM_YEARS.map(function(y){
+        var d = PERFIL.comp[y] && PERFIL.comp[y][t] && PERFIL.comp[y][t][dim] && PERFIL.comp[y][t][dim][c[0]];
+        return d ? { y: y, v: d[1] / d[0] * 100, n: d[0] } : null;
+      }).filter(Boolean);
+      out += '<text class="rl' + (c[2] ? ' fac' : '') + '" x="' + (LW - 8) + '" y="' + (cy + 4) + '" text-anchor="end">' + c[1] + '</text>';
+      if (!vals.length) return;
+      var lo = Math.min.apply(null, vals.map(function(p){ return p.v; })), hi = Math.max.apply(null, vals.map(function(p){ return p.v; }));
+      out += '<line class="cn" x1="' + x(lo) + '" x2="' + x(hi) + '" y1="' + cy + '" y2="' + cy + '"/>';
+      var tip = c[1] + ' ¦ ' + vals.map(function(p){ return p.y + ': ' + fmtPct(p.v, 1) + ' (' + fmtInt(p.n) + ' aptos)'; }).join(' ¦ ');
+      out += '<g class="col" data-tip="' + esc(tip) + '"><rect class="hit" x="' + LW + '" y="' + (cy - rowH / 2) + '" width="' + (W - LW) + '" height="' + rowH + '"/>';
+      vals.forEach(function(p){ out += '<circle class="dot" cx="' + x(p.v) + '" cy="' + cy + '" r="4.5" style="fill:' + DM_COLORS[p.y] + '"/>'; });
+      out += '</g>';
+      var last = vals[vals.length - 1];
+      out += '<text class="vl" x="' + (x(hi) + 8) + '" y="' + (cy + 3) + '">' + f1(last.v) + '</text>';
+    });
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    svg.innerHTML = out;
+  }
+
+  function renderDemography(){
+    $('dmLegend').innerHTML = DM_YEARS.map(function(y){ return '<span><i class="sw" style="background:' + DM_COLORS[y] + '"></i>' + y + '</span>'; }).join('') +
+      '<span style="color:var(--muted2)">número à direita = 2022</span>';
+    drawDots($('dmIdade'), 'idade', AGE, state.dmTurno);
+    drawDots($('dmEsc'), 'escolaridade', ESC, state.dmTurno);
+    drawDots($('dmGen'), 'genero', GEN, state.dmTurno);
+
+    // electorate composition, 100% stacked, ordered groups on a one-hue ramp
+    var EL = PERFIL.eleitorado;
+    function stack(svg, lg, dim, groups){
+      lg.innerHTML = groups.map(function(g){ return '<span><i class="sw" style="background:' + g.c + '"></i>' + g.nm + '</span>'; }).join('');
+      drawBars(svg, { max: 100, ticks: [0, 50, 100], unit: '%', h: 160, solid: true,
+        missing: function(yr){ return yr < 1994 ? 'sem dados de perfil' : 'TSE não registrou ' + (dim === 'idade' ? 'idade' : 'escolaridade') + ' neste ano'; },
+        item: function(yr){
+          var e = EL[yr]; if (!e || !e[dim]) return null;
+          var sum = 0; Object.keys(e[dim]).forEach(function(k){ sum += e[dim][k]; });
+          var parts = groups.map(function(g){ var v = 0; g.keys.forEach(function(k){ v += e[dim][k] || 0; }); return { v: v / sum * 100, color: g.c, nm: g.nm }; });
+          return { parts: parts, partial: false, tip: yr + ' ¦ ' + parts.slice().reverse().map(function(p){ return p.nm + ': ' + fmtPct(p.v, 1); }).join(' ¦ ') };
+        } });
+    }
+    stack($('peIdade'), $('peIdadeLg'), 'idade', [
+      { nm: '16–24', keys: ['16-17', '18-24'], c: 'var(--sq1)' }, { nm: '25–44', keys: ['25-34', '35-44'], c: 'var(--sq2)' },
+      { nm: '45–59', keys: ['45-59'], c: 'var(--sq3)' }, { nm: '60+', keys: ['60-69', '70+'], c: 'var(--sq4)' }]);
+    stack($('peEsc'), $('peEscLg'), 'escolaridade', [
+      { nm: 'Até lê e escreve', keys: ['ate_le'], c: 'var(--sq1)' }, { nm: 'Fundamental', keys: ['fund'], c: 'var(--sq2)' },
+      { nm: 'Médio', keys: ['medio'], c: 'var(--sq3)' }, { nm: 'Superior', keys: ['sup'], c: 'var(--sq4)' }]);
+    var share = function(y, dim, ks){ var e = EL[y]; if (!e || !e[dim]) return null; var a = 0, s = 0; Object.keys(e[dim]).forEach(function(k){ s += e[dim][k]; if (ks.indexOf(k) >= 0) a += e[dim][k]; }); return a / s * 100; };
+    $('peNote').innerHTML = 'Mulheres: ' + f1(share(1994, 'genero', ['F'])) + '% do eleitorado em 1994 → ' + f1(share(2026, 'genero', ['F'])) + '% em 2026. ' +
+      'Com 60 anos ou mais: ' + f1(share(2010, 'idade', ['60-69', '70+'])) + '% em 2010 → ' + f1(share(2026, 'idade', ['60-69', '70+'])) + '% em 2026. ' +
+      'Ensino superior: ' + f1(share(2002, 'escolaridade', ['sup'])) + '% em 2002 → ' + f1(share(2026, 'escolaridade', ['sup'])) + '% em 2026. ' +
+      'Escolaridade é a declarada no alistamento e nem sempre é atualizada depois.';
   }
 
   // Label only the extremes of the historical series and 2026, never every bar.
@@ -783,6 +973,15 @@ tr.click:hover td{background:var(--ink3)}
                  label: (yr === 2026 || yr === eb.hi || yr === eb.lo) ? f1(r.brancos + r.nulos) + (r.partial ? '*' : '') : '' };
       }});
     });
+    var series = REGIONS.map(function(r){ return { id: r.id, nm: r.nm, color: 'var(--rg-' + r.id + ')' }; });
+    $('rgLegend').innerHTML = series.map(function(sr){ return '<span><i class="sw" style="background:' + sr.color + '"></i>' + sr.nm + '</span>'; }).join('');
+    [1, 2].forEach(function(t){
+      drawLines($('rg' + t), { max: 35, ticks: [0, 10, 20, 30], series: series, value: function(yr, id){ return regAbst(yr, t, id); } });
+    });
+    var ex = HIST_REG[2022] && HIST_REG[2022]['1'] && HIST_REG[2022]['1'].ZZ;
+    $('rgNote').textContent = 'Em 1989 a abstenção no Norte (25,9%) era mais que o triplo da do Sudeste (7,4%); desde 2014 as cinco ficam numa faixa estreita (cerca de 17% a 24%), e o Sudeste passou a ter das maiores taxas.' +
+      (ex ? ' O voto no exterior fica fora das regiões: lá a abstenção passa de 50% (' + fmtPct(ex[1] / ex[0] * 100, 1) + ' no 1º turno de 2022).' : '');
+
     var mg = {}; HIST_YEARS.forEach(function(yr){ var r = decisive(yr); mg[yr] = r && r.cands[1] ? r.cands[0].pct - r.cands[1].pct : null; });
     var em = extremes(mg);
     drawBars($('margem'), { max: 30, ticks: [0, 10, 20, 30], item: function(yr){
@@ -799,6 +998,7 @@ tr.click:hover td{background:var(--ink3)}
                tip: yr + ' · ' + fmtInt(r.aptos) + ' eleitores',
                label: (yr === 1989 || yr === 2026 || (yr === 2022 && !roundOf(2026, 1))) ? f1(m) : '' };
     }});
+    renderDemography();
     renderHistTable();
   }
 
@@ -838,13 +1038,19 @@ tr.click:hover td{background:var(--ink3)}
     if (hist) { loadRef(); renderHistory(); } else render();
   }
   window.addEventListener('hashchange', showTab);
+  $('dmTurno').addEventListener('click', function(ev){
+    var b = ev.target.closest('button'); if (!b) return;
+    state.dmTurno = b.getAttribute('data-t');
+    Array.prototype.forEach.call($('dmTurno').children, function(x){ x.classList.toggle('on', x === b); });
+    renderDemography();
+  });
 
   (function(){
     var box = $('tab-hist'), tip = $('histtip');
     function move(ev){
       var g = ev.target.closest && ev.target.closest('g[data-tip]');
       if (!g) { tip.hidden = true; return; }
-      tip.textContent = g.getAttribute('data-tip'); tip.hidden = false;
+      tip.textContent = g.getAttribute('data-tip').split(' ¦ ').join('\n'); tip.hidden = false;   // ¦ = line break (attribute newlines get normalised)
       var br = box.getBoundingClientRect(), gr = g.getBoundingClientRect();
       var left = gr.left + gr.width / 2 - br.left - tip.offsetWidth / 2;
       tip.style.left = Math.max(4, Math.min(br.width - tip.offsetWidth - 4, left)) + 'px';
