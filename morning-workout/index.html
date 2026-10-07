@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Morning Workout — Janiele Custodio</title>
+<meta name="description" content="10-minute standing, low-impact interval workout that rotates focus every day.">
+<link rel="canonical" href="https://janielecustodio.com/morning-workout/">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Workout">
+<meta name="theme-color" content="#111318">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script>try{document.documentElement.setAttribute('data-theme',localStorage.getItem('jc_theme')||'dark')}catch(e){document.documentElement.setAttribute('data-theme','dark')}</script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#111318;--ink2:#16191f;--ink3:#1c2029;
+  --line:#22273a;--line2:#2c3248;
+  --muted:#505775;--muted2:#7a8299;
+  --body:#b2bace;--head:#e2e6f2;
+  --accent:#8c9eff;--good:#4caf7d;--r:8px;
+  --work:#f0a04b;--rest:#5fb8d6;--ready:#8c9eff;
+}
+[data-theme="light"]{
+  --ink:#f7f8fc;--ink2:#eef0f7;--ink3:#e6e8f2;
+  --line:#d8dce8;--line2:#c4c9da;
+  --muted:#9299b0;--muted2:#626882;
+  --body:#474e68;--head:#1a1d2e;
+  --accent:#4a5cf0;--good:#1f9d52;
+  --work:#c96a0a;--rest:#1f88ad;--ready:#4a5cf0;
+}
+html{-webkit-text-size-adjust:100%}
+body{
+  background:var(--ink);color:var(--body);
+  font-family:'IBM Plex Sans',sans-serif;font-size:15px;line-height:1.5;
+  min-height:100vh;-webkit-font-smoothing:antialiased;
+  padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+}
+button{font-family:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.mono{font-family:'IBM Plex Mono',monospace}
+.wrap{max-width:520px;margin:0 auto;padding:16px 16px 40px}
+
+/* top bar */
+.top{display:flex;align-items:center;gap:8px;margin-bottom:18px}
+.top a{color:var(--muted2);text-decoration:none;font-size:13px}
+.top h1{font-size:15px;font-weight:600;color:var(--head);margin-right:auto}
+.icon-btn{background:none;border:1px solid var(--line2);border-radius:var(--r);color:var(--muted2);
+  width:36px;height:36px;display:grid;place-items:center;font-size:16px}
+.icon-btn:hover{color:var(--head);border-color:var(--muted)}
+
+/* today card */
+.date{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted2);text-transform:uppercase;letter-spacing:.06em}
+.focus{font-size:26px;font-weight:600;color:var(--head);line-height:1.2;margin:4px 0 4px}
+.summary{font-size:13px;color:var(--muted2)}
+.done-badge{display:inline-block;margin-left:6px;color:var(--good);font-weight:500}
+
+.section-label{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:22px 0 8px}
+.ex-list{display:flex;flex-direction:column;gap:8px}
+.ex{display:flex;align-items:center;gap:12px;background:var(--ink2);border:1px solid var(--line);border-radius:var(--r);padding:12px}
+.ex-letter{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;flex-shrink:0;
+  font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:500;background:var(--ink3);color:var(--head)}
+.ex-body{flex:1;min-width:0}
+.ex-name{color:var(--head);font-weight:500}
+.ex-meta{font-size:12px;color:var(--muted2)}
+.ex .icon-btn{width:32px;height:32px;font-size:14px;flex-shrink:0}
+
+.timeline{display:flex;gap:4px;margin-top:10px}
+.timeline span{flex:1;height:22px;border-radius:4px;background:var(--ink3);display:grid;place-items:center;
+  font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted2)}
+
+.actions{display:flex;gap:8px;margin-top:22px}
+.btn{border:1px solid var(--line2);background:var(--ink2);color:var(--head);border-radius:var(--r);
+  padding:12px 14px;font-size:14px;font-weight:500}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{flex:1;background:var(--accent);border-color:var(--accent);color:#0d0f14;font-size:17px;font-weight:600;padding:16px}
+[data-theme="light"] .btn.primary{color:#fff}
+
+.week{display:flex;gap:6px;margin-top:6px}
+.day{flex:1;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted)}
+.day i{display:block;width:10px;height:10px;border-radius:50%;margin:0 auto 4px;border:1px solid var(--line2)}
+.day.on i{background:var(--good);border-color:var(--good)}
+.day.today{color:var(--head)}
+
+/* settings */
+dialog{margin:auto;border:1px solid var(--line2);border-radius:12px;background:var(--ink2);color:var(--body);
+  width:min(420px,calc(100vw - 32px));padding:20px}
+dialog::backdrop{background:rgba(0,0,0,.55)}
+dialog h2{font-size:16px;color:var(--head);margin-bottom:14px}
+.field{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.field label{font-size:14px}
+.field small{display:block;font-size:12px;color:var(--muted2)}
+.stepper{display:flex;align-items:center;gap:6px}
+.stepper button{width:32px;height:32px;border-radius:var(--r);border:1px solid var(--line2);background:var(--ink3);color:var(--head);font-size:16px}
+.stepper output{min-width:48px;text-align:center;font-family:'IBM Plex Mono',monospace;color:var(--head)}
+.field input[type=checkbox]{width:20px;height:20px;accent-color:var(--accent)}
+.dialog-foot{display:flex;justify-content:space-between;align-items:center;margin-top:16px;gap:8px}
+.dialog-foot .total{font-size:12px;color:var(--muted2)}
+
+/* timer screen */
+#timer{position:fixed;inset:0;background:var(--ink);display:none;flex-direction:column;z-index:100;
+  padding:calc(env(safe-area-inset-top) + 16px) 16px calc(env(safe-area-inset-bottom) + 20px)}
+#timer.show{display:flex}
+.t-top{display:flex;justify-content:space-between;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted2)}
+.t-main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:6px;min-height:0}
+.phase{font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:.14em;text-transform:uppercase;font-weight:500}
+.ring{position:relative;width:min(72vw,300px,42vh);aspect-ratio:1;margin:8px 0 14px}
+.ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.ring circle{fill:none;stroke-width:7}
+.ring .track{stroke:var(--line)}
+.ring .prog{stroke-linecap:round;transition:stroke .3s}
+.ring .num{position:absolute;inset:0;display:grid;place-items:center;font-family:'IBM Plex Mono',monospace;
+  font-size:clamp(56px,18vw,88px);font-weight:500;color:var(--head);font-variant-numeric:tabular-nums}
+.t-name{font-size:clamp(24px,7vw,32px);font-weight:600;color:var(--head);line-height:1.15;max-width:440px}
+.t-cue{font-size:15px;color:var(--muted2);max-width:400px;min-height:45px}
+.t-note{font-size:13px;font-weight:500;min-height:20px}
+.t-bar{height:4px;background:var(--line);border-radius:2px;overflow:hidden;margin-bottom:16px}
+.t-bar div{height:100%;background:var(--muted2);width:0}
+.t-controls{display:flex;justify-content:center;gap:14px;align-items:center}
+.t-controls .btn{width:58px;height:58px;border-radius:50%;padding:0;font-size:18px;display:grid;place-items:center}
+.t-controls .btn.big{width:76px;height:76px;font-size:24px;background:var(--head);color:var(--ink);border-color:var(--head)}
+.paused-flag{color:var(--work)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <a href="/vibing/">‹</a>
+    <h1>Morning Workout</h1>
+    <button class="icon-btn" id="themeBtn" title="Toggle theme" aria-label="Toggle theme">◐</button>
+    <button class="icon-btn" id="settingsBtn" title="Settings" aria-label="Settings">⚙</button>
+  </div>
+
+  <div class="date" id="dateLabel"></div>
+  <div class="focus" id="focusLabel"></div>
+  <div class="summary" id="summaryLabel"></div>
+
+  <div class="section-label" id="circuitLabel">Circuit</div>
+  <div class="ex-list" id="exList"></div>
+  <div class="timeline" id="timeline"></div>
+
+  <div class="actions">
+    <button class="btn" id="focusBtn" title="Switch to a different focus">Change focus</button>
+    <button class="btn" id="shuffleBtn" title="New exercises, same focus">↻ Shuffle</button>
+  </div>
+  <div class="actions">
+    <button class="btn primary" id="startBtn">Start</button>
+  </div>
+
+  <div class="section-label">Last 7 days</div>
+  <div class="week" id="week"></div>
+</div>
+
+<dialog id="settings">
+  <h2>Settings</h2>
+  <div class="field"><label>Work<small>seconds per exercise</small></label>
+    <div class="stepper" data-key="work" data-step="5" data-min="10" data-max="180"><button>−</button><output></output><button>+</button></div></div>
+  <div class="field"><label>Rest<small>seconds between exercises</small></label>
+    <div class="stepper" data-key="rest" data-step="5" data-min="0" data-max="120"><button>−</button><output></output><button>+</button></div></div>
+  <div class="field"><label>Rounds</label>
+    <div class="stepper" data-key="rounds" data-step="1" data-min="1" data-max="30"><button>−</button><output></output><button>+</button></div></div>
+  <div class="field"><label>Get ready<small>countdown before round 1</small></label>
+    <div class="stepper" data-key="prep" data-step="5" data-min="0" data-max="30"><button>−</button><output></output><button>+</button></div></div>
+  <div class="field"><label for="optVoice">Voice cues<small>says the exercise name</small></label><input type="checkbox" id="optVoice" data-key="voice"></div>
+  <div class="field"><label for="optBeep">Beeps<small>3-2-1 countdown</small></label><input type="checkbox" id="optBeep" data-key="beep"></div>
+  <div class="field"><label for="optBench">Bench / step available</label><input type="checkbox" id="optBench" data-key="bench"></div>
+  <div class="field"><label for="optDb">Use dumbbells</label><input type="checkbox" id="optDb" data-key="dumbbells"></div>
+  <div class="dialog-foot">
+    <button class="btn" id="resetSettings">Reset defaults</button>
+    <span class="total" id="totalLabel"></span>
+    <button class="btn" id="closeSettings">Done</button>
+  </div>
+</dialog>
+
+<div id="timer" role="dialog" aria-label="Workout timer">
+  <div class="t-top"><span id="tRound"></span><span id="tLeft"></span></div>
+  <div class="t-main">
+    <div class="phase" id="tPhase"></div>
+    <div class="ring">
+      <svg viewBox="0 0 100 100"><circle class="track" cx="50" cy="50" r="45"/><circle class="prog" id="tProg" cx="50" cy="50" r="45"/></svg>
+      <div class="num" id="tNum"></div>
+    </div>
+    <div class="t-name" id="tName"></div>
+    <div class="t-cue" id="tCue"></div>
+    <div class="t-note" id="tNote"></div>
+  </div>
+  <div class="t-bar"><div id="tBar"></div></div>
+  <div class="t-controls">
+    <button class="btn" id="tStop" aria-label="Stop">✕</button>
+    <button class="btn" id="tPrev" aria-label="Previous">⏮</button>
+    <button class="btn big" id="tPause" aria-label="Pause">❚❚</button>
+    <button class="btn" id="tNext" aria-label="Skip">⏭</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* ── Exercise library ──
+   Simple, familiar moves only. Everything is standing or hands-only on the floor
+   (planks OK, no lying down), low impact, no jumping. `sides` = one side at a time →
+   a "switch" cue at the halfway mark. `eq` = needs a bench or dumbbells.
+   `plank` = hands/forearms on the floor (max one of these per day). */
+const EXERCISES = [
+  // Legs
+  {id:'squat',        cat:'legs', name:'Squats', cue:'Feet shoulder-width, sit the hips back, chest up.'},
+  {id:'front-lunge',  cat:'legs', name:'Alternating front lunges', cue:'Step forward, both knees to about 90°, push back to standing.'},
+  {id:'rev-lunge',    cat:'legs', name:'Alternating reverse lunges', cue:'Step back, both knees to about 90°, push through the front heel.'},
+  {id:'lat-lunge',    cat:'legs', name:'Alternating side lunges', cue:'Big step to the side, sit into that hip, other leg straight.'},
+  {id:'split-squat',  cat:'legs', name:'Split squats', cue:'Staggered stance, lower straight down, front knee over the ankle.', sides:true},
+  {id:'squat-pulse',  cat:'legs', name:'Squat pulses', cue:'Stay low in a squat and pulse a few inches up and down.'},
+  {id:'wall-sit',     cat:'legs', name:'Wall sit', cue:'Back flat on the wall, thighs parallel to the floor.'},
+  {id:'squat-hold',   cat:'legs', name:'Squat hold', cue:'Sit into a squat and stay there. Arms forward for balance.'},
+  {id:'step-up',      cat:'legs', name:'Step-ups', cue:'Drive through the top foot, step down with control.', sides:true, eq:'bench'},
+  {id:'db-goblet',    cat:'legs', name:'Goblet squats', cue:'Hold one dumbbell at your chest, sit the hips back.', eq:'dumbbells'},
+  // Glutes
+  {id:'sumo-squat',   cat:'glutes', name:'Sumo squats', cue:'Wide stance, toes out, squeeze the glutes at the top.'},
+  {id:'sumo-pulse',   cat:'glutes', name:'Sumo squat pulses', cue:'Wide and low, small pulses up and down.'},
+  {id:'curtsy',       cat:'glutes', name:'Curtsy lunges', cue:'Step one leg behind and across, lower, return. Alternate.'},
+  {id:'kickback',     cat:'glutes', name:'Standing glute kickbacks', cue:'Hold something for balance, squeeze the glute to press the leg back.', sides:true},
+  {id:'side-raise',   cat:'glutes', name:'Standing side leg raises', cue:'Straight leg out to the side, toes forward, lower slowly.', sides:true},
+  {id:'hydrant',      cat:'glutes', name:'Standing fire hydrants', cue:'Knee bent, lift the leg out to the side from the hip.', sides:true},
+  {id:'good-morning', cat:'glutes', name:'Good mornings', cue:'Hands behind head, soft knees, hinge forward, squeeze glutes to stand.'},
+  {id:'db-rdl',       cat:'glutes', name:'Dumbbell deadlifts', cue:'Weights slide down the thighs, hips back, flat back.', eq:'dumbbells'},
+  // Calves
+  {id:'calf-raise',   cat:'calves', name:'Calf raises', cue:'Rise onto the balls of your feet, pause at the top, lower slowly.'},
+  {id:'slow-calf',    cat:'calves', name:'Slow calf raises', cue:'Three seconds up, three seconds down.'},
+  {id:'sl-calf',      cat:'calves', name:'Single-leg calf raises', cue:'One hand on the wall for balance, up and down on one foot.', sides:true},
+  {id:'calf-hold',    cat:'calves', name:'Calf raise hold', cue:'Up on your toes and hold. Hand on the wall if needed.'},
+  {id:'squat-calf',   cat:'calves', name:'Squat to calf raise', cue:'Squat down, stand up, rise onto your toes at the top.'},
+  {id:'step-calf',    cat:'calves', name:'Calf raises on a step', cue:'Heels hanging off the edge, lower below the step, rise up.', eq:'bench'},
+  // Core
+  {id:'plank',        cat:'core', name:'Forearm plank', cue:'Elbows under shoulders, squeeze the glutes, don\u2019t let the hips sag.', plank:true},
+  {id:'high-plank',   cat:'core', name:'High plank', cue:'Hands under shoulders, push the floor away, long body.', plank:true},
+  {id:'shoulder-tap', cat:'core', name:'Plank shoulder taps', cue:'High plank, tap the opposite shoulder, keep the hips still.', plank:true},
+  {id:'side-plank',   cat:'core', name:'Side plank', cue:'Forearm under the shoulder, hips high.', sides:true, plank:true},
+  {id:'climber',      cat:'core', name:'Slow mountain climbers', cue:'High plank, one knee to the chest at a time, no jumping.', plank:true},
+  {id:'cross-crunch', cat:'core', name:'Standing crunches', cue:'Hands behind head, bring elbow to the opposite knee.'},
+  {id:'side-crunch',  cat:'core', name:'Standing side crunches', cue:'Lift the knee out to the side and crunch the elbow down to meet it.', sides:true},
+  {id:'knee-march',   cat:'core', name:'High knee march', cue:'March in place, knees to hip height, brace your core.'},
+  {id:'side-bend',    cat:'core', name:'Standing side bends', cue:'Hands at your sides, bend slowly side to side.'},
+  // Arms
+  {id:'wall-pushup',  cat:'arms', name:'Wall push-ups', cue:'Hands on the wall at chest height, lower the chest to the wall, push away.'},
+  {id:'incline-pushup',cat:'arms',name:'Incline push-ups', cue:'Hands on a bench, body in a straight line.', eq:'bench'},
+  {id:'pushup',       cat:'arms', name:'Push-ups', cue:'Hands under the shoulders, body in one line.', plank:true},
+  {id:'bench-dip',    cat:'arms', name:'Bench dips', cue:'Hands on the bench edge behind you, elbows to 90°, press up.', eq:'bench'},
+  {id:'arm-circles',  cat:'arms', name:'Arm circles', cue:'Arms out at shoulder height, small circles.', sides:true, switchCue:'Switch direction'},
+  {id:'punches',      cat:'arms', name:'Punches', cue:'Alternate quick, controlled punches straight ahead.'},
+  {id:'plank-updown', cat:'arms', name:'Plank up-downs', cue:'Forearm plank to high plank, one arm at a time.', plank:true},
+  {id:'db-curl',      cat:'arms', name:'Bicep curls', cue:'Elbows pinned to your sides, slow on the way down.', eq:'dumbbells'},
+  {id:'db-press',     cat:'arms', name:'Shoulder press', cue:'Press straight up, ribs down.', eq:'dumbbells'},
+  {id:'db-row',       cat:'arms', name:'Bent-over rows', cue:'Hinge forward, pull the elbows back past the ribs.', eq:'dumbbells'},
+];
+const BY_ID = Object.fromEntries(EXERCISES.map(e => [e.id, e]));
+const CAT_LABEL = {legs:'Legs', glutes:'Glutes', calves:'Calves', core:'Core', arms:'Arms'};
+const UPPER = new Set(['core','arms']);
+
+/* Each day: two lower-body moves + one upper-body move, done 3× each,
+   then one finisher from the other upper-body group.
+   With 10 rounds that's 6 lower / 4 upper = 60/40. Rotates by calendar day. */
+const FOCUSES = [
+  {main:['legs','glutes','core'],  fin:'arms'},
+  {main:['legs','calves','arms'],  fin:'core'},
+  {main:['glutes','legs','arms'],  fin:'core'},
+  {main:['glutes','calves','core'],fin:'arms'},
+];
+
+const DEFAULTS = {work:45, rest:15, rounds:10, prep:10, voice:true, beep:true, bench:true, dumbbells:false};
+
+/* ── storage (never required; app works without it) ── */
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} },
+};
+let settings = Object.assign({}, DEFAULTS, store.get('mw_settings', {}));
+
+/* ── dates ── */
+const pad = n => String(n).padStart(2,'0');
+const dayKey = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const dayNumber = d => Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 864e5);
+
+/* ── seeded random, so a given day/shuffle is stable ── */
+function rng(seed){
+  let h = 1779033703;
+  for (const c of String(seed)) h = Math.imul(h ^ c.charCodeAt(0), 3432918353), h = h << 13 | h >>> 19;
+  return () => { h = Math.imul(h ^ h >>> 16, 2246822507); h = Math.imul(h ^ h >>> 13, 3266489909); h ^= h >>> 16; return (h >>> 0) / 4294967296; };
+}
+const pick = (arr, r) => arr[Math.floor(r() * arr.length)];
+
+function eligible(cat, exclude){
+  const ok = e => e.cat === cat && (!e.eq || settings[e.eq]) && !exclude.includes(e.id);
+  return EXERCISES.filter(ok);
+}
+
+function buildPlan(focusIdx, seed){
+  const r = rng(seed), f = FOCUSES[focusIdx], ids = [];
+  for (const c of [...f.main, f.fin]) ids.push(pickFor(c, ids, r));
+  return {date: dayKey(new Date()), focusIdx, seed, ids};
+}
+// At most one floor (plank-type) exercise per day.
+function pickFor(cat, taken, r){
+  let pool = eligible(cat, taken);
+  if (taken.some(id => BY_ID[id].plank)){ const off = pool.filter(e => !e.plank); if (off.length) pool = off; }
+  return pick(pool, r).id;
+}
+
+function todayPlan(){
+  const today = dayKey(new Date());
+  let p = store.get('mw_plan', null);
+  // also rebuild if equipment settings make a saved exercise unavailable
+  const valid = p && p.date === today && FOCUSES[p.focusIdx] && p.ids.length === 4 &&
+    p.ids.every(id => BY_ID[id] && (!BY_ID[id].eq || settings[BY_ID[id].eq]));
+  if (!valid){
+    const focusIdx = p && p.date === today ? p.focusIdx : dayNumber(new Date()) % FOCUSES.length;
+    p = buildPlan(focusIdx, today + ':' + Math.random());
+    store.set('mw_plan', p);
+  }
+  return p;
+}
+let plan = todayPlan();
+
+/* Round order: A B C repeated, last round is the finisher. */
+function roundSequence(){
+  const n = settings.rounds;
+  const main = plan.ids.slice(0, 3);
+  if (n === 1) return [main[0]];
+  const seq = [];
+  for (let i = 0; i < n - 1; i++) seq.push(main[i % 3]);
+  seq.push(plan.ids[3]);
+  return seq;
+}
+
+/* ── rendering: home ── */
+const $ = id => document.getElementById(id);
+const fmt = s => { s = Math.max(0, Math.round(s)); return `${Math.floor(s/60)}:${pad(s%60)}`; };
+const totalSeconds = () => settings.rounds * settings.work + (settings.rounds - 1) * settings.rest;
+
+function renderHome(){
+  const now = new Date();
+  $('dateLabel').textContent = now.toLocaleDateString(undefined, {weekday:'long', month:'short', day:'numeric'});
+  const f = FOCUSES[plan.focusIdx];
+  $('focusLabel').textContent = [...f.main, f.fin].map(c => CAT_LABEL[c]).join(' · ');
+  const history = store.get('mw_history', []);
+  const doneToday = history.includes(dayKey(now));
+  $('summaryLabel').innerHTML = `${settings.rounds} rounds · ${settings.work}s on / ${settings.rest}s off · ${fmt(totalSeconds())} total` +
+    (doneToday ? '<span class="done-badge">✓ done today</span>' : '');
+
+  const seq = roundSequence();
+  const upper = seq.filter(id => UPPER.has(BY_ID[id].cat)).length;
+  $('summaryLabel').innerHTML += `<br>${Math.round(100 * (seq.length - upper) / seq.length)}% lower body · ${Math.round(100 * upper / seq.length)}% upper body`;
+  const counts = {};
+  seq.forEach(id => counts[id] = (counts[id] || 0) + 1);
+  const letters = ['A','B','C','★'];
+  $('exList').innerHTML = plan.ids.map((id, i) => {
+    const e = BY_ID[id];
+    if (!counts[id]) return '';
+    const label = (i === 3 ? 'Finisher · ' : '') + CAT_LABEL[e.cat];
+    return `<div class="ex">
+      <div class="ex-letter">${letters[i]}</div>
+      <div class="ex-body"><div class="ex-name">${e.name}</div>
+        <div class="ex-meta">${label} · ×${counts[id]}${e.sides ? ' · switch halfway' : ''}</div></div>
+      <button class="icon-btn" data-swap="${i}" title="Swap this exercise" aria-label="Swap ${e.name}">↻</button>
+    </div>`;
+  }).join('');
+  $('timeline').innerHTML = seq.map(id => `<span>${letters[plan.ids.indexOf(id)]}</span>`).join('');
+
+  const days = [];
+  for (let i = 6; i >= 0; i--){
+    const d = new Date(now); d.setDate(d.getDate() - i);
+    const on = history.includes(dayKey(d));
+    days.push(`<div class="day${on ? ' on' : ''}${i === 0 ? ' today' : ''}"><i></i>${d.toLocaleDateString(undefined,{weekday:'narrow'})}</div>`);
+  }
+  $('week').innerHTML = days.join('');
+}
+
+$('exList').addEventListener('click', ev => {
+  const b = ev.target.closest('[data-swap]'); if (!b) return;
+  const i = +b.dataset.swap;
+  const others = plan.ids.filter((_, j) => j !== i);
+  const pool = eligible(BY_ID[plan.ids[i]].cat, plan.ids);
+  if (!pool.length) return;
+  plan.ids[i] = pickFor(BY_ID[plan.ids[i]].cat, plan.ids, Math.random);
+  // if that created a second floor exercise, re-pick the other one
+  const j = others.map(id => plan.ids.indexOf(id)).find(k => BY_ID[plan.ids[k]].plank);
+  if (BY_ID[plan.ids[i]].plank && j !== undefined)
+    plan.ids[j] = pickFor(BY_ID[plan.ids[j]].cat, plan.ids.filter((_, k) => k !== j), Math.random);
+  store.set('mw_plan', plan); renderHome();
+});
+$('shuffleBtn').onclick = () => { plan = buildPlan(plan.focusIdx, Math.random()); store.set('mw_plan', plan); renderHome(); };
+$('focusBtn').onclick = () => { plan = buildPlan((plan.focusIdx + 1) % FOCUSES.length, Math.random()); store.set('mw_plan', plan); renderHome(); };
+$('themeBtn').onclick = () => {
+  const t = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', t);
+  try{ localStorage.setItem('jc_theme', t); }catch(e){}
+};
+
+/* ── settings ── */
+function renderSettings(){
+  document.querySelectorAll('.stepper').forEach(s => {
+    const k = s.dataset.key;
+    s.querySelector('output').textContent = k === 'rounds' ? settings[k] : settings[k] + 's';
+  });
+  document.querySelectorAll('dialog input[type=checkbox]').forEach(c => c.checked = !!settings[c.dataset.key]);
+  $('totalLabel').textContent = fmt(totalSeconds()) + ' total';
+}
+function saveSettings(){ store.set('mw_settings', settings); renderSettings(); plan = todayPlan(); renderHome(); }
+document.querySelectorAll('.stepper').forEach(s => {
+  const [minus, plus] = s.querySelectorAll('button');
+  const step = +s.dataset.step, min = +s.dataset.min, max = +s.dataset.max, k = s.dataset.key;
+  minus.onclick = () => { settings[k] = Math.max(min, settings[k] - step); saveSettings(); };
+  plus.onclick  = () => { settings[k] = Math.min(max, settings[k] + step); saveSettings(); };
+});
+document.querySelectorAll('dialog input[type=checkbox]').forEach(c => c.onchange = () => { settings[c.dataset.key] = c.checked; saveSettings(); });
+$('settingsBtn').onclick = () => { renderSettings(); $('settings').showModal(); };
+$('closeSettings').onclick = () => $('settings').close();
+$('resetSettings').onclick = () => { settings = Object.assign({}, DEFAULTS); saveSettings(); };
+
+/* ── audio & voice ── */
+let actx = null;
+function unlockAudio(){
+  try{
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    if (actx.state === 'suspended') actx.resume();
+  }catch(e){ actx = null; }
+}
+function beep(freq = 880, dur = 0.12, vol = 0.25){
+  if (!settings.beep || !actx) return;
+  const t = actx.currentTime, o = actx.createOscillator(), g = actx.createGain();
+  o.type = 'sine'; o.frequency.value = freq;
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g).connect(actx.destination); o.start(t); o.stop(t + dur + 0.02);
+}
+function say(text){
+  if (!settings.voice || !('speechSynthesis' in window)) return;
+  try{ speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.rate = 1.02; speechSynthesis.speak(u); }catch(e){}
+}
+
+/* ── wake lock (keep screen on) ── */
+let wakeLock = null;
+async function lockScreen(){ try{ if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); }catch(e){} }
+function unlockScreen(){ try{ wakeLock && wakeLock.release(); }catch(e){} wakeLock = null; }
+document.addEventListener('visibilitychange', () => { if (run && document.visibilityState === 'visible') lockScreen(); });
+
+/* ── timer engine ──
+   Time is computed from timestamps, not by counting ticks, so it stays accurate
+   if the phone throttles the page. */
+let run = null;
+const CIRC = 2 * Math.PI * 45;
+$('tProg').style.strokeDasharray = CIRC;
+
+function buildSegments(){
+  const seq = roundSequence(), segs = [];
+  if (settings.prep > 0) segs.push({type:'ready', dur:settings.prep, ex:BY_ID[seq[0]], round:1});
+  seq.forEach((id, i) => {
+    segs.push({type:'work', dur:settings.work, ex:BY_ID[id], round:i + 1});
+    if (i < seq.length - 1 && settings.rest > 0) segs.push({type:'rest', dur:settings.rest, ex:BY_ID[seq[i + 1]], round:i + 2});
+  });
+  return segs;
+}
+
+function enterSeg(i, at, announce = true){
+  run.i = i; run.start = at; run.lastSec = null; run.halfDone = false;
+  const s = run.segs[i];
+  if (!announce) return;
+  if (s.type === 'work'){ beep(1320, 0.35, 0.3); say(s.ex.name); }
+  else if (s.type === 'rest'){ beep(660, 0.3); say(`Rest. Next, ${s.ex.name}`); }
+  else say(`Get ready. First, ${s.ex.name}`);
+}
+
+function startWorkout(){
+  unlockAudio();
+  run = {segs: buildSegments(), paused:false};
+  enterSeg(0, performance.now());
+  $('timer').classList.add('show');
+  lockScreen();
+  loop();
+}
+
+function tick(){
+  if (!run || run.paused) return;
+  const now = performance.now();
+  let s = run.segs[run.i];
+  // advance through any segments that elapsed (handles a throttled background tab)
+  while ((now - run.start) / 1000 >= s.dur){
+    const end = run.start + s.dur * 1000;
+    if (run.i + 1 >= run.segs.length){ finish(); return; }
+    enterSeg(run.i + 1, end, now - end < 1500);
+    s = run.segs[run.i];
+  }
+  const el = (now - run.start) / 1000, rem = s.dur - el, sec = Math.ceil(rem);
+  if (sec !== run.lastSec){
+    if (run.lastSec !== null && sec >= 1 && sec <= 3) beep(880, 0.12);
+    run.lastSec = sec;
+  }
+  if (s.type === 'work' && s.ex.sides && !run.halfDone && el >= s.dur / 2){
+    run.halfDone = true; beep(1100, 0.2); beep(1100, 0.2); say(s.ex.switchCue || 'Switch sides');
+  }
+  renderTimer(s, rem, el);
+}
+function loop(){ if (!run) return; tick(); requestAnimationFrame(loop); }
+setInterval(tick, 250); // keeps cues firing if rAF is paused
+
+function renderTimer(s, rem, el){
+  const color = {work:'var(--work)', rest:'var(--rest)', ready:'var(--ready)'}[s.type];
+  const n = settings.rounds;
+  $('tPhase').textContent = run.paused ? 'Paused' : {work:'Work', rest:'Rest', ready:'Get ready'}[s.type];
+  $('tPhase').style.color = run.paused ? 'var(--work)' : color;
+  $('tProg').style.stroke = color;
+  $('tProg').style.strokeDashoffset = CIRC * (el / s.dur);
+  $('tNum').textContent = Math.max(0, Math.ceil(rem));
+  $('tName').textContent = (s.type === 'work' ? '' : 'Next: ') + s.ex.name;
+  $('tCue').textContent = s.ex.cue;
+  $('tRound').textContent = `Round ${s.round} / ${n}`;
+  let left = rem; for (let j = run.i + 1; j < run.segs.length; j++) left += run.segs[j].dur;
+  $('tLeft').textContent = fmt(left) + ' left';
+  const total = run.segs.reduce((a, x) => a + x.dur, 0);
+  $('tBar').style.width = (100 * (1 - left / total)) + '%';
+  let note = '';
+  if (s.type === 'work' && s.ex.sides) note = run.halfDone ? (s.ex.switchCue ? 'Other direction' : 'Second side') : `${s.ex.switchCue || 'Switch sides'} at ${fmt(s.dur / 2)}`;
+  if (s.type === 'work' && s.round === n && n > 1) note = note ? note + ' · last round' : 'Last round 💪';
+  $('tNote').textContent = note; $('tNote').style.color = color;
+  $('tPause').textContent = run.paused ? '▶' : '❚❚';
+}
+
+function finish(){
+  const h = store.get('mw_history', []), k = dayKey(new Date());
+  if (!h.includes(k)){ h.push(k); store.set('mw_history', h.slice(-120)); }
+  beep(1320, 0.15); setTimeout(() => beep(1760, 0.4), 180);
+  say('Done. Great work.');
+  closeTimer();
+}
+function closeTimer(){ run = null; $('timer').classList.remove('show'); unlockScreen(); renderHome(); }
+
+$('tPause').onclick = () => {
+  if (!run) return;
+  const now = performance.now();
+  if (run.paused){ run.start += now - run.pausedAt; run.paused = false; unlockAudio(); }
+  else { run.paused = true; run.pausedAt = now; try{ speechSynthesis.cancel(); }catch(e){} }
+  const s = run.segs[run.i], el = ((run.paused ? run.pausedAt : now) - run.start) / 1000;
+  renderTimer(s, s.dur - el, el);
+};
+function jump(i){
+  if (!run) return;
+  i = Math.max(0, Math.min(run.segs.length - 1, i));
+  const now = performance.now();
+  enterSeg(i, now);
+  if (run.paused) run.pausedAt = now;
+  const s = run.segs[i]; renderTimer(s, s.dur, 0);
+}
+$('tNext').onclick = () => { if (!run) return; run.i + 1 >= run.segs.length ? finish() : jump(run.i + 1); };
+$('tPrev').onclick = () => {
+  if (!run) return;
+  const el = ((run.paused ? run.pausedAt : performance.now()) - run.start) / 1000;
+  jump(el > 3 ? run.i : run.i - 1);
+};
+$('tStop').onclick = () => { if (confirm('End this workout?')){ try{ speechSynthesis.cancel(); }catch(e){} closeTimer(); } };
+$('startBtn').onclick = startWorkout;
+
+// a new day while the app sat open → refresh the plan
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && !run && plan.date !== dayKey(new Date())){ plan = todayPlan(); renderHome(); }
+});
+
+renderHome();
+</script>
+</body>
+</html>
