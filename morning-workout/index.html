@@ -170,6 +170,7 @@ dialog h2{font-size:16px;color:var(--head);margin-bottom:14px}
   <div class="field"><label for="optBench">Bench / step available</label><input type="checkbox" id="optBench" data-key="bench"></div>
   <div class="field"><label for="optDb">Use dumbbells</label><input type="checkbox" id="optDb" data-key="dumbbells"></div>
   <div class="dialog-foot">
+    <button class="btn" id="testSound">🔊 Test</button>
     <button class="btn" id="resetSettings">Reset defaults</button>
     <span class="total" id="totalLabel"></span>
     <button class="btn" id="closeSettings">Done</button>
@@ -416,6 +417,14 @@ document.querySelectorAll('.stepper').forEach(s => {
 document.querySelectorAll('dialog input[type=checkbox]').forEach(c => c.onchange = () => { settings[c.dataset.key] = c.checked; saveSettings(); });
 $('settingsBtn').onclick = () => { renderSettings(); $('settings').showModal(); };
 $('closeSettings').onclick = () => $('settings').close();
+$('testSound').onclick = () => {
+  unlockAudio();
+  const was = {beep: settings.beep, voice: settings.voice};
+  settings.beep = settings.voice = true;
+  beep(880, 0.12); setTimeout(() => beep(880, 0.12), 400); setTimeout(() => beep(1320, 0.35, 0.3), 800);
+  say('Sound check. Next, squats.');
+  Object.assign(settings, was);
+};
 $('resetSettings').onclick = () => { settings = Object.assign({}, DEFAULTS); saveSettings(); };
 
 /* ── audio & voice ── */
@@ -466,7 +475,11 @@ function enterSeg(i, at, announce = true){
   const s = run.segs[i];
   if (!announce) return;
   if (s.type === 'work'){ beep(1320, 0.35, 0.3); say(s.ex.name); }
-  else if (s.type === 'rest'){ beep(660, 0.3); say(`Rest. Next, ${s.ex.name}`); }
+  else if (s.type === 'rest'){
+    beep(660, 0.3);
+    const last = s.round === settings.rounds && settings.rounds > 1;
+    say(`Rest. ${last ? 'Last round' : `Round ${s.round} of ${settings.rounds}`}: ${s.ex.name}`);
+  }
   else say(`Get ready. First, ${s.ex.name}`);
 }
 
