@@ -442,9 +442,26 @@ function beep(freq = 880, dur = 0.12, vol = 0.25){
   g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
   o.connect(g).connect(actx.destination); o.start(t); o.stop(t + dur + 0.02);
 }
+// Always speak English, whatever the phone's language is.
+let enVoice = null;
+function pickVoice(){
+  try{
+    const vs = speechSynthesis.getVoices().filter(v => /^en[-_]/i.test(v.lang) || v.lang === 'en');
+    const rank = v => (/^en[-_]US/i.test(v.lang) ? 0 : /^en[-_]GB/i.test(v.lang) ? 1 : 2) - (v.localService ? 0.5 : 0);
+    enVoice = vs.sort((a, b) => rank(a) - rank(b))[0] || null;
+  }catch(e){}
+}
+if ('speechSynthesis' in window){ pickVoice(); speechSynthesis.addEventListener?.('voiceschanged', pickVoice); }
 function say(text){
   if (!settings.voice || !('speechSynthesis' in window)) return;
-  try{ speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.rate = 1.02; speechSynthesis.speak(u); }catch(e){}
+  try{
+    speechSynthesis.cancel();
+    if (!enVoice) pickVoice();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = enVoice ? enVoice.lang : 'en-US';
+    if (enVoice) u.voice = enVoice;
+    u.rate = 1.02; speechSynthesis.speak(u);
+  }catch(e){}
 }
 
 /* ── wake lock (keep screen on) ── */
