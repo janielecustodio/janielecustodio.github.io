@@ -478,9 +478,9 @@ function enterSeg(i, at, announce = true){
   else if (s.type === 'rest'){
     beep(660, 0.3);
     const last = s.round === settings.rounds && settings.rounds > 1;
-    say(`Rest. ${last ? 'Last round' : `Round ${s.round} of ${settings.rounds}`}: ${s.ex.name}`);
+    say(`Rest. Coming up${last ? ', last round' : ''}: ${s.ex.name}.`);
   }
-  else say(`Get ready. First, ${s.ex.name}`);
+  else say(`Get ready. Coming up: ${s.ex.name}.`);
 }
 
 function startWorkout(){
