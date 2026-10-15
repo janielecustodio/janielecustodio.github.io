@@ -82,12 +82,17 @@ h1{font-size:22px;font-weight:600;color:var(--head);margin-top:6px}
 #map g.uf:hover path{opacity:.8}
 #map g.uf.sel path{stroke:var(--head);stroke-width:2.2}
 #mapBack{padding:2px 8px;font-size:11px}
+.bub circle{stroke:var(--ink2);stroke-width:1px;vector-effect:non-scaling-stroke;fill-opacity:.82;cursor:pointer}
+.bub circle:hover{stroke:var(--head);stroke-width:1.5px}
+.bub circle.on{stroke:var(--head);stroke-width:2px}
+.bubbled path.m,.bubbled g.uf path{fill:var(--empty)!important;fill-opacity:1!important}
 .mapwrap{position:relative}
 #mapMun{width:100%;height:auto;display:block;touch-action:manipulation}
 #mapMun path.m{stroke:var(--ink2);stroke-width:.25px;vector-effect:non-scaling-stroke;cursor:pointer}
 #mapMun path.m:hover{stroke:var(--head);stroke-width:1px}
 #mapMun path.m.on{stroke:var(--head);stroke-width:2px}
 #mapMun path.u{fill:none;stroke:var(--ink);stroke-width:1.2px;vector-effect:non-scaling-stroke;pointer-events:none}
+#map .bub{pointer-events:auto}
 #map text{font:600 15px 'IBM Plex Mono',monospace;fill:#fff;pointer-events:none;paint-order:stroke;stroke:rgba(0,0,0,.45);stroke-width:3px}
 .legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;font-size:12px}
 .legend span{display:inline-flex;align-items:center;gap:6px}
@@ -232,6 +237,7 @@ tr.click:hover td{background:var(--ink3)}
   <div class="grid">
     <div class="card">
       <h2><span id="mapTitle">Quem lidera em cada município</span><small id="mapHint">clique num município</small>
+        <span class="seg sm" id="size" title="Como colorir o mapa"><button data-s="cor" class="on" title="tom = vantagem em pontos percentuais">% vantagem</button><button data-s="tons" title="tom = vantagem em número de votos">Saldo</button><button data-s="votos" title="círculos do tamanho dos votos válidos">○ Votos</button><button data-s="saldo" title="círculos do tamanho do saldo de votos">○ Saldo</button></span>
         <button class="btn" id="mapBack" hidden>← Brasil</button></h2>
       <div class="mapwrap">
         <svg id="map" role="img" aria-label="Mapa do Brasil por estado" hidden></svg>
@@ -441,7 +447,7 @@ tr.click:hover td{background:var(--ink3)}
   }
   var state = {
     eleicao: initialElection(), ref: {},
-    mode: 'mun', sel: null, mun: { data: null, e: null, missing: false, sel: null }, data: {}, colors: {}, sortKey: 'uf', sortDir: 1,
+    mode: 'mun', size: 'cor', sel: null, mun: { data: null, e: null, missing: false, sel: null }, data: {}, colors: {}, sortKey: 'uf', sortDir: 1,
     demo: params.get('demo') === '1', timer: null, lastOk: null
   };
 
@@ -707,6 +713,60 @@ tr.click:hover td{background:var(--ink3)}
     return { color: colorOf(lead.n), op: op };
   }
 
+  // ── Proportional circles ("Votos" / "Saldo") ──
+  // Circle AREA is proportional to the value: valid votes, or the lead in votes of the 1st over the 2nd.
+  function bubbleValue(d){
+    if (!d || !d.cands || !d.cands.length) return 0;
+    if (state.size === 'saldo') return Math.max(0, (d.cands[0].votos || 0) - ((d.cands[1] && d.cands[1].votos) || 0));
+    return d.vv || d.cands.reduce(function(s, c){ return s + (c.votos || 0); }, 0);
+  }
+  function saldoOf(d){ return d && d.cands && d.cands[0] && d.cands[0].votos ? d.cands[0].votos - ((d.cands[1] && d.cands[1].votos) || 0) : 0; }
+  // "Saldo" tones: leader's colour, darker = bigger lead in votes, on a log scale (leads run from 1 to 500k+)
+  function saldoShade(d, lmax){
+    var v = saldoOf(d); if (!d || !d.cands.length || !d.cands[0].votos) return null;
+    // scale starts at 10 votes so small and large leads separate visibly
+    var t = lmax > 1 ? (Math.log10(v + 1) - 1) / (lmax - 1) : 0;
+    return { color: colorOf(d.cands[0].n), op: 0.08 + 0.92 * Math.max(0, Math.min(1, t)) };
+  }
+  function saldoLegend(lmax){
+    var nat = national(), ticks = [];
+    for (var k = 1; k <= Math.floor(lmax); k++) ticks.push(Math.pow(10, k));
+    var lab = function(v){ return v >= 1e6 ? (v / 1e6) + ' mi' : v >= 1e3 ? (v / 1e3) + ' mil' : String(v); };
+    return (nat.cands || []).filter(function(c){ return c.votos; }).slice(0, 2).map(function(c){
+        return '<span>' + esc(c.nm) + ' <i style="display:inline-block;width:70px;height:10px;border-radius:3px;vertical-align:middle;background:linear-gradient(90deg,' +
+          colorOf(c.n) + '1f,' + colorOf(c.n) + ')"></i></span>'; }).join('') +
+      '<span style="color:var(--muted2)">tom = saldo em votos de quem venceu ali (escala logarítmica: ' + ticks.filter(function(_, i){ return i % 2 === 0 || i === ticks.length - 1; }).map(lab).join(' · ') + ')</span>';
+  }
+  function bubbleTip(d){
+    var a = d.cands[0], b = d.cands[1];
+    if (state.size === 'saldo') return a.nm + ' +' + fmtInt(bubbleValue(d)) + ' votos sobre ' + (b ? b.nm : '—');
+    return fmtInt(bubbleValue(d)) + ' votos válidos · ' + a.nm + ' ' + fmtPct(a.pct, 1);
+  }
+  // items: [{x, y, d, attr, label}] -> circles drawn largest first so small ones stay clickable on top
+  function drawBubbles(svg, items, rmax){
+    var g = svg.querySelector('g.bub');
+    if (!g) { g = document.createElementNS('http://www.w3.org/2000/svg', 'g'); g.setAttribute('class', 'bub'); svg.appendChild(g); }
+    var on = state.size === 'votos' || state.size === 'saldo';
+    svg.classList.toggle('bubbled', on);
+    if (!on) { g.innerHTML = ''; return null; }
+    var vmax = 0, top = null;
+    items.forEach(function(it){ it.v = bubbleValue(it.d); if (it.v > vmax) { vmax = it.v; top = it; } });
+    items.sort(function(a, b){ return b.v - a.v; });
+    g.innerHTML = items.filter(function(it){ return it.v > 0; }).map(function(it){
+      var r = rmax * Math.sqrt(it.v / vmax), lead = it.d.cands[0];
+      return '<circle ' + it.attr + (it.on ? ' class="on"' : '') + ' cx="' + it.x.toFixed(1) + '" cy="' + it.y.toFixed(1) + '" r="' + Math.max(r, 0.6).toFixed(2) +
+        '" style="fill:' + colorOf(lead.n) + '"><title>' + esc(it.label + ' — ' + bubbleTip(it.d)) + '</title></circle>';
+    }).join('');
+    return top && { label: top.label, v: top.v };
+  }
+  function bubbleLegend(top){
+    var nat = national();
+    return (nat.cands || []).filter(function(c){ return c.votos; }).slice(0, 2).map(function(c){
+        return '<span><i class="sw" style="background:' + colorOf(c.n) + ';border-radius:50%"></i>' + esc(c.nm) + '</span>'; }).join('') +
+      '<span style="color:var(--muted2)">' + (state.size === 'saldo' ? 'área do círculo = vantagem em votos do 1º sobre o 2º colocado, na cor de quem está à frente'
+        : 'área do círculo = votos válidos, na cor de quem lidera') + (top ? ' · maior: ' + esc(top.label) + ' (' + fmtInt(top.v) + ')' : '') + '</span>';
+  }
+
   // ── Map by municipality ──
   // Results per municipality come from dados/mun-<eleicao>.json on this site, built from the TSE's
   // per-municipality files by scripts/municipios.py (run by a GitHub Action on election night).
@@ -768,7 +828,7 @@ tr.click:hover td{background:var(--ink3)}
       svg.innerHTML = h;
       var tip = $('maptip');
       var show = function(ev){
-        var p = ev.target.closest && ev.target.closest('path.m');
+        var p = ev.target.closest && ev.target.closest('[data-c]');
         if (!p) { tip.hidden = true; return null; }
         var ibge = p.getAttribute('data-c'), d = M.data && M.data[ibge];
         var nm = d ? d.nome + ' (' + d.uf + ')' : IBGE_UF[ibge.slice(0, 2)];
@@ -802,15 +862,26 @@ tr.click:hover td{background:var(--ink3)}
     svg.setAttribute('viewBox', vb);
     var abs = state.mode === 'abs', vals = [];
     if (abs && M.data) Object.keys(M.data).forEach(function(k){ var d = M.data[k]; if (d.ea) vals.push(d.pa); });
-    var lo = pctile(vals, 0.05), hi = pctile(vals, 0.95);
+    var lo = pctile(vals, 0.05), hi = pctile(vals, 0.95), lmax = 0;
+    if (M.data) Object.keys(M.data).forEach(function(k){ var v = saldoOf(M.data[k]); if (v > 0) lmax = Math.max(lmax, Math.log10(v + 1)); });
     Array.prototype.forEach.call(svg.querySelectorAll('path.m'), function(p){
       var ibge = p.getAttribute('data-c'), d = M.data && M.data[ibge];
-      var sh = d ? (abs ? absShade(d, lo, hi) : leaderShade(d)) : null;
+      var sh = d ? (abs ? absShade(d, lo, hi) : state.size === 'tons' ? saldoShade(d, lmax) : leaderShade(d)) : null;
       p.style.fill = sh ? sh.color : 'var(--empty)';
       p.style.fillOpacity = sh ? Math.min(1, sh.op) : 1;
       p.classList.toggle('on', M.sel === ibge);
     });
-    return { lo: lo, hi: hi, n: vals.length };
+    var bub = null;
+    if (!abs) {
+      if (!M.cent) { M.cent = {}; Array.prototype.forEach.call(svg.querySelectorAll('path.m'), function(p){ var b = p.getBBox(); M.cent[p.getAttribute('data-c')] = [b.x + b.width / 2, b.y + b.height / 2]; }); }
+      var items = [];
+      if (M.data) Object.keys(M.data).forEach(function(ibge){
+        var c = M.cent[ibge], d = M.data[ibge]; if (!c) return;
+        items.push({ x: c[0], y: c[1], d: d, attr: 'data-c="' + ibge + '"', label: d.nome + ' (' + d.uf + ')', on: M.sel === ibge });
+      });
+      bub = drawBubbles(svg, items, 85);
+    } else { var keep = state.size; state.size = 'cor'; drawBubbles(svg, [], 0); state.size = keep; }
+    return { lo: lo, hi: hi, n: vals.length, bub: bub, lmax: lmax };
   }
 
   function renderMap(){
@@ -818,13 +889,18 @@ tr.click:hover td{background:var(--ink3)}
     // SVG elements have no .hidden property, so toggle the attribute itself
     $('map').toggleAttribute('hidden', useMun); $('mapMun').toggleAttribute('hidden', !useMun);
     $('mapBack').hidden = !(state.sel && (useMun || state.mode === 'uf'));
+    $('size').hidden = state.mode === 'abs';
     $('mapHint').textContent = useMun ? (state.sel ? 'clique num município · toque de novo para desmarcar' : 'clique num município para ampliar o estado') : state.mode === 'reg' ? 'clique numa região' : 'clique num estado';
     if (useMun) {
       var r = renderMunMap(), nat = national();
-      $('mapTitle').textContent = state.mode === 'abs' ? 'Abstenção por município' : 'Quem lidera em cada município';
+      $('mapTitle').textContent = state.mode === 'abs' ? 'Abstenção por município' : state.size === 'tons' || state.size === 'saldo' ? 'Saldo de votos por município' : 'Quem lidera em cada município';
       if (state.mode === 'abs') {
         $('legend').innerHTML = r.n ? '<span>' + fmtPct(r.lo, 1) + '</span><span class="grad"></span><span>' + fmtPct(r.hi, 1) + '</span>' +
           '<span style="color:var(--muted2)">abstenção nas seções apuradas (escala do 5º ao 95º percentil dos municípios)</span>' : '<span style="color:var(--muted2)">sem dados de abstenção ainda</span>';
+      } else if (state.size === 'tons') {
+        $('legend').innerHTML = saldoLegend(r.lmax);
+      } else if (state.size !== 'cor') {
+        $('legend').innerHTML = bubbleLegend(r.bub);
       } else {
         $('legend').innerHTML = (nat.cands || []).filter(function(c){ return c.votos; }).slice(0, 4).map(function(c){
           return '<span><i class="sw" style="background:' + colorOf(c.n) + '"></i>' + esc(c.nm) + '</span>';
@@ -850,7 +926,9 @@ tr.click:hover td{background:var(--ink3)}
       });
       svg.innerHTML = html;
       svg.addEventListener('click', function(ev){
-        var g = ev.target.closest('g.uf'); if (!g) return;
+        var rg = ev.target.closest('[data-reg]');
+        if (rg) { select(state.sel === rg.getAttribute('data-reg') ? null : rg.getAttribute('data-reg')); return; }
+        var g = ev.target.closest('[data-uf]'); if (!g) return;
         var uf = g.getAttribute('data-uf');
         if (state.mode === 'reg') select(UF_REGION[uf].id); else select(state.sel === uf ? null : uf);   // 'mun' fallback acts like 'uf'
       });
@@ -861,10 +939,13 @@ tr.click:hover td{background:var(--ink3)}
 
     var absVals = UFS.map(function(u){ return state.data[u] && state.data[u].ea ? state.data[u].pa : null; }).filter(function(v){ return v != null; });
     var absMin = absVals.length ? Math.min.apply(null, absVals) : 0, absMax = absVals.length ? Math.max.apply(null, absVals) : 0;
+    var slmax = 0;
+    (state.mode === 'reg' ? REGIONS.map(function(r){ return regAgg[r.id]; }) : UFS.map(function(u){ return state.data[u]; }))
+      .forEach(function(d){ var v = saldoOf(d); if (v > 0) slmax = Math.max(slmax, Math.log10(v + 1)); });
     Array.prototype.forEach.call(svg.querySelectorAll('g.uf'), function(g){
       var uf = g.getAttribute('data-uf');
       var d = state.mode === 'reg' ? regAgg[UF_REGION[uf].id] : state.data[uf];
-      var sh = state.mode === 'abs' ? absShade(d, absMin, absMax) : leaderShade(d);
+      var sh = state.mode === 'abs' ? absShade(d, absMin, absMax) : state.size === 'tons' ? saldoShade(d, slmax) : leaderShade(d);
       var p = g.querySelector('path');
       p.style.fill = sh ? sh.color : 'var(--empty)';
       p.style.fillOpacity = sh ? sh.op : 1;
@@ -875,7 +956,19 @@ tr.click:hover td{background:var(--ink3)}
         (state.mode === 'abs' ? (d && d.ea ? ' — abstenção ' + fmtPct(d.pa, 1) : '') : (lead && lead.votos ? ' — ' + lead.nm + ' ' + fmtPct(lead.pct) : '')) +
         (d ? ' · apurado ' + fmtPct(d.pea, 1) : '');
     });
-    var nat = national();
+    var nat = national(), items = [];
+    if (state.mode === 'reg') REGIONS.forEach(function(r){
+      var x = 0, y = 0; r.ufs.forEach(function(u){ x += M.states[u].c[0]; y += M.states[u].c[1]; });
+      items.push({ x: x / r.ufs.length, y: y / r.ufs.length, d: regAgg[r.id], attr: 'data-reg="' + r.id + '"', label: 'Região ' + r.nm, on: state.sel === r.id });
+    });
+    else if (state.mode !== 'abs') UFS.forEach(function(u){
+      if (state.data[u]) items.push({ x: M.states[u].c[0], y: M.states[u].c[1], d: state.data[u], attr: 'data-uf="' + u + '"', label: UF_NAMES[u], on: state.sel === u });
+    });
+    var keep = state.size; if (state.mode === 'abs') state.size = 'cor';
+    var bub = drawBubbles(svg, items, state.mode === 'reg' ? 120 : 70);
+    state.size = keep;
+    if (state.mode !== 'abs' && state.size === 'tons') { $('legend').innerHTML = saldoLegend(slmax); return; }
+    if (state.mode !== 'abs' && state.size !== 'cor') { $('legend').innerHTML = bubbleLegend(bub); return; }
     if (state.mode === 'abs') {
       $('legend').innerHTML = absVals.length
         ? '<span>' + fmtPct(absMin, 1) + '</span><span class="grad"></span><span>' + fmtPct(absMax, 1) + '</span><span style="color:var(--muted2)">abstenção entre os eleitores das seções já apuradas</span>'
@@ -1594,6 +1687,12 @@ tr.click:hover td{background:var(--ink3)}
     setMode(b.getAttribute('data-m')); state.sel = null; state.mun.sel = null;
     if (munMode() && state.mun.e !== state.eleicao) loadMun();
     renderMap(); renderDetail(); renderRegions();
+  });
+  $('size').addEventListener('click', function(ev){
+    var b = ev.target.closest('button'); if (!b) return;
+    state.size = b.getAttribute('data-s');
+    Array.prototype.forEach.call($('size').children, function(x){ x.classList.toggle('on', x === b); });
+    renderMap();
   });
   $('mapBack').addEventListener('click', function(){ state.sel = null; state.mun.sel = null; renderMap(); renderDetail(); renderRegions(); });
   $('detail').addEventListener('click', function(ev){
