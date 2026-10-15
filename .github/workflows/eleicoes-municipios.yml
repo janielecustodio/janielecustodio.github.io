@@ -1,0 +1,57 @@
+# Election night: gather the TSE's per-municipality presidential results into
+# eleicoes-2026/dados/mun-<eleicao>.json so the map can colour every municipality.
+# The TSE publishes one file per municipality (~5,570); browsers cannot poll that many,
+# so this job does it every few minutes and commits the compact result.
+name: Eleições 2026 · resultados por município
+
+on:
+  schedule:
+    # 2º turno, 25/10/2026: 17h-23h59 in Brasília (UTC-3) and the early hours after.
+    # Each run loops for ~25 minutes, so runs every 30 minutes give continuous coverage.
+    - cron: '0,30 20-23 25 10 *'
+    - cron: '0,30 0-5 26 10 *'
+  workflow_dispatch:
+    inputs:
+      eleicao:
+        description: 'Código da eleição no TSE (6257 = 1º turno, 6258 = 2º turno)'
+        default: '6258'
+      minutos:
+        description: 'Por quantos minutos repetir a coleta'
+        default: '25'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: eleicoes-municipios
+  cancel-in-progress: false
+
+jobs:
+  coletar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Collect and publish
+        env:
+          ELEICAO: ${{ github.event.inputs.eleicao || '6258' }}
+          MINUTOS: ${{ github.event.inputs.minutos || '25' }}
+        run: |
+          # the schedule repeats every year; only collect for this election
+          if [ "${{ github.event_name }}" = schedule ] && [ "$(date -u +%Y)" != 2026 ]; then echo 'not 2026'; exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          out="eleicoes-2026/dados/mun-${ELEICAO}.json"
+          end=$(( $(date +%s) + MINUTOS * 60 ))
+          while [ "$(date +%s)" -lt "$end" ]; do
+            python3 eleicoes-2026/scripts/municipios.py "$ELEICAO" --out "$out" || true
+            if [ -f "$out" ]; then
+              git add "$out"
+              if ! git diff --cached --quiet; then
+                git commit -q -m "Resultados por município (eleição ${ELEICAO})"
+                git pull -q --rebase origin "$GITHUB_REF_NAME" && git push -q origin "HEAD:$GITHUB_REF_NAME" || echo 'push failed; will retry next round'
+              fi
+            fi
+            sleep 180
+          done
