@@ -80,6 +80,13 @@ h1{font-size:22px;font-weight:600;color:var(--head);margin-top:6px}
 #map path{stroke:var(--ink2);stroke-width:1.2;stroke-linejoin:round;cursor:pointer;transition:fill .4s,opacity .2s}
 #map g.uf:hover path{opacity:.8}
 #map g.uf.sel path{stroke:var(--head);stroke-width:2.2}
+#mapBack{padding:2px 8px;font-size:11px}
+.mapwrap{position:relative}
+#mapMun{width:100%;height:auto;display:block;touch-action:manipulation}
+#mapMun path.m{stroke:var(--ink2);stroke-width:.25px;vector-effect:non-scaling-stroke;cursor:pointer}
+#mapMun path.m:hover{stroke:var(--head);stroke-width:1px}
+#mapMun path.m.on{stroke:var(--head);stroke-width:2px}
+#mapMun path.u{fill:none;stroke:var(--ink);stroke-width:1.2px;vector-effect:non-scaling-stroke;pointer-events:none}
 #map text{font:600 15px 'IBM Plex Mono',monospace;fill:#fff;pointer-events:none;paint-order:stroke;stroke:rgba(0,0,0,.45);stroke-width:3px}
 .legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;font-size:12px}
 .legend span{display:inline-flex;align-items:center;gap:6px}
@@ -199,7 +206,8 @@ tr.click:hover td{background:var(--ink3)}
         <button data-e="6258">2º turno</button>
       </div>
       <div class="seg" id="mode">
-        <button data-m="uf" class="on">Por estado</button>
+        <button data-m="mun" class="on">Por município</button>
+        <button data-m="uf">Por estado</button>
         <button data-m="reg">Por região</button>
         <button data-m="abs">Abstenção</button>
       </div>
@@ -222,8 +230,13 @@ tr.click:hover td{background:var(--ink3)}
 
   <div class="grid">
     <div class="card">
-      <h2><span id="mapTitle">Quem lidera em cada estado</span><small>clique num estado</small></h2>
-      <svg id="map" role="img" aria-label="Mapa do Brasil por estado"></svg>
+      <h2><span id="mapTitle">Quem lidera em cada município</span><small id="mapHint">clique num município</small>
+        <button class="btn" id="mapBack" hidden>← Brasil</button></h2>
+      <div class="mapwrap">
+        <svg id="map" role="img" aria-label="Mapa do Brasil por estado" hidden></svg>
+        <svg id="mapMun" role="img" aria-label="Mapa do Brasil por município"></svg>
+        <div class="histtip" id="maptip" hidden></div>
+      </div>
       <div class="legend" id="legend"></div>
     </div>
     <div class="card">
@@ -255,7 +268,11 @@ tr.click:hover td{background:var(--ink3)}
     Fonte: arquivos públicos de divulgação do <a href="https://resultados.tse.jus.br/oficial/app/index.html" target="_blank" rel="noopener">TSE</a>
     (<span class="mono">/oficial/ele2026/{eleição}/dados</span>). Atualiza a cada 30 s com a aba aberta.<br>
     <b>% apurado do eleitorado</b> = eleitores das seções já totalizadas ÷ eleitorado apto (é o que reflete a população já contada; o % de seções aparece ao lado).
-    Os totais por região somam os votos de cada estado; o voto no exterior entra só no total do Brasil.
+    Os totais por região somam os votos de cada estado; o voto no exterior entra só no total do Brasil.<br>
+    <b>Mapa por município:</b> o TSE não publica o contorno das zonas eleitorais (uma zona pode cobrir vários municípios ou parte de uma cidade),
+    então o recorte mais fino possível é o município. O TSE divulga um arquivo por município; um robô deste site (GitHub Actions) junta os 5.571
+    em <span class="mono">dados/mun-{eleição}.json</span> a cada 3 minutos na noite da apuração. Malha municipal do IBGE (2010, via
+    <a href="https://github.com/tbrugz/geodata-br" target="_blank" rel="noopener">geodata-br</a>): os 7 municípios criados depois de 2010 aparecem dentro do município de origem no mapa.
     Projeto independente, sem vínculo com a Justiça Eleitoral.
   </p>
   </div>
@@ -384,6 +401,7 @@ tr.click:hover td{background:var(--ink3)}
 </div>
 
 <script src="map-data.js"></script>
+<script src="mun-map.js"></script>
 <script src="historico-data.js"></script>
 <script src="world-data.js"></script>
 <script src="exterior-data.js"></script>
@@ -422,7 +440,7 @@ tr.click:hover td{background:var(--ink3)}
   }
   var state = {
     eleicao: initialElection(), ref: {},
-    mode: 'uf', sel: null, data: {}, colors: {}, sortKey: 'uf', sortDir: 1,
+    mode: 'mun', sel: null, mun: { data: null, e: null, missing: false, sel: null }, data: {}, colors: {}, sortKey: 'uf', sortDir: 1,
     demo: params.get('demo') === '1', timer: null, lastOk: null
   };
 
@@ -521,6 +539,7 @@ tr.click:hover td{background:var(--ink3)}
         return;
       }
       state.data = data; state.lastOk = new Date();
+      if (munMode() && !$('tab-live').hidden) loadMun();   // municipal file refreshes on the same 30 s cycle
       var found = Object.keys(data).filter(function(k){ return data[k]; }).length;
       if (!state.demo) showBanner(found ? '' : isRunoff()
         ? 'O 2º turno é no domingo, <b>25 de outubro</b>. A votação vai das 8h às 17h (horário de Brasília) e o TSE começa a divulgar os resultados a partir das 17h. Esta página atualiza sozinha a cada 30 s.'
@@ -687,7 +706,137 @@ tr.click:hover td{background:var(--ink3)}
     return { color: colorOf(lead.n), op: op };
   }
 
+  // ── Map by municipality ──
+  // Results per municipality come from dados/mun-<eleicao>.json on this site, built from the TSE's
+  // per-municipality files by scripts/municipios.py (run by a GitHub Action on election night).
+  var IBGE_UF = {11:'RO',12:'AC',13:'AM',14:'RR',15:'PA',16:'AP',17:'TO',21:'MA',22:'PI',23:'CE',24:'RN',25:'PB',26:'PE',27:'AL',28:'SE',29:'BA',
+                 31:'MG',32:'ES',33:'RJ',35:'SP',41:'PR',42:'SC',43:'RS',50:'MS',51:'MT',52:'GO',53:'DF'};
+  function munMode(){ return (state.mode === 'mun' || state.mode === 'abs') && !!window.MUN_MAP; }
+
+  function parseMun(r, names){
+    var vv = r[8] || 0;
+    var cands = (r[7] || []).map(function(x){
+      var nm = names[x[0]] || [x[0], ''];
+      return { n: x[0], nm: nm[0], partido: nm[1], votos: x[1], pct: vv ? x[1] / vv * 100 : 0 };
+    });
+    return { nome: r[0], uf: r[1], e: r[2], ea: r[3], a: r[4], st: r[5], s: r[6], cands: cands, vv: vv,
+             pea: r[2] ? r[3] / r[2] * 100 : null, pa: r[3] ? r[4] / r[3] * 100 : null, pst: r[6] ? r[5] / r[6] * 100 : null };
+  }
+
+  function demoMun(){
+    var out = {}, mins = Math.floor(Date.now() / 60000), runoff = isRunoff();
+    Object.keys(window.MUN_MAP.m).forEach(function(ibge){
+      var h = 0; for (var i = 0; i < ibge.length; i++) h = (h * 31 + ibge.charCodeAt(i)) % 9973;
+      var uf = IBGE_UF[ibge.slice(0, 2)], lean = { N:.02, NE:.18, CO:-.12, SE:-.03, S:-.15 }[UF_REGION[uf].id] + ((h % 41) - 20) / 100;
+      var e = 2000 + (h % 97) * 300, ap = Math.min(1, 0.3 + ((h % 50) + (mins % 60)) / 120), ea = e * ap, a = ea * (0.12 + (h % 15) / 100), vv = (ea - a) * 0.93;
+      var A = Math.max(0.05, Math.min(0.9, (runoff ? 0.5 : 0.44) + lean)), B = (runoff ? 1 : 0.88) - A;
+      out[ibge] = parseMun(['Município ' + ibge, uf, e, Math.round(ea), Math.round(a), 1, 1,
+        [['10', Math.round(vv * A)], ['21', Math.round(vv * B)]], Math.round(vv * (A + B))], { '10': ['Candidato A', 'PARTIDO A'], '21': ['Candidato B', 'PARTIDO B'] });
+    });
+    return out;
+  }
+
+  function loadMun(){
+    var M = state.mun, e = state.eleicao;
+    if (!window.MUN_MAP) return Promise.resolve();
+    if (state.demo) { M.data = demoMun(); M.e = e; M.missing = false; renderMap(); return Promise.resolve(); }
+    return fetch('dados/mun-' + e + '.json', { cache: 'no-cache' }).then(function(r){
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    }).then(function(j){
+      if (state.eleicao !== e) return;
+      var data = {};
+      Object.keys(j.m).forEach(function(ibge){ data[ibge] = parseMun(j.m[ibge], j.c || {}); });
+      M.data = data; M.e = e; M.missing = false; M.gerado = j.gerado;
+      renderMap(); renderDetail();
+    }).catch(function(){
+      if (state.eleicao !== e) return;
+      if (M.e !== e) { M.data = null; M.e = e; }
+      M.missing = !M.data; renderMap();
+    });
+  }
+
+  function pctile(arr, q){ if (!arr.length) return 0; var a = arr.slice().sort(function(x, y){ return x - y; }); return a[Math.min(a.length - 1, Math.floor(q * a.length))]; }
+
+  function renderMunMap(){
+    var svg = $('mapMun'), MM = window.MUN_MAP, M = state.mun;
+    if (!svg.firstChild) {
+      var h = '';
+      Object.keys(MM.m).forEach(function(ibge){ h += '<path class="m" data-c="' + ibge + '" d="' + MM.m[ibge] + '"/>'; });
+      Object.keys(MM.uf).forEach(function(c){ h += '<path class="u" data-uf="' + IBGE_UF[c] + '" d="' + MM.uf[c] + '"/>'; });
+      svg.innerHTML = h;
+      var tip = $('maptip');
+      var show = function(ev){
+        var p = ev.target.closest && ev.target.closest('path.m');
+        if (!p) { tip.hidden = true; return null; }
+        var ibge = p.getAttribute('data-c'), d = M.data && M.data[ibge];
+        var nm = d ? d.nome + ' (' + d.uf + ')' : IBGE_UF[ibge.slice(0, 2)];
+        var lead = d && d.cands[0], sec = d && d.cands[1];
+        tip.textContent = nm + (d ? (state.mode === 'abs' ? ' ¦ abstenção ' + fmtPct(d.pa, 1) :
+          (lead && lead.votos ? ' ¦ ' + lead.nm + ' ' + fmtPct(lead.pct, 1) + (sec ? ' ¦ ' + sec.nm + ' ' + fmtPct(sec.pct, 1) : '') : ' ¦ sem votos apurados')) +
+          ' ¦ apurado ' + fmtPct(d.pea, 0) : '').split(' ¦ ').join('\n');
+        tip.hidden = false;
+        var wr = svg.parentNode.getBoundingClientRect();
+        var x = ev.clientX - wr.left + 12, y = ev.clientY - wr.top + 12;
+        if (x + tip.offsetWidth > wr.width) x = ev.clientX - wr.left - tip.offsetWidth - 12;
+        tip.style.left = Math.max(0, x) + 'px'; tip.style.top = y + 'px';
+        return ibge;
+      };
+      svg.addEventListener('mousemove', show);
+      svg.addEventListener('mouseleave', function(){ tip.hidden = true; });
+      svg.addEventListener('click', function(ev){
+        var ibge = show(ev); if (!ibge) return;
+        var uf = IBGE_UF[ibge.slice(0, 2)];
+        M.sel = M.sel === ibge ? null : ibge;
+        state.sel = uf;                                   // zoom into the municipality's state
+        renderMap(); renderDetail(); renderRegions();
+      });
+    }
+    // zoom: whole country, or the selected state's box
+    var vb = '0 0 ' + MM.w + ' ' + MM.h;
+    if (state.sel && UF_NAMES[state.sel]) {
+      var u = svg.querySelector('path.u[data-uf="' + state.sel + '"]');
+      if (u) { var b = u.getBBox(), pad = Math.max(b.width, b.height) * 0.06; vb = (b.x - pad) + ' ' + (b.y - pad) + ' ' + (b.width + 2 * pad) + ' ' + (b.height + 2 * pad); }
+    }
+    svg.setAttribute('viewBox', vb);
+    var abs = state.mode === 'abs', vals = [];
+    if (abs && M.data) Object.keys(M.data).forEach(function(k){ var d = M.data[k]; if (d.ea) vals.push(d.pa); });
+    var lo = pctile(vals, 0.05), hi = pctile(vals, 0.95);
+    Array.prototype.forEach.call(svg.querySelectorAll('path.m'), function(p){
+      var ibge = p.getAttribute('data-c'), d = M.data && M.data[ibge];
+      var sh = d ? (abs ? absShade(d, lo, hi) : leaderShade(d)) : null;
+      p.style.fill = sh ? sh.color : 'var(--empty)';
+      p.style.fillOpacity = sh ? Math.min(1, sh.op) : 1;
+      p.classList.toggle('on', M.sel === ibge);
+    });
+    return { lo: lo, hi: hi, n: vals.length };
+  }
+
   function renderMap(){
+    var useMun = munMode() && !(state.mun.missing && state.mode === 'mun');
+    $('map').hidden = useMun; $('mapMun').hidden = !useMun;
+    $('mapBack').hidden = !(state.sel && (useMun || state.mode === 'uf'));
+    $('mapHint').textContent = useMun ? (state.sel ? 'clique num município · toque de novo para desmarcar' : 'clique num município para ampliar o estado') : state.mode === 'reg' ? 'clique numa região' : 'clique num estado';
+    if (useMun) {
+      var r = renderMunMap(), nat = national();
+      $('mapTitle').textContent = state.mode === 'abs' ? 'Abstenção por município' : 'Quem lidera em cada município';
+      if (state.mode === 'abs') {
+        $('legend').innerHTML = r.n ? '<span>' + fmtPct(r.lo, 1) + '</span><span class="grad"></span><span>' + fmtPct(r.hi, 1) + '</span>' +
+          '<span style="color:var(--muted2)">abstenção nas seções apuradas (escala do 5º ao 95º percentil dos municípios)</span>' : '<span style="color:var(--muted2)">sem dados de abstenção ainda</span>';
+      } else {
+        $('legend').innerHTML = (nat.cands || []).filter(function(c){ return c.votos; }).slice(0, 4).map(function(c){
+          return '<span><i class="sw" style="background:' + colorOf(c.n) + '"></i>' + esc(c.nm) + '</span>';
+        }).join('') + '<span style="color:var(--muted2)">cor mais forte = vantagem maior · cinza = sem votos apurados</span>';
+      }
+      if (state.mun.missing) $('legend').innerHTML += '<span style="color:var(--muted2)">dados por município ainda não publicados</span>';
+      return;
+    }
+    renderStateMap();
+    if (state.mode === 'mun' && state.mun.missing)
+      $('legend').innerHTML = '<span style="color:var(--muted2)">Resultados por município ainda não publicados; mostrando por estado.</span>' + $('legend').innerHTML;
+  }
+
+  function renderStateMap(){
     var svg = $('map'), M = window.BR_MAP;
     if (!svg.firstChild) {
       svg.setAttribute('viewBox', '0 0 ' + M.w + ' ' + M.h);
@@ -701,12 +850,13 @@ tr.click:hover td{background:var(--ink3)}
       svg.addEventListener('click', function(ev){
         var g = ev.target.closest('g.uf'); if (!g) return;
         var uf = g.getAttribute('data-uf');
-        if (state.mode === 'reg') select(UF_REGION[uf].id); else select(state.sel === uf ? null : uf);
+        if (state.mode === 'reg') select(UF_REGION[uf].id); else select(state.sel === uf ? null : uf);   // 'mun' fallback acts like 'uf'
       });
     }
     var regAgg = {};
     if (state.mode === 'reg') REGIONS.forEach(function(r){ regAgg[r.id] = aggregate(r.ufs); });
     $('mapTitle').textContent = state.mode === 'reg' ? 'Quem lidera em cada região' : state.mode === 'abs' ? 'Abstenção por estado' : 'Quem lidera em cada estado';
+
     var absVals = UFS.map(function(u){ return state.data[u] && state.data[u].ea ? state.data[u].pa : null; }).filter(function(v){ return v != null; });
     var absMin = absVals.length ? Math.min.apply(null, absVals) : 0, absMax = absVals.length ? Math.max.apply(null, absVals) : 0;
     Array.prototype.forEach.call(svg.querySelectorAll('g.uf'), function(g){
@@ -754,6 +904,8 @@ tr.click:hover td{background:var(--ink3)}
   }
 
   function current(){
+    var ms = state.mun.sel, md = ms && munMode() && state.mun.data && state.mun.data[ms];
+    if (md) return { title: md.nome + ' · ' + md.uf, d: md, keys: null };
     if (!state.sel) return { title: 'Brasil', d: national(), keys: 'BR' };
     var reg = REGIONS.filter(function(r){ return r.id === state.sel; })[0];
     if (reg) return { title: 'Região ' + reg.nm, d: aggregate(reg.ufs), keys: reg.ufs };
@@ -765,7 +917,9 @@ tr.click:hover td{background:var(--ink3)}
     $('detailTitle').textContent = cur.title;
     $('detailAp').textContent = d && d.e ? 'eleitorado apurado ' + fmtPct(d.pea) + ' · faltam ' + fmtInt(falta(d)) + ' eleitores' + (d.ea ? ' · abstenção ' + fmtPct(d.pa, 1) : '') : '';
     $('detailBar').firstChild.style.width = (d && d.pea || 0) + '%';
-    $('detail').innerHTML = d ? candRows(d.cands, 0, isRunoff() ? cur.keys : null) : '<div class="empty">Sem dados para este local ainda.</div>';
+    $('detail').innerHTML = d ? candRows(d.cands, 0, isRunoff() && cur.keys ? cur.keys : null) : '<div class="empty">Sem dados para este local ainda.</div>';
+    if (cur.keys === null) $('detail').innerHTML += '<div class="vt" style="margin-top:10px;font:11px \'IBM Plex Mono\',monospace;color:var(--muted2)">por município o TSE detalha os 3 mais votados aqui · ' +
+      '<a href="#" id="toState">ver ' + esc(UF_NAMES[d.uf] || d.uf) + '</a></div>';
   }
 
   function stackBar(cands){
@@ -1416,7 +1570,7 @@ tr.click:hover td{background:var(--ink3)}
     }).join('') + '</tbody>';
   }
 
-  function select(id){ state.sel = id; renderMap(); renderDetail(); renderRegions(); }
+  function select(id){ state.sel = id; state.mun.sel = null; renderMap(); renderDetail(); renderRegions(); }
 
   // ── events ──
   $('regions').addEventListener('click', function(ev){
@@ -1427,7 +1581,7 @@ tr.click:hover td{background:var(--ink3)}
     var th = ev.target.closest('th');
     if (th) { var k = th.getAttribute('data-k'); state.sortDir = state.sortKey === k ? -state.sortDir : (k === 'uf' || k === 'reg' ? 1 : -1); state.sortKey = k; renderTable(); return; }
     var tr = ev.target.closest('tr.click');
-    if (tr) { setMode('uf'); select(tr.getAttribute('data-uf')); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+    if (tr) { if (state.mode === 'reg') setMode('mun'); state.mun.sel = null; select(tr.getAttribute('data-uf')); window.scrollTo({ top: 0, behavior: 'smooth' }); }
   });
   function setMode(m){
     state.mode = m;
@@ -1435,7 +1589,14 @@ tr.click:hover td{background:var(--ink3)}
   }
   $('mode').addEventListener('click', function(ev){
     var b = ev.target.closest('button'); if (!b) return;
-    setMode(b.getAttribute('data-m')); state.sel = null; renderMap(); renderDetail(); renderRegions();
+    setMode(b.getAttribute('data-m')); state.sel = null; state.mun.sel = null;
+    if (munMode() && state.mun.e !== state.eleicao) loadMun();
+    renderMap(); renderDetail(); renderRegions();
+  });
+  $('mapBack').addEventListener('click', function(){ state.sel = null; state.mun.sel = null; renderMap(); renderDetail(); renderRegions(); });
+  $('detail').addEventListener('click', function(ev){
+    if (ev.target.id !== 'toState') return;
+    ev.preventDefault(); state.mun.sel = null; renderMap(); renderDetail();
   });
   function syncTurnoUI(){
     Array.prototype.forEach.call($('turno').children, function(x){ x.classList.toggle('on', x.getAttribute('data-e') === state.eleicao); });
@@ -1443,7 +1604,7 @@ tr.click:hover td{background:var(--ink3)}
   }
   $('turno').addEventListener('click', function(ev){
     var b = ev.target.closest('button'); if (!b) return;
-    state.eleicao = b.getAttribute('data-e'); state.data = {}; state.lastOk = null; state.sel = null;
+    state.eleicao = b.getAttribute('data-e'); state.data = {}; state.lastOk = null; state.sel = null; state.mun.sel = null;
     syncTurnoUI();
     try {
       var q = new URLSearchParams(location.search); q.delete('e'); q.set('turno', isRunoff() ? '2' : '1');
