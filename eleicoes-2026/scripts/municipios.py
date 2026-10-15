@@ -100,6 +100,9 @@ def main():
         else:
             rows[ibge][-1] = sig
 
+    if not todo and prev and all(r[-1] for r in rows.values()):
+        print(f'{len(rows)} municipalities, nothing changed'); return
+
     def fetch(job):
         cd, uf, ibge, sig = job
         return job, get(f'{BASE}{e}/dados/{uf}/{uf}{cd}-c0001-e{e6}-u.json')
