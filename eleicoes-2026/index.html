@@ -29,6 +29,7 @@
   --rg-N:#2a78d6;--rg-NE:#eb6834;--rg-CO:#1baf7a;--rg-SE:#eda100;--rg-S:#e87ba4;
   --sq1:#c9cff8;--sq2:#93a0f0;--sq3:#5b6be0;--sq4:#2f3fb8;
 }
+[hidden]{display:none!important}
 body{background:var(--ink);color:var(--body);font-family:'IBM Plex Sans',sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh}
 a{color:var(--accent);text-decoration:none}
 .mono{font-family:'IBM Plex Mono',monospace}
@@ -814,7 +815,8 @@ tr.click:hover td{background:var(--ink3)}
 
   function renderMap(){
     var useMun = munMode() && !(state.mun.missing && state.mode === 'mun');
-    $('map').hidden = useMun; $('mapMun').hidden = !useMun;
+    // SVG elements have no .hidden property, so toggle the attribute itself
+    $('map').toggleAttribute('hidden', useMun); $('mapMun').toggleAttribute('hidden', !useMun);
     $('mapBack').hidden = !(state.sel && (useMun || state.mode === 'uf'));
     $('mapHint').textContent = useMun ? (state.sel ? 'clique num município · toque de novo para desmarcar' : 'clique num município para ampliar o estado') : state.mode === 'reg' ? 'clique numa região' : 'clique num estado';
     if (useMun) {
