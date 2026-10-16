@@ -82,9 +82,9 @@ h1{font-size:22px;font-weight:600;color:var(--head);margin-top:6px}
 #map g.uf:hover path{opacity:.8}
 #map g.uf.sel path{stroke:var(--head);stroke-width:2.2}
 #mapBack{padding:2px 8px;font-size:11px}
-.bub circle{stroke:var(--ink2);stroke-width:1px;vector-effect:non-scaling-stroke;fill-opacity:.82;cursor:pointer}
-.bub circle:hover{stroke:var(--head);stroke-width:1.5px}
-.bub circle.on{stroke:var(--head);stroke-width:2px}
+.bub circle{stroke:none;fill-opacity:.62;cursor:pointer}
+.bub circle:hover{stroke:var(--head);stroke-width:1.5px;vector-effect:non-scaling-stroke;fill-opacity:.9}
+.bub circle.on{stroke:var(--head);stroke-width:2px;vector-effect:non-scaling-stroke;fill-opacity:.9}
 .bubbled path.m,.bubbled g.uf path{fill:var(--empty)!important;fill-opacity:1!important}
 .mapwrap{position:relative}
 #mapMun{width:100%;height:auto;display:block;touch-action:manipulation}
@@ -743,28 +743,31 @@ tr.click:hover td{background:var(--ink3)}
     return fmtInt(bubbleValue(d)) + ' votos válidos · ' + a.nm + ' ' + fmtPct(a.pct, 1);
   }
   // items: [{x, y, d, attr, label}] -> circles drawn largest first so small ones stay clickable on top
-  function drawBubbles(svg, items, rmax){
+  // scope (optional): only these items set the largest circle, e.g. the zoomed state's municipalities
+  function drawBubbles(svg, items, rmax, scope){
     var g = svg.querySelector('g.bub');
     if (!g) { g = document.createElementNS('http://www.w3.org/2000/svg', 'g'); g.setAttribute('class', 'bub'); svg.appendChild(g); }
     var on = state.size === 'votos' || state.size === 'saldo';
     svg.classList.toggle('bubbled', on);
     if (!on) { g.innerHTML = ''; return null; }
     var vmax = 0, top = null;
-    items.forEach(function(it){ it.v = bubbleValue(it.d); if (it.v > vmax) { vmax = it.v; top = it; } });
+    items.forEach(function(it){ it.v = bubbleValue(it.d); if ((!scope || scope(it)) && it.v > vmax) { vmax = it.v; top = it; } });
+    if (!vmax) return null;
     items.sort(function(a, b){ return b.v - a.v; });
     g.innerHTML = items.filter(function(it){ return it.v > 0; }).map(function(it){
-      var r = rmax * Math.sqrt(it.v / vmax), lead = it.d.cands[0];
+      var r = rmax * Math.sqrt(Math.min(it.v, vmax) / vmax), lead = it.d.cands[0];
       return '<circle ' + it.attr + (it.on ? ' class="on"' : '') + ' cx="' + it.x.toFixed(1) + '" cy="' + it.y.toFixed(1) + '" r="' + Math.max(r, 0.6).toFixed(2) +
         '" style="fill:' + colorOf(lead.n) + '"><title>' + esc(it.label + ' — ' + bubbleTip(it.d)) + '</title></circle>';
     }).join('');
-    return top && { label: top.label, v: top.v };
+    return top && { label: top.label, v: top.v, scoped: !!scope };
   }
   function bubbleLegend(top){
     var nat = national();
     return (nat.cands || []).filter(function(c){ return c.votos; }).slice(0, 2).map(function(c){
         return '<span><i class="sw" style="background:' + colorOf(c.n) + ';border-radius:50%"></i>' + esc(c.nm) + '</span>'; }).join('') +
       '<span style="color:var(--muted2)">' + (state.size === 'saldo' ? 'área do círculo = vantagem em votos do 1º sobre o 2º colocado, na cor de quem está à frente'
-        : 'área do círculo = votos válidos, na cor de quem lidera') + (top ? ' · maior: ' + esc(top.label) + ' (' + fmtInt(top.v) + ')' : '') + '</span>';
+        : 'área do círculo = votos válidos, na cor de quem lidera') + (top ? ' · maior' + (top.scoped ? ' no estado' : '') + ': ' + esc(top.label) + ' (' + fmtInt(top.v) + ')' : '') +
+        (top && top.scoped ? ' · escala deste estado' : '') + '</span>';
   }
 
   // ── Map by municipality ──
@@ -879,7 +882,11 @@ tr.click:hover td{background:var(--ink3)}
         var c = M.cent[ibge], d = M.data[ibge]; if (!c) return;
         items.push({ x: c[0], y: c[1], d: d, attr: 'data-c="' + ibge + '"', label: d.nome + ' (' + d.uf + ')', on: M.sel === ibge });
       });
-      bub = drawBubbles(svg, items, 85);
+      // zoomed into a state: keep circles the same size on screen as in the national view and
+      // let that state's largest municipality set the scale (otherwise they balloon with the zoom)
+      var zuf = state.sel && UF_NAMES[state.sel] ? state.sel : null;
+      var z = zuf ? parseFloat(vb.split(' ')[2]) / MM.w : 1;
+      bub = drawBubbles(svg, items, 85 * z, zuf ? function(it){ return it.d.uf === zuf; } : null);
     } else { var keep = state.size; state.size = 'cor'; drawBubbles(svg, [], 0); state.size = keep; }
     return { lo: lo, hi: hi, n: vals.length, bub: bub, lmax: lmax };
   }
