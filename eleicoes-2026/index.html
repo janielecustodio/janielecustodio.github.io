@@ -93,7 +93,10 @@ h1{font-size:22px;font-weight:600;color:var(--head);margin-top:6px}
 #mapMun path.m.on{stroke:var(--head);stroke-width:2px}
 #mapMun path.u{fill:none;stroke:var(--ink);stroke-width:1.2px;vector-effect:non-scaling-stroke;pointer-events:none}
 #map .bub{pointer-events:auto}
-#map text{font:600 15px 'IBM Plex Mono',monospace;fill:#fff;pointer-events:none;paint-order:stroke;stroke:rgba(0,0,0,.45);stroke-width:3px}
+/* state names only on the selected state; never under the circles */
+#map text{display:none;font:600 32px 'IBM Plex Sans',sans-serif;fill:var(--head);pointer-events:none}
+#map g.uf.sel text{display:block}
+#map.bubbled text{display:none!important}
 .legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;font-size:12px}
 .legend span{display:inline-flex;align-items:center;gap:6px}
 .sw{width:11px;height:11px;border-radius:3px;display:inline-block;flex-shrink:0}
