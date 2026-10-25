@@ -146,6 +146,7 @@ h1{font-size:22px;font-weight:600;color:var(--head);margin-top:6px}
 .hist .hit{fill:transparent}
 .histtip{white-space:pre;position:absolute;pointer-events:none;background:var(--ink3);border:1px solid var(--line2);border-radius:var(--r);padding:5px 8px;font:11px 'IBM Plex Mono',monospace;color:var(--head);z-index:5}
 .hist .ln{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+#trendCard{margin-top:18px;position:relative}
 .hist .ln.part{stroke-dasharray:4 3}
 .hist .dot{stroke:var(--ink2);stroke-width:2}
 .hist .el{font:500 10px 'IBM Plex Sans',sans-serif;fill:var(--body)}
@@ -240,7 +241,7 @@ tr.click:hover td{background:var(--ink3)}
   <div class="grid">
     <div class="card">
       <h2><span id="mapTitle">Quem lidera em cada município</span><small id="mapHint">clique num município</small>
-        <span class="seg sm" id="size" title="Como colorir o mapa"><button data-s="cor" class="on" title="tom = vantagem em pontos percentuais">% vantagem</button><button data-s="tons" title="tom = vantagem em número de votos">Saldo</button><button data-s="votos" title="círculos do tamanho dos votos válidos">○ Votos</button><button data-s="saldo" title="círculos do tamanho do saldo de votos">○ Saldo</button></span>
+        <span class="seg sm" id="size" title="Como colorir o mapa"><button data-s="cor" class="on" title="tom = vantagem em pontos percentuais">% vantagem</button><button data-s="tons" title="tom = vantagem em número de votos">Saldo</button><button data-s="votos" title="círculos do tamanho dos votos válidos">○ Votos</button><button data-s="saldo" title="círculos do tamanho do saldo de votos">○ Saldo</button><button data-s="swing" id="swingBtn" title="quem cresceu mais desde o 1º turno" hidden>Δ 1º turno</button></span>
         <button class="btn" id="mapBack" hidden>← Brasil</button></h2>
       <div class="mapwrap">
         <svg id="map" role="img" aria-label="Mapa do Brasil por estado" hidden></svg>
@@ -254,6 +255,16 @@ tr.click:hover td{background:var(--ink3)}
       <div id="detailBar" class="bar" style="margin:-2px 0 14px"><i></i></div>
       <div class="cands" id="detail"></div>
     </div>
+  </div>
+
+  <div class="card hist" id="trendCard">
+    <h2><span id="trendTitle">Tendência da apuração · Brasil</span><small id="trendInfo"></small></h2>
+    <div class="histgrid">
+      <figure><figcaption>% dos votos válidos conforme as urnas são apuradas</figcaption><svg id="trendShare" role="img" aria-label="Evolução do percentual de cada candidato"></svg></figure>
+      <figure><figcaption>Quem levou os votos novos em cada atualização</figcaption><svg id="trendNew" role="img" aria-label="Divisão dos votos novos por atualização"></svg></figure>
+    </div>
+    <p class="proj-note" id="trendNote" style="margin:10px 0 0"></p>
+    <div class="histtip" id="trendtip" hidden></div>
   </div>
 
   <div class="card proj">
@@ -279,6 +290,9 @@ tr.click:hover td{background:var(--ink3)}
     (<span class="mono">/oficial/ele2026/{eleição}/dados</span>). Atualiza a cada 30 s com a aba aberta.<br>
     <b>% apurado do eleitorado</b> = eleitores das seções já totalizadas ÷ eleitorado apto (é o que reflete a população já contada; o % de seções aparece ao lado).
     Os totais por região somam os votos de cada estado; o voto no exterior entra só no total do Brasil.<br>
+    <b>Tendência:</b> o mesmo robô grava um retrato da apuração (Brasil, cada estado e exterior) a cada atualização em
+    <span class="mono">dados/serie-{eleição}.json</span>; a página completa com as atualizações que ela mesma viu desde então. “Votos novos” é a
+    diferença de votos de cada candidato entre dois retratos seguidos. <b>Δ 1º turno</b> compara a fatia de cada finalista nos votos válidos com a do 1º turno.<br>
     <b>Mapa por município:</b> o TSE não publica o contorno das zonas eleitorais (uma zona pode cobrir vários municípios ou parte de uma cidade),
     então o recorte mais fino possível é o município. O TSE divulga um arquivo por município; um robô deste site (GitHub Actions) junta os 5.571
     em <span class="mono">dados/mun-{eleição}.json</span> a cada 3 minutos na noite da apuração. Malha municipal do IBGE (2010, via
@@ -533,6 +547,7 @@ tr.click:hover td{background:var(--ink3)}
   }
 
   function load(){
+    loadSerie();   // our own file, independent of the TSE being reachable
     $('dot').className = 'dot';
     var abrs = ['br', 'zz'].concat(UFS.map(function(u){ return u.toLowerCase(); }));
     var failures = 0, firstErr = null;
@@ -550,6 +565,7 @@ tr.click:hover td{background:var(--ink3)}
       }
       state.data = data; state.lastOk = new Date();
       if (munMode() && !$('tab-live').hidden) loadMun();   // municipal file refreshes on the same 30 s cycle
+      sampleTrend();
       var found = Object.keys(data).filter(function(k){ return data[k]; }).length;
       if (!state.demo) showBanner(found ? '' : isRunoff()
         ? 'O 2º turno é no domingo, <b>25 de outubro</b>. A votação vai das 8h às 17h (horário de Brasília) e o TSE começa a divulgar os resultados a partir das 17h. Esta página atualiza sozinha a cada 30 s.'
@@ -656,7 +672,7 @@ tr.click:hover td{background:var(--ink3)}
       if (!state.colors[c.n]) state.colors[c.n] = free[Math.min(i++, free.length - 1)];
     });
   }
-  function colorOf(n){ return state.colors[n] || '#7a8299'; }
+  function colorOf(n){ return state.colors[n] || FIXED_COLORS[n] || '#7a8299'; }
 
   // ── rendering ──
   function render(){
@@ -673,6 +689,7 @@ tr.click:hover td{background:var(--ink3)}
     renderDetail();
     renderRegions();
     renderProjection();
+    renderTrend();
     renderHistory();
     renderExt();
     renderTable();
@@ -725,6 +742,32 @@ tr.click:hover td{background:var(--ink3)}
   }
   function saldoOf(d){ return d && d.cands && d.cands[0] && d.cands[0].votos ? d.cands[0].votos - ((d.cands[1] && d.cands[1].votos) || 0) : 0; }
   // "Saldo" tones: leader's colour, darker = bigger lead in votes, on a log scale (leads run from 1 to 500k+)
+  // "Δ 1º turno": which finalist grew more (in p.p. of valid votes) from the 1st round to now.
+  function swingOf(d2, d1){
+    if (!d2 || !d1 || !d2.cands || d2.cands.length < 2 || !d2.cands[0].votos) return null;
+    var a = d2.cands[0], b = d2.cands[1];
+    var p1 = function(n){ var c = (d1.cands || []).filter(function(x){ return x.n === n; })[0]; return c ? c.pct : 0; };
+    var ga = a.pct - p1(a.n), gb = b.pct - p1(b.n);
+    return { a: a, b: b, ga: ga, gb: gb, net: ga - gb };
+  }
+  function swingShade(d2, d1){
+    var w = swingOf(d2, d1); if (!w) return null;
+    var who = w.net >= 0 ? w.a : w.b;
+    return { color: colorOf(who.n), op: 0.1 + 0.9 * Math.min(1, Math.abs(w.net) / 40) };
+  }
+  function swingTip(d2, d1){
+    var w = swingOf(d2, d1); if (!w) return '';
+    var f = function(g){ return (g >= 0 ? '+' : '') + f1(g) + ' p.p.'; };
+    return w.a.nm + ' ' + f(w.ga) + ' ¦ ' + w.b.nm + ' ' + f(w.gb) + ' ¦ (vs 1º turno)';
+  }
+  function swingLegend(){
+    var nat = national();
+    return (nat.cands || []).filter(function(c){ return c.votos; }).slice(0, 2).map(function(c){
+        return '<span>' + esc(c.nm) + ' cresceu mais <i style="display:inline-block;width:60px;height:10px;border-radius:3px;vertical-align:middle;background:linear-gradient(90deg,' +
+          colorOf(c.n) + '1f,' + colorOf(c.n) + ')"></i></span>'; }).join('') +
+      '<span style="color:var(--muted2)">cor = finalista que mais ganhou pontos percentuais desde o 1º turno; tom forte = diferença de 40 p.p. ou mais</span>';
+  }
+
   function saldoShade(d, lmax){
     var v = saldoOf(d); if (!d || !d.cands.length || !d.cands[0].votos) return null;
     // scale starts at 10 votes so small and large leads separate visibly
@@ -803,10 +846,26 @@ tr.click:hover td{background:var(--ink3)}
     return out;
   }
 
+  function loadMun1(){
+    var M = state.mun;
+    if (M.r1 || M.r1loading || state.demo) return;
+    M.r1loading = true;
+    fetch('dados/mun-' + E1 + '.json').then(function(r){ return r.ok ? r.json() : null; }).then(function(j){
+      if (!j) return;
+      var d = {}; Object.keys(j.m).forEach(function(k){ d[k] = parseMun(j.m[k], j.c || {}); });
+      M.r1 = d; renderMap();
+    }).catch(function(){}).then(function(){ M.r1loading = false; });
+  }
+
   function loadMun(){
     var M = state.mun, e = state.eleicao;
     if (!window.MUN_MAP) return Promise.resolve();
-    if (state.demo) { M.data = demoMun(); M.e = e; M.missing = false; renderMap(); return Promise.resolve(); }
+    if (state.demo) {
+      M.data = demoMun(); M.e = e; M.missing = false;
+      if (isRunoff() && !M.r1) { var r1 = {}; Object.keys(M.data).forEach(function(k){ var d = M.data[k], h = (+k) % 17;
+        r1[k] = { cands: d.cands.map(function(c, i){ return { n: c.n, pct: c.pct * (i ? 0.8 + h / 100 : 0.9 - h / 200) }; }) }; }); M.r1 = r1; }
+      renderMap(); return Promise.resolve();
+    }
     return fetch('dados/mun-' + e + '.json', { cache: 'no-cache' }).then(function(r){
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return r.json();
@@ -840,6 +899,7 @@ tr.click:hover td{background:var(--ink3)}
         var nm = d ? d.nome + ' (' + d.uf + ')' : IBGE_UF[ibge.slice(0, 2)];
         var lead = d && d.cands[0], sec = d && d.cands[1];
         tip.textContent = nm + (d ? (state.mode === 'abs' ? ' ¦ abstenção ' + fmtPct(d.pa, 1) :
+          state.size === 'swing' && M.r1 && M.r1[ibge] ? ' ¦ ' + swingTip(d, M.r1[ibge]) :
           (lead && lead.votos ? ' ¦ ' + lead.nm + ' ' + fmtPct(lead.pct, 1) + (sec ? ' ¦ ' + sec.nm + ' ' + fmtPct(sec.pct, 1) : '') : ' ¦ sem votos apurados')) +
           ' ¦ apurado ' + fmtPct(d.pea, 0) : '').split(' ¦ ').join('\n');
         tip.hidden = false;
@@ -872,7 +932,8 @@ tr.click:hover td{background:var(--ink3)}
     if (M.data) Object.keys(M.data).forEach(function(k){ var v = saldoOf(M.data[k]); if (v > 0) lmax = Math.max(lmax, Math.log10(v + 1)); });
     Array.prototype.forEach.call(svg.querySelectorAll('path.m'), function(p){
       var ibge = p.getAttribute('data-c'), d = M.data && M.data[ibge];
-      var sh = d ? (abs ? absShade(d, lo, hi) : state.size === 'tons' ? saldoShade(d, lmax) : leaderShade(d)) : null;
+      var sh = d ? (abs ? absShade(d, lo, hi) : state.size === 'tons' ? saldoShade(d, lmax) :
+        state.size === 'swing' ? swingShade(d, M.r1 && M.r1[ibge]) : leaderShade(d)) : null;
       p.style.fill = sh ? sh.color : 'var(--empty)';
       p.style.fillOpacity = sh ? Math.min(1, sh.op) : 1;
       p.classList.toggle('on', M.sel === ibge);
@@ -894,19 +955,168 @@ tr.click:hover td{background:var(--ink3)}
     return { lo: lo, hi: hi, n: vals.length, bub: bub, lmax: lmax };
   }
 
+  // ── Trend of the count ──
+  // Server series (dados/serie-<e>.json, appended by the election-night job every few minutes, so
+  // everyone sees the count from the first update) plus samples this page took itself since.
+  state.trend = { srv: null, e: null, local: [] };
+  function loadSerie(){
+    var T = state.trend, e = state.eleicao;
+    if (state.demo) return;
+    fetch('dados/serie-' + e + '.json', { cache: 'no-cache' }).then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(j){ if (state.eleicao !== e) return; T.srv = j; T.e = e; renderTrend(); }).catch(function(){});
+  }
+  function sampleTrend(){
+    var T = state.trend, br = state.data.BR;
+    if (T.e !== state.eleicao) { T.local = []; T.srv = null; T.e = state.eleicao; }
+    if (!br || !br.cands.length || !br.vv) return;
+    var v = {}; br.cands.forEach(function(c){ v[c.n] = c.votos; });
+    var uf = {}; UFS.forEach(function(u){ var d = state.data[u]; if (!d) return; var vv = {}; d.cands.forEach(function(c){ vv[c.n] = c.votos; }); uf[u] = [d.st, d.s, vv]; });
+    var zz = state.data.ZZ, zv = {}; if (zz) zz.cands.forEach(function(c){ zv[c.n] = c.votos; });
+    var last = T.local[T.local.length - 1];
+    if (last && JSON.stringify(last.v) === JSON.stringify(v)) return;
+    T.local.push({ t: new Date().toISOString(), pst: String(br.pst).replace('.', ','), v: v, uf: uf, zz: zz ? [zz.st, zz.s, zv] : null });
+    if (state.demo) T.local = T.local.slice(-60);
+  }
+  function trendPoints(){
+    var T = state.trend, srv = (T.srv && T.srv.pontos) || [];
+    var lastPst = srv.length ? pct(srv[srv.length - 1].pst) : -1;
+    return srv.concat(T.local.filter(function(p){ return pct(p.pst) > lastPst; }));
+  }
+  // votes and % counted for the current selection at one snapshot
+  function trendScope(p){
+    var sel = state.sel, ufs = null;
+    if (!sel) return { v: p.v, pst: pct(p.pst) };
+    var reg = REGIONS.filter(function(r){ return r.id === sel; })[0];
+    ufs = reg ? reg.ufs : UF_NAMES[sel] ? [sel] : null;
+    if (!ufs) return { v: p.v, pst: pct(p.pst) };
+    var v = {}, st = 0, ts = 0;
+    ufs.forEach(function(u){ var x = p.uf && p.uf[u]; if (!x) return; st += x[0]; ts += x[1]; Object.keys(x[2]).forEach(function(n){ v[n] = (v[n] || 0) + x[2][n]; }); });
+    return { v: v, pst: ts ? st / ts * 100 : 0 };
+  }
+
+  function renderTrend(){
+    if (!$('trendCard') || $('tab-live').hidden) return;
+    var pts = trendPoints().map(trendScope).filter(function(p){ return p.v && Object.keys(p.v).length; });
+    var nat = national(), fin = (nat.cands || []).filter(function(c){ return c.votos; }).slice(0, 2);
+    if (fin.length < 2 && pts.length) {   // live national file not in yet: take the finalists from the series itself
+      var lv = pts[pts.length - 1].v, names = (state.trend.srv && state.trend.srv.c) || {};
+      fin = Object.keys(lv).sort(function(x, y){ return lv[y] - lv[x]; }).slice(0, 2).map(function(n){ return { n: n, nm: (names[n] || [n])[0] }; });
+    }
+    var cur = current();
+    $('trendTitle').textContent = 'Tendência da apuração · ' + (state.mun.sel && cur.keys === null ? (UF_NAMES[cur.d.uf] || 'Brasil') : cur.title);
+    if (pts.length < 2 || fin.length < 2) {
+      $('trendShare').innerHTML = ''; $('trendNew').innerHTML = '';
+      $('trendInfo').textContent = '';
+      $('trendNote').textContent = pts.length ? 'A tendência aparece a partir da segunda atualização da apuração.' :
+        'A tendência aparece quando a apuração começar (no 2º turno, a partir das 17h de Brasília). Cada atualização do TSE vira um ponto no gráfico.';
+      return;
+    }
+    var A = fin[0], B = fin[1];
+    var share = pts.map(function(p){ var a = p.v[A.n] || 0, b = p.v[B.n] || 0, tot = 0; Object.keys(p.v).forEach(function(n){ tot += p.v[n]; });
+      return { pst: p.pst, a: tot ? a / tot * 100 : 0, b: tot ? b / tot * 100 : 0, va: a, vb: b }; });
+    // drop repeated points (same % counted and same votes)
+    share = share.filter(function(p, i){ return !i || p.va !== share[i - 1].va || p.vb !== share[i - 1].vb; });
+    // new votes between consecutive snapshots
+    var steps = [];
+    for (var i = 1; i < share.length; i++) {
+      var da = share[i].va - share[i - 1].va, db = share[i].vb - share[i - 1].vb;
+      if (da + db > 0) steps.push({ pst: share[i].pst, from: share[i - 1].pst, a: da, b: db, pa: da / (da + db) * 100 });
+    }
+    drawTrendShare($('trendShare'), share, A, B);
+    drawTrendNew($('trendNew'), steps, A, B);
+    $('trendInfo').textContent = share.length + ' atualizações';
+    // summary: who is taking the new votes now, and any lead change
+    var note = [];
+    var recent = steps.slice(-3), ra = 0, rb = 0;
+    recent.forEach(function(s){ ra += s.a; rb += s.b; });
+    if (ra + rb) {
+      var lead = ra >= rb ? A : B, lp = Math.max(ra, rb) / (ra + rb) * 100;
+      note.push('Nas últimas ' + recent.length + ' atualizações, <b>' + esc(lead.nm) + '</b> ficou com ' + fmtPct(lp, 1) + ' dos votos novos' +
+        ' (' + fmtInt(Math.abs(ra - rb)) + ' votos de diferença).');
+    }
+    for (var k = 1; k < share.length; k++) {
+      var was = share[k - 1].va >= share[k - 1].vb, now = share[k].va >= share[k].vb;
+      if (was !== now) note.push('<b>Virada</b> com ' + fmtPct(share[k].pst, 1) + ' das seções apuradas: ' + esc((now ? A : B).nm) + ' passou à frente.');
+    }
+    var first = share[0], last = share[share.length - 1];
+    note.push('Desde ' + fmtPct(first.pst, 1) + ' apurado, ' + esc(A.nm) + ' foi de ' + fmtPct(first.a, 1) + ' para ' + fmtPct(last.a, 1) + '.');
+    $('trendNote').innerHTML = note.join(' ');
+  }
+
+  function drawTrendShare(svg, share, A, B){
+    var W = Math.max(260, Math.round(svg.getBoundingClientRect().width) || 320), H = 170, L = 34, R = 70, T = 10, Bm = 20;
+    var lo = 100, hi = 0; share.forEach(function(p){ lo = Math.min(lo, p.a, p.b); hi = Math.max(hi, p.a, p.b); });
+    lo = Math.max(0, Math.floor((Math.min(lo, 50) - 3) / 5) * 5); hi = Math.min(100, Math.ceil((Math.max(hi, 50) + 3) / 5) * 5);
+    var x0 = share[0].pst, x1 = Math.max(share[share.length - 1].pst, x0 + 1);
+    var x = function(v){ return L + (W - L - R) * (v - x0) / (x1 - x0); }, y = function(v){ return T + (H - T - Bm) * (1 - (v - lo) / (hi - lo)); };
+    var out = '';
+    for (var g = lo; g <= hi; g += (hi - lo > 20 ? 10 : 5))
+      out += '<line class="gl" x1="' + L + '" x2="' + (W - R) + '" y1="' + y(g) + '" y2="' + y(g) + '"' + (g === 50 ? ' style="stroke:var(--muted2);stroke-dasharray:3 3"' : '') + '/>' +
+        '<text class="ax" x="' + (L - 5) + '" y="' + (y(g) + 3) + '" text-anchor="end">' + g + '%</text>';
+    out += '<text class="ax" x="' + L + '" y="' + (H - 4) + '">' + fmtPct(x0, 0) + ' apurado</text><text class="ax" x="' + (W - R) + '" y="' + (H - 4) + '" text-anchor="end">' + fmtPct(x1, 0) + '</text>';
+    [[A, 'a'], [B, 'b']].forEach(function(s){
+      var c = colorOf(s[0].n), d = share.map(function(p, i){ return (i ? 'L' : 'M') + x(p.pst).toFixed(1) + ' ' + y(p[s[1]]).toFixed(1); }).join('');
+      out += '<path class="ln" d="' + d + '" style="stroke:' + c + '"/>';
+      var lp = share[share.length - 1];
+      out += '<circle class="dot" cx="' + x(lp.pst) + '" cy="' + y(lp[s[1]]) + '" r="4" style="fill:' + c + '"/>' +
+        '<text class="el" x="' + (W - R + 8) + '" y="' + (y(lp[s[1]]) + 3) + '">' + esc(s[0].nm.split(' ')[0]) + ' ' + f1(lp[s[1]]) + '%</text>';
+    });
+    share.forEach(function(p){
+      out += '<g class="col" data-tip="' + esc(fmtPct(p.pst, 1) + ' apurado ¦ ' + A.nm + ' ' + fmtPct(p.a, 2) + ' ¦ ' + B.nm + ' ' + fmtPct(p.b, 2)) + '">' +
+        '<rect class="hit" x="' + (x(p.pst) - 6) + '" y="' + T + '" width="12" height="' + (H - T - Bm) + '"/></g>';
+    });
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H); svg.innerHTML = out;
+  }
+
+  function drawTrendNew(svg, steps, A, B){
+    var W = Math.max(260, Math.round(svg.getBoundingClientRect().width) || 320), H = 170, L = 34, R = 6, T = 10, Bm = 20;
+    var show = steps.slice(-40), n = Math.max(show.length, 1), step = (W - L - R) / n, bw = Math.max(2, Math.min(18, step - 2));
+    var y = function(v){ return T + (H - T - Bm) * (1 - v / 100); };
+    var out = '';
+    [0, 50, 100].forEach(function(g){ out += '<line class="gl" x1="' + L + '" x2="' + (W - R) + '" y1="' + y(g) + '" y2="' + y(g) + '"' + (g === 50 ? ' style="stroke:var(--muted2);stroke-dasharray:3 3"' : '') + '/>' +
+      '<text class="ax" x="' + (L - 5) + '" y="' + (y(g) + 3) + '" text-anchor="end">' + g + '%</text>'; });
+    show.forEach(function(s, i){
+      var cx = L + step * i + step / 2, x0 = cx - bw / 2;
+      out += '<g class="bar col" data-tip="' + esc('de ' + fmtPct(s.from, 1) + ' a ' + fmtPct(s.pst, 1) + ' apurado ¦ ' + A.nm + ' ' + fmtPct(s.pa, 1) + ' (' + fmtInt(s.a) + ') ¦ ' + B.nm + ' ' + fmtPct(100 - s.pa, 1) + ' (' + fmtInt(s.b) + ')') + '">' +
+        '<rect class="hit" x="' + (cx - step / 2) + '" y="' + T + '" width="' + step + '" height="' + (H - T - Bm) + '"/>' +
+        '<rect x="' + x0 + '" y="' + y(s.pa) + '" width="' + bw + '" height="' + (y(0) - y(s.pa)) + '" style="fill:' + colorOf(A.n) + ';opacity:.85"/>' +
+        '<rect x="' + x0 + '" y="' + y(100) + '" width="' + bw + '" height="' + Math.max(0, y(s.pa) - y(100) - 2) + '" style="fill:' + colorOf(B.n) + ';opacity:.85"/></g>';
+    });
+    out += '<text class="ax" x="' + L + '" y="' + (H - 4) + '">mais antiga</text><text class="ax" x="' + (W - R) + '" y="' + (H - 4) + '" text-anchor="end">mais recente</text>';
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H); svg.innerHTML = out;
+  }
+  (function(){
+    var box = $('trendCard'), tip = $('trendtip');
+    box.addEventListener('mousemove', function(ev){
+      var g = ev.target.closest && ev.target.closest('g[data-tip]');
+      if (!g) { tip.hidden = true; return; }
+      tip.textContent = g.getAttribute('data-tip').split(' ¦ ').join('\n'); tip.hidden = false;
+      var br = box.getBoundingClientRect(), gr = g.getBoundingClientRect();
+      tip.style.left = Math.max(4, Math.min(br.width - tip.offsetWidth - 4, gr.left + gr.width / 2 - br.left - tip.offsetWidth / 2)) + 'px';
+      tip.style.top = (gr.top - br.top - tip.offsetHeight + 8) + 'px';
+    });
+    box.addEventListener('mouseleave', function(){ tip.hidden = true; });
+  })();
+
   function renderMap(){
     var useMun = munMode() && !(state.mun.missing && state.mode === 'mun');
     // SVG elements have no .hidden property, so toggle the attribute itself
     $('map').toggleAttribute('hidden', useMun); $('mapMun').toggleAttribute('hidden', !useMun);
     $('mapBack').hidden = !(state.sel && (useMun || state.mode === 'uf'));
     $('size').hidden = state.mode === 'abs';
+    $('swingBtn').hidden = !isRunoff();
+    if (!isRunoff() && state.size === 'swing') { state.size = 'cor'; Array.prototype.forEach.call($('size').children, function(x){ x.classList.toggle('on', x.getAttribute('data-s') === 'cor'); }); }
     $('mapHint').textContent = useMun ? (state.sel ? 'clique num município · toque de novo para desmarcar' : 'clique num município para ampliar o estado') : state.mode === 'reg' ? 'clique numa região' : 'clique num estado';
     if (useMun) {
       var r = renderMunMap(), nat = national();
-      $('mapTitle').textContent = state.mode === 'abs' ? 'Abstenção por município' : state.size === 'tons' || state.size === 'saldo' ? 'Saldo de votos por município' : 'Quem lidera em cada município';
+      $('mapTitle').textContent = state.mode === 'abs' ? 'Abstenção por município' : state.size === 'swing' ? 'Quem cresceu mais desde o 1º turno' :
+        state.size === 'tons' || state.size === 'saldo' ? 'Saldo de votos por município' : 'Quem lidera em cada município';
       if (state.mode === 'abs') {
         $('legend').innerHTML = r.n ? '<span>' + fmtPct(r.lo, 1) + '</span><span class="grad"></span><span>' + fmtPct(r.hi, 1) + '</span>' +
           '<span style="color:var(--muted2)">abstenção nas seções apuradas (escala do 5º ao 95º percentil dos municípios)</span>' : '<span style="color:var(--muted2)">sem dados de abstenção ainda</span>';
+      } else if (state.size === 'swing') {
+        $('legend').innerHTML = swingLegend();
+        if (!state.mun.r1 && !state.demo) loadMun1();
       } else if (state.size === 'tons') {
         $('legend').innerHTML = saldoLegend(r.lmax);
       } else if (state.size !== 'cor') {
@@ -946,6 +1156,7 @@ tr.click:hover td{background:var(--ink3)}
     var regAgg = {};
     if (state.mode === 'reg') REGIONS.forEach(function(r){ regAgg[r.id] = aggregate(r.ufs); });
     $('mapTitle').textContent = state.mode === 'reg' ? 'Quem lidera em cada região' : state.mode === 'abs' ? 'Abstenção por estado' : 'Quem lidera em cada estado';
+    if (state.mode !== 'abs' && state.size === 'swing') $('mapTitle').textContent = 'Quem cresceu mais desde o 1º turno' + (state.mode === 'reg' ? ' · por região' : ' · por estado');
 
     var absVals = UFS.map(function(u){ return state.data[u] && state.data[u].ea ? state.data[u].pa : null; }).filter(function(v){ return v != null; });
     var absMin = absVals.length ? Math.min.apply(null, absVals) : 0, absMax = absVals.length ? Math.max.apply(null, absVals) : 0;
@@ -955,7 +1166,9 @@ tr.click:hover td{background:var(--ink3)}
     Array.prototype.forEach.call(svg.querySelectorAll('g.uf'), function(g){
       var uf = g.getAttribute('data-uf');
       var d = state.mode === 'reg' ? regAgg[UF_REGION[uf].id] : state.data[uf];
-      var sh = state.mode === 'abs' ? absShade(d, absMin, absMax) : state.size === 'tons' ? saldoShade(d, slmax) : leaderShade(d);
+      var d1 = state.mode === 'reg' ? aggList(UF_REGION[uf].ufs.map(function(u){ return state.ref[u]; })) : state.ref[uf];
+      var sh = state.mode === 'abs' ? absShade(d, absMin, absMax) : state.size === 'tons' ? saldoShade(d, slmax) :
+        state.size === 'swing' ? swingShade(d, d1) : leaderShade(d);
       var p = g.querySelector('path');
       p.style.fill = sh ? sh.color : 'var(--empty)';
       p.style.fillOpacity = sh ? sh.op : 1;
@@ -978,6 +1191,7 @@ tr.click:hover td{background:var(--ink3)}
     var bub = drawBubbles(svg, items, state.mode === 'reg' ? 120 : 70);
     state.size = keep;
     if (state.mode !== 'abs' && state.size === 'tons') { $('legend').innerHTML = saldoLegend(slmax); return; }
+    if (state.mode !== 'abs' && state.size === 'swing') { $('legend').innerHTML = swingLegend(); return; }
     if (state.mode !== 'abs' && state.size !== 'cor') { $('legend').innerHTML = bubbleLegend(bub); return; }
     if (state.mode === 'abs') {
       $('legend').innerHTML = absVals.length
@@ -1675,7 +1889,7 @@ tr.click:hover td{background:var(--ink3)}
     }).join('') + '</tbody>';
   }
 
-  function select(id){ state.sel = id; state.mun.sel = null; renderMap(); renderDetail(); renderRegions(); }
+  function select(id){ state.sel = id; state.mun.sel = null; renderMap(); renderDetail(); renderRegions(); renderTrend(); }
 
   // ── events ──
   $('regions').addEventListener('click', function(ev){
