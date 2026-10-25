@@ -6,6 +6,10 @@ much for a browser to poll. This script gathers them into eleicoes-2026/dados/mu
 It reads the 27 per-state progress files first and refetches only municipalities whose count
 changed since the previous run, so it is cheap to run every few minutes on election night.
 
+It also appends a snapshot of the count (national total from the TSE's BR file, each state summed
+from its municipalities, and votes abroad) to dados/serie-<eleicao>.json whenever the count moves,
+so the page can chart how each candidate's share evolved and who took the newly counted votes.
+
 Usage: python3 municipios.py 6258 [--out path] [--workers 16]
 Standard library only.
 """
@@ -101,7 +105,9 @@ def main():
             rows[ibge][-1] = sig
 
     if not todo and prev and all(r[-1] for r in rows.values()):
-        print(f'{len(rows)} municipalities, nothing changed'); return
+        print(f'{len(rows)} municipalities, nothing changed')
+        snapshot(e, e6, rows, names, out_path)
+        return
 
     def fetch(job):
         cd, uf, ibge, sig = job
@@ -128,6 +134,44 @@ def main():
         json.dump(doc, f, ensure_ascii=False, separators=(',', ':'))
     os.replace(tmp, out_path)
     print(f'{len(rows)} municipalities, {len(todo)} changed, {done} fetched -> {out_path}')
+    snapshot(e, e6, rows, names, out_path)
+
+
+def snapshot(e, e6, rows, names, out_path):
+    """Append {t, pst, v, uf, zz} to serie-<e>.json when the national count changed."""
+    br = get(f'{BASE}{e}/dados/br/br-c0001-e{e6}-u.json')
+    if not br:
+        return
+    v_br, nm = votes(br)
+    names.update(nm)
+    zz = get(f'{BASE}{e}/dados/zz/zz-c0001-e{e6}-u.json')
+    v_zz = votes(zz)[0] if zz else {}
+    uf = {}
+    for r in rows.values():
+        u = uf.setdefault(r[1], [0, 0, {}])
+        u[0] += r[5]; u[1] += r[6]
+        for n, c in r[7]:
+            u[2][n] = u[2].get(n, 0) + c
+    point = {'t': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()), 'tse': f"{br.get('dt', '')} {br.get('ht', '')}".strip(),
+             'pst': br['s']['pst'], 'pea': br['e'].get('pest', ''), 'v': v_br,
+             'zz': [num(zz['s']['st']), num(zz['s']['ts']), v_zz] if zz else None, 'uf': uf}
+    path = os.path.join(os.path.dirname(out_path), f'serie-{e}.json')
+    doc = {'eleicao': e, 'c': {}, 'pontos': []}
+    if os.path.exists(path):
+        with open(path) as f:
+            doc = json.load(f)
+    last = doc['pontos'][-1] if doc['pontos'] else None
+    if last and last['v'] == point['v'] and last['pst'] == point['pst']:
+        return
+    if not sum(v_br.values()):
+        return   # nothing counted yet
+    doc['c'].update({n: names[n] for n in v_br if n in names})
+    doc['pontos'].append(point)
+    tmp = path + '.tmp'
+    with open(tmp, 'w') as f:
+        json.dump(doc, f, ensure_ascii=False, separators=(',', ':'))
+    os.replace(tmp, path)
+    print(f"snapshot {point['pst']}% -> {path}")
 
 
 if __name__ == '__main__':

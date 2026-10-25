@@ -46,8 +46,10 @@ jobs:
           end=$(( $(date +%s) + MINUTOS * 60 ))
           while [ "$(date +%s)" -lt "$end" ]; do
             python3 eleicoes-2026/scripts/municipios.py "$ELEICAO" --out "$out" || true
+            serie="eleicoes-2026/dados/serie-${ELEICAO}.json"
             if [ -f "$out" ]; then
               git add "$out"
+              [ -f "$serie" ] && git add "$serie"
               if ! git diff --cached --quiet; then
                 git commit -q -m "Resultados por município (eleição ${ELEICAO})"
                 git pull -q --rebase origin "$GITHUB_REF_NAME" && git push -q origin "HEAD:$GITHUB_REF_NAME" || echo 'push failed; will retry next round'
