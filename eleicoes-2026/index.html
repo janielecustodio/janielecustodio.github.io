@@ -147,6 +147,7 @@ h1{font-size:22px;font-weight:600;color:var(--head);margin-top:6px}
 .histtip{white-space:pre;position:absolute;pointer-events:none;background:var(--ink3);border:1px solid var(--line2);border-radius:var(--r);padding:5px 8px;font:11px 'IBM Plex Mono',monospace;color:var(--head);z-index:5}
 .hist .ln{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
 #trendCard{margin-top:18px;position:relative}
+#trendCard svg{overflow:hidden}
 .hist .ln.part{stroke-dasharray:4 3}
 .hist .dot{stroke:var(--ink2);stroke-width:2}
 .hist .el{font:500 10px 'IBM Plex Sans',sans-serif;fill:var(--body)}
@@ -550,10 +551,12 @@ tr.click:hover td{background:var(--ink3)}
     loadSerie();   // our own file, independent of the TSE being reachable
     $('dot').className = 'dot';
     var abrs = ['br', 'zz'].concat(UFS.map(function(u){ return u.toLowerCase(); }));
-    var failures = 0, firstErr = null;
+    var failures = 0, firstErr = null, e = state.eleicao;
     return Promise.all(abrs.map(function(a){
-      return fetchOne(a).catch(function(err){ failures++; firstErr = firstErr || err; return undefined; });
+      return fetchOne(a, e).catch(function(err){ failures++; firstErr = firstErr || err; return undefined; });
     })).then(function(res){
+      // the round was switched while this load was in flight: its numbers belong to the other round
+      if (state.eleicao !== e) return;
       var data = {};
       abrs.forEach(function(a, i){ if (res[i] !== undefined) data[a.toUpperCase()] = res[i]; else if (state.data[a.toUpperCase()]) data[a.toUpperCase()] = state.data[a.toUpperCase()]; });
       if (failures === abrs.length) {
@@ -642,6 +645,7 @@ tr.click:hover td{background:var(--ink3)}
       return fetchOne(a, E1).catch(function(){ return null; });
     })).then(function(rs){
       abrs.forEach(function(a, i){ if (rs[i]) state.ref[a.toUpperCase()] = rs[i]; });
+      if (!rs[0]) state.refLoaded = false;   // try again on the next round switch or reload
       if (isRunoff()) { render(); renderHistory(); }
     });
   }
@@ -656,8 +660,12 @@ tr.click:hover td{background:var(--ink3)}
   }
 
   function national(){
-    // Prefer the official BR file (includes votes abroad); fall back to the sum of the states.
-    return state.data.BR && state.data.BR.cands.length ? state.data.BR : aggregate(UFS);
+    // Prefer the official BR file (includes votes abroad). The sum of the states is only a stand-in when all 27
+    // arrived: a partial sum would show a lopsided "national" result driven by whichever states happened to load.
+    if (state.data.BR && state.data.BR.cands.length) return state.data.BR;
+    var agg = aggregate(UFS);
+    if (agg.have < UFS.length) return { cands: [], e: 0, ea: 0, pea: null, s: 0, st: 0, pst: null, vv: 0, have: agg.have, a: 0, pa: null };
+    return agg;
   }
 
   function assignColors(){
@@ -959,28 +967,43 @@ tr.click:hover td{background:var(--ink3)}
   // Server series (dados/serie-<e>.json, appended by the election-night job every few minutes, so
   // everyone sees the count from the first update) plus samples this page took itself since.
   state.trend = { srv: null, e: null, local: [] };
+  // The trend cache belongs to one round: drop everything the moment it is used for another one.
+  function trendFor(e){
+    var T = state.trend;
+    if (T.e !== e) { T.local = []; T.srv = null; T.e = e; }
+    return T;
+  }
   function loadSerie(){
-    var T = state.trend, e = state.eleicao;
+    var e = state.eleicao;
     if (state.demo) return;
     fetch('dados/serie-' + e + '.json', { cache: 'no-cache' }).then(function(r){ return r.ok ? r.json() : null; })
-      .then(function(j){ if (state.eleicao !== e) return; T.srv = j; T.e = e; renderTrend(); }).catch(function(){});
+      .then(function(j){
+        if (state.eleicao !== e || !j || j.eleicao !== e) return;
+        trendFor(e).srv = j; renderTrend();
+      }).catch(function(){});
   }
   function sampleTrend(){
-    var T = state.trend, br = state.data.BR;
-    if (T.e !== state.eleicao) { T.local = []; T.srv = null; T.e = state.eleicao; }
+    var T = trendFor(state.eleicao), br = state.data.BR;
     if (!br || !br.cands.length || !br.vv) return;
     var v = {}; br.cands.forEach(function(c){ v[c.n] = c.votos; });
     var uf = {}; UFS.forEach(function(u){ var d = state.data[u]; if (!d) return; var vv = {}; d.cands.forEach(function(c){ vv[c.n] = c.votos; }); uf[u] = [d.st, d.s, vv]; });
     var zz = state.data.ZZ, zv = {}; if (zz) zz.cands.forEach(function(c){ zv[c.n] = c.votos; });
     var last = T.local[T.local.length - 1];
     if (last && JSON.stringify(last.v) === JSON.stringify(v)) return;
-    T.local.push({ t: new Date().toISOString(), pst: String(br.pst).replace('.', ','), v: v, uf: uf, zz: zz ? [zz.st, zz.s, zv] : null });
+    // the count only moves forward: ignore anything behind the newest point we already have
+    var pts = trendPoints(), newest = pts.length ? pct(pts[pts.length - 1].pst) : -1, tot = 0;
+    Object.keys(v).forEach(function(n){ tot += v[n]; });
+    var lastTot = 0; if (pts.length) Object.keys(pts[pts.length - 1].v).forEach(function(n){ lastTot += pts[pts.length - 1].v[n]; });
+    if (!(br.pst <= 100) || br.pst < newest || tot < lastTot) return;
+    T.local.push({ e: state.eleicao, t: new Date().toISOString(), pst: String(br.pst).replace('.', ','), v: v, uf: uf, zz: zz ? [zz.st, zz.s, zv] : null });
     if (state.demo) T.local = T.local.slice(-60);
   }
   function trendPoints(){
-    var T = state.trend, srv = (T.srv && T.srv.pontos) || [];
+    var T = trendFor(state.eleicao), srv = (T.srv && T.srv.pontos) || [];
     var lastPst = srv.length ? pct(srv[srv.length - 1].pst) : -1;
-    return srv.concat(T.local.filter(function(p){ return pct(p.pst) > lastPst; }));
+    var all = srv.concat(T.local.filter(function(p){ return p.e === T.e && pct(p.pst) > lastPst; })), out = [], hi = -1;
+    all.forEach(function(p){ var x = pct(p.pst); if (x >= hi && x <= 100) { out.push(p); hi = x; } });
+    return out;
   }
   // votes and % counted for the current selection at one snapshot
   function trendScope(p){
@@ -1044,7 +1067,7 @@ tr.click:hover td{background:var(--ink3)}
   }
 
   function drawTrendShare(svg, share, A, B){
-    var W = Math.max(260, Math.round(svg.getBoundingClientRect().width) || 320), H = 170, L = 34, R = 70, T = 10, Bm = 20;
+    var W = Math.max(260, Math.round(svg.getBoundingClientRect().width) || 320), H = 170, L = 34, R = 88, T = 10, Bm = 20;
     var lo = 100, hi = 0; share.forEach(function(p){ lo = Math.min(lo, p.a, p.b); hi = Math.max(hi, p.a, p.b); });
     lo = Math.max(0, Math.floor((Math.min(lo, 50) - 3) / 5) * 5); hi = Math.min(100, Math.ceil((Math.max(hi, 50) + 3) / 5) * 5);
     var x0 = share[0].pst, x1 = Math.max(share[share.length - 1].pst, x0 + 1);
@@ -1054,12 +1077,14 @@ tr.click:hover td{background:var(--ink3)}
       out += '<line class="gl" x1="' + L + '" x2="' + (W - R) + '" y1="' + y(g) + '" y2="' + y(g) + '"' + (g === 50 ? ' style="stroke:var(--muted2);stroke-dasharray:3 3"' : '') + '/>' +
         '<text class="ax" x="' + (L - 5) + '" y="' + (y(g) + 3) + '" text-anchor="end">' + g + '%</text>';
     out += '<text class="ax" x="' + L + '" y="' + (H - 4) + '">' + fmtPct(x0, 0) + ' apurado</text><text class="ax" x="' + (W - R) + '" y="' + (H - 4) + '" text-anchor="end">' + fmtPct(x1, 0) + '</text>';
+    // end labels: keep them at least 12px apart so they stay legible when the race is close
+    var lp = share[share.length - 1], ly = { a: y(lp.a), b: y(lp.b) };
+    if (Math.abs(ly.a - ly.b) < 12) { var mid = (ly.a + ly.b) / 2, up = ly.a <= ly.b ? 'a' : 'b'; ly[up] = mid - 6; ly[up === 'a' ? 'b' : 'a'] = mid + 6; }
     [[A, 'a'], [B, 'b']].forEach(function(s){
       var c = colorOf(s[0].n), d = share.map(function(p, i){ return (i ? 'L' : 'M') + x(p.pst).toFixed(1) + ' ' + y(p[s[1]]).toFixed(1); }).join('');
       out += '<path class="ln" d="' + d + '" style="stroke:' + c + '"/>';
-      var lp = share[share.length - 1];
       out += '<circle class="dot" cx="' + x(lp.pst) + '" cy="' + y(lp[s[1]]) + '" r="4" style="fill:' + c + '"/>' +
-        '<text class="el" x="' + (W - R + 8) + '" y="' + (y(lp[s[1]]) + 3) + '">' + esc(s[0].nm.split(' ')[0]) + ' ' + f1(lp[s[1]]) + '%</text>';
+        '<text class="el" x="' + (W - R + 8) + '" y="' + (ly[s[1]] + 3) + '">' + esc(s[0].nm.split(' ')[0]) + ' ' + f1(lp[s[1]]) + '%</text>';
     });
     share.forEach(function(p){
       out += '<g class="col" data-tip="' + esc(fmtPct(p.pst, 1) + ' apurado ¦ ' + A.nm + ' ' + fmtPct(p.a, 2) + ' ¦ ' + B.nm + ' ' + fmtPct(p.b, 2)) + '">' +
@@ -1630,6 +1655,7 @@ tr.click:hover td{background:var(--ink3)}
       X.lastOk = new Date(); renderExt(); return Promise.resolve();
     }
     return getJson(extUrlAb(e)).then(function(ab){
+      if (state.eleicao !== e) return;
       if (!ab) { X.lastOk = new Date(); renderExt(); return; }
       var todo = [];
       (ab.abr || []).forEach(function(m){
@@ -1642,8 +1668,8 @@ tr.click:hover td{background:var(--ink3)}
       });
       X.pending = todo.length; X.total = todo.length;
       renderExt();
-      todo = todo.map(function(job){ return function(){ return job().then(function(){ X.pending--; if (X.pending % 20 === 0) renderExt(); }); }; });
-      return pool(todo, 8).then(function(){ X.pending = 0; X.lastOk = new Date(); renderExt(); });
+      todo = todo.map(function(job){ return function(){ return job().then(function(){ if (state.eleicao !== e) return; X.pending--; if (X.pending % 5 === 0) renderExt(); }); }; });
+      return pool(todo, 8).then(function(){ if (state.eleicao !== e) return; X.pending = 0; X.lastOk = new Date(); renderExt(); });
     }).catch(function(){ renderExt(); });
   }
   function scheduleExt(){
@@ -1929,13 +1955,19 @@ tr.click:hover td{background:var(--ink3)}
   }
   $('turno').addEventListener('click', function(ev){
     var b = ev.target.closest('button'); if (!b) return;
+    if (b.getAttribute('data-e') === state.eleicao) return;
     state.eleicao = b.getAttribute('data-e'); state.data = {}; state.lastOk = null; state.sel = null; state.mun.sel = null;
+    // nothing from the other round may be drawn while this round's files load
+    state.mun.data = null; state.mun.e = null; state.mun.missing = false;
+    trendFor(state.eleicao);
+    var X = state.ext; X.cities = {}; X.sig = {}; X.eleicao = state.eleicao; X.pending = 0; X.total = 0;
     syncTurnoUI();
     try {
       var q = new URLSearchParams(location.search); q.delete('e'); q.set('turno', isRunoff() ? '2' : '1');
       history.replaceState(null, '', '?' + q.toString());
     } catch (e) {}
     setStatus('', 'Carregando dados do TSE…'); render(); load().then(schedule, schedule); loadRef();
+    if (munMode()) loadMun();
     if (!$('tab-ext').hidden) loadExt().then(scheduleExt, scheduleExt);
   });
   $('refresh').addEventListener('click', function(){ load().then(schedule, schedule); });
