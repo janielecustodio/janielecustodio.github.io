@@ -147,6 +147,19 @@ h1{font-size:22px;font-weight:600;color:var(--head);margin-top:6px}
 .histtip{white-space:pre;position:absolute;pointer-events:none;background:var(--ink3);border:1px solid var(--line2);border-radius:var(--r);padding:5px 8px;font:11px 'IBM Plex Mono',monospace;color:var(--head);z-index:5}
 .hist .ln{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
 #trendCard{margin-top:18px;position:relative}
+.vs1card{margin-top:18px}
+.vs1{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+@media(max-width:560px){.vs1{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.vs1 .p3{grid-column:1 / -1}}
+.vs1 h4{margin:0;font:600 12px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--head)}
+.vs1 .ps{font-size:11px;line-height:1.4;color:var(--muted2);min-height:36px;border-bottom:1px solid var(--line);padding-bottom:4px}
+.vs1 .bars{display:flex;align-items:flex-end;gap:6px;height:170px;border-bottom:1px solid var(--line2);margin-top:6px}
+.vs1 .b{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:flex-end;height:100%;text-align:center}
+.vs1 .b i{display:block;border-radius:3px 3px 0 0;min-height:2px}
+.vs1 .b .v{font:600 11px 'IBM Plex Sans',sans-serif;color:var(--head);white-space:nowrap}
+.vs1 .b .q{font:10px 'IBM Plex Mono',monospace;color:var(--muted2);margin-bottom:3px;white-space:nowrap}
+.vs1 .nm{display:flex;gap:6px}
+.vs1 .nm span{flex:1;min-width:0;text-align:center;font-size:11px;color:var(--body);padding-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vs1 .msg{height:170px;display:flex;align-items:center;justify-content:center;text-align:center;font-size:12px;color:var(--muted2);padding:0 6px}
 #trendCard svg{overflow:hidden}
 .hist .ln.part{stroke-dasharray:4 3}
 .hist .dot{stroke:var(--ink2);stroke-width:2}
@@ -268,6 +281,12 @@ tr.click:hover td{background:var(--ink3)}
     <div class="histtip" id="trendtip" hidden></div>
   </div>
 
+  <div class="card vs1card" id="vs1Card" hidden>
+    <h2><span id="vs1Title">1º × 2º turno</span><small id="vs1Info"></small></h2>
+    <div class="vs1" id="vs1"></div>
+    <p class="proj-note" id="vs1Note" style="margin:10px 0 0"></p>
+  </div>
+
   <div class="card proj">
     <h2><span>Projeção do resultado final</span><small id="projInfo"></small></h2>
     <p class="proj-note">Se, em cada estado, os eleitores que faltam apurar votarem na mesma proporção dos já apurados.
@@ -304,6 +323,12 @@ tr.click:hover td{background:var(--ink3)}
 
   <div id="tab-ext" hidden>
     <div class="summary" id="extSummary"></div>
+
+    <div class="card vs1card" id="vs1ExtCard" hidden>
+      <h2><span>Votos no exterior · 1º × 2º turno</span><small id="vs1ExtInfo"></small></h2>
+      <div class="vs1" id="vs1Ext"></div>
+      <p class="proj-note" id="vs1ExtNote" style="margin:10px 0 0"></p>
+    </div>
 
     <div class="grid">
       <div class="card">
@@ -567,8 +592,10 @@ tr.click:hover td{background:var(--ink3)}
         return;
       }
       state.data = data; state.lastOk = new Date();
-      if (munMode() && !$('tab-live').hidden) loadMun();   // municipal file refreshes on the same 30 s cycle
+      // municipal file refreshes on the same cycle (the runoff comparison uses it in every map mode)
+      if ((munMode() || isRunoff()) && !$('tab-live').hidden) loadMun();
       sampleTrend();
+      loadRef();   // retries any 1st-round file that failed
       var found = Object.keys(data).filter(function(k){ return data[k]; }).length;
       if (!state.demo) showBanner(found ? '' : isRunoff()
         ? 'O 2º turno é no domingo, <b>25 de outubro</b>. A votação vai das 8h às 17h (horário de Brasília) e o TSE começa a divulgar os resultados a partir das 17h. Esta página atualiza sozinha a cada 30 s.'
@@ -637,24 +664,36 @@ tr.click:hover td{background:var(--ink3)}
   function isRunoff(){ return state.eleicao === E2; }
 
   // In the runoff, also load the (final) 1st-round files once, to show each finalist's 1st-round share.
+  // Final 1st-round files are fetched once each; any that failed are retried on the next refresh cycle.
   function loadRef(){
-    if (!isRunoff() || state.refLoaded) return;   // in round 1 the live data already is the 1st round
-    state.refLoaded = true;
-    var abrs = ['br'].concat(UFS.map(function(u){ return u.toLowerCase(); }));
+    if (!isRunoff() || state.refLoading) return;   // in round 1 the live data already is the 1st round
+    var abrs = ['br', 'zz'].concat(UFS.map(function(u){ return u.toLowerCase(); }))
+      .filter(function(a){ return !state.ref[a.toUpperCase()]; });
+    if (!abrs.length) return;
+    state.refLoading = true;
     Promise.all(abrs.map(function(a){
       return fetchOne(a, E1).catch(function(){ return null; });
     })).then(function(rs){
+      state.refLoading = false;
       abrs.forEach(function(a, i){ if (rs[i]) state.ref[a.toUpperCase()] = rs[i]; });
-      if (!rs[0]) state.refLoaded = false;   // try again on the next round switch or reload
       if (isRunoff()) { render(); renderHistory(); }
     });
   }
   // 1st-round share of candidate n in a state key or a list of states (summed).
+  // Scaled to the two runoff finalists only, so it sums to 100% and compares directly with the runoff.
   function refPct(keys, n){
-    var tot = 0, mine = 0, any = false;
-    [].concat(keys).forEach(function(k){
-      var d = state.ref[k]; if (!d) return; any = true;
-      d.cands.forEach(function(c){ tot += c.votos; if (c.n === n) mine += c.votos; });
+    var tot = 0, mine = 0, any = false, fin = finalists().map(function(c){ return c.n; });
+    if (fin.length < 2 || fin.indexOf(n) < 0) return null;
+    keys = [].concat(keys);
+    var src = null;
+    // every state of the area, never a partial set (that would skew the share toward whichever states loaded)
+    if (keys.every(function(k){ return state.ref[k]; })) src = keys.map(function(k){ return state.ref[k]; });
+    else if (keys[0] !== 'BR' && state.mun.r1) src = Object.keys(state.mun.r1).map(function(k){ return state.mun.r1[k]; })
+      .filter(function(d){ return keys.indexOf(d.uf) >= 0; });   // 1st round is final: its municipalities add up to the same totals
+    if (!src) return null;
+    src.forEach(function(d){
+      any = true;
+      d.cands.forEach(function(c){ if (fin.indexOf(c.n) < 0) return; tot += c.votos; if (c.n === n) mine += c.votos; });
     });
     return any && tot ? mine / tot * 100 : null;
   }
@@ -754,8 +793,10 @@ tr.click:hover td{background:var(--ink3)}
   function swingOf(d2, d1){
     if (!d2 || !d1 || !d2.cands || d2.cands.length < 2 || !d2.cands[0].votos) return null;
     var a = d2.cands[0], b = d2.cands[1];
-    var p1 = function(n){ var c = (d1.cands || []).filter(function(x){ return x.n === n; })[0]; return c ? c.pct : 0; };
-    var ga = a.pct - p1(a.n), gb = b.pct - p1(b.n);
+    // 1st round scaled to the two finalists only (sums to 100, like the runoff)
+    var w1 = function(n){ var c = (d1.cands || []).filter(function(x){ return x.n === n; })[0]; return c ? (c.votos != null ? c.votos : c.pct) : 0; };
+    var t1 = w1(a.n) + w1(b.n); if (!t1) return null;
+    var ga = a.pct - w1(a.n) / t1 * 100, gb = b.pct - w1(b.n) / t1 * 100;
     return { a: a, b: b, ga: ga, gb: gb, net: ga - gb };
   }
   function swingShade(d2, d1){
@@ -766,14 +807,14 @@ tr.click:hover td{background:var(--ink3)}
   function swingTip(d2, d1){
     var w = swingOf(d2, d1); if (!w) return '';
     var f = function(g){ return (g >= 0 ? '+' : '') + f1(g) + ' p.p.'; };
-    return w.a.nm + ' ' + f(w.ga) + ' ¦ ' + w.b.nm + ' ' + f(w.gb) + ' ¦ (vs 1º turno)';
+    return w.a.nm + ' ' + f(w.ga) + ' ¦ ' + w.b.nm + ' ' + f(w.gb) + ' ¦ (vs 1º turno, só entre os dois)';
   }
   function swingLegend(){
     var nat = national();
     return (nat.cands || []).filter(function(c){ return c.votos; }).slice(0, 2).map(function(c){
         return '<span>' + esc(c.nm) + ' cresceu mais <i style="display:inline-block;width:60px;height:10px;border-radius:3px;vertical-align:middle;background:linear-gradient(90deg,' +
           colorOf(c.n) + '1f,' + colorOf(c.n) + ')"></i></span>'; }).join('') +
-      '<span style="color:var(--muted2)">cor = finalista que mais ganhou pontos percentuais desde o 1º turno; tom forte = diferença de 40 p.p. ou mais</span>';
+      '<span style="color:var(--muted2)">cor = finalista que ganhou espaço desde o 1º turno, contando só os dois (1º turno escalado para 100%); tom forte = margem mudou 40 p.p. ou mais</span>';
   }
 
   function saldoShade(d, lmax){
@@ -861,7 +902,7 @@ tr.click:hover td{background:var(--ink3)}
     fetch('dados/mun-' + E1 + '.json').then(function(r){ return r.ok ? r.json() : null; }).then(function(j){
       if (!j) return;
       var d = {}; Object.keys(j.m).forEach(function(k){ d[k] = parseMun(j.m[k], j.c || {}); });
-      M.r1 = d; renderMap();
+      M.r1 = d; renderMap(); renderVs1();
     }).catch(function(){}).then(function(){ M.r1loading = false; });
   }
 
@@ -874,6 +915,7 @@ tr.click:hover td{background:var(--ink3)}
         r1[k] = { cands: d.cands.map(function(c, i){ return { n: c.n, pct: c.pct * (i ? 0.8 + h / 100 : 0.9 - h / 200) }; }) }; }); M.r1 = r1; }
       renderMap(); return Promise.resolve();
     }
+    M.loading = true;
     return fetch('dados/mun-' + e + '.json', { cache: 'no-cache' }).then(function(r){
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return r.json();
@@ -887,7 +929,7 @@ tr.click:hover td{background:var(--ink3)}
       if (state.eleicao !== e) return;
       if (M.e !== e) { M.data = null; M.e = e; }
       M.missing = !M.data; renderMap();
-    });
+    }).then(function(){ M.loading = false; });
   }
 
   function pctile(arr, q){ if (!arr.length) return 0; var a = arr.slice().sort(function(x, y){ return x - y; }); return a[Math.min(a.length - 1, Math.floor(q * a.length))]; }
@@ -1123,6 +1165,118 @@ tr.click:hover td{background:var(--ink3)}
     box.addEventListener('mouseleave', function(){ tip.hidden = true; });
   })();
 
+  // ── 1st round × runoff: votes of each finalist in both rounds, and what they gained ──
+  // Raw "votes now − votes in round 1" is only fair once the area is fully counted; before that the
+  // gain is measured over the municipalities already 100% counted in the runoff (same places, both rounds).
+  function fmtK(v){
+    var a = Math.abs(v), s = v < 0 ? '−' : '';
+    if (a < 1000) return s + fmtInt(a);
+    if (a < 1e6) return s + (a / 1e3).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' mil';
+    return s + (a / 1e6).toLocaleString('pt-BR', { maximumFractionDigits: 2 }) + ' mi';
+  }
+  function votesOf(d, n){ var c = d && (d.cands || []).filter(function(x){ return x.n === n; })[0]; return c ? c.votos : 0; }
+  function vvOf(d){ return d ? (d.vv || (d.cands || []).reduce(function(t, c){ return t + c.votos; }, 0)) : 0; }
+  function finalists(){
+    var nat = national(), src = nat.cands && nat.cands.length ? nat.cands : [];
+    // fixed order (by ballot number) so the bars don't swap places when the lead changes
+    return src.filter(function(c){ return c.votos; }).slice(0, 2).sort(function(a, b){ return +a.n - +b.n; });
+  }
+  // scope -> { r1, r2, fair: { n, a1, b1, a2, b2 } | null }
+  function vs1Scope(cur){
+    var M = state.mun, inScope;
+    if (cur.keys === null) { var ms = state.mun.sel; return { r1: M.r1 && M.r1[ms], r2: cur.d, mun: true }; }
+    var r1 = cur.keys === 'BR' ? state.ref.BR : Array.isArray(cur.keys)
+      ? (cur.keys.every(function(u){ return state.ref[u]; }) ? aggList(cur.keys.map(function(u){ return state.ref[u]; })) : null)
+      : state.ref[cur.keys];
+    inScope = cur.keys === 'BR' ? function(){ return true; } : function(d){ return [].concat(cur.keys).indexOf(d.uf) >= 0; };
+    // states and regions: the 1st round is final, so the sum of its municipalities is the same total
+    if (!r1 && cur.keys !== 'BR' && M.r1) {
+      var list = Object.keys(M.r1).map(function(k){ return M.r1[k]; }).filter(inScope);
+      r1 = aggList(list);
+      r1.vv = list.reduce(function(t, d){ return t + (d.vv || 0); }, 0);   // municipal rows list only the top 3
+    }
+    return { r1: r1, r2: cur.d, inScope: inScope };
+  }
+  function fairGain(inScope, fin){
+    var M = state.mun; if (!M.data || !M.r1 || M.e !== state.eleicao) return null;
+    var f = { n: 0, tot: 0, a1: 0, b1: 0, a2: 0, b2: 0 };
+    Object.keys(M.data).forEach(function(k){
+      var d = M.data[k]; if (!inScope(d)) return;
+      f.tot++;
+      // fully counted in the runoff, with votes (a counted municipality with 0 votes is a stale file, not a result)
+      var d1 = M.r1[k]; if (!d1 || !d.s || d.st < d.s || !d.vv || !vvOf(d1)) return;
+      f.n++; f.a1 += votesOf(d1, fin[0].n); f.b1 += votesOf(d1, fin[1].n); f.a2 += votesOf(d, fin[0].n); f.b2 += votesOf(d, fin[1].n);
+    });
+    return f;
+  }
+  function vs1Html(r1, r2, fin, gain, gainSub, gainMsg){
+    var a1 = votesOf(r1, fin[0].n), b1 = votesOf(r1, fin[1].n), vv1 = vvOf(r1), o1 = Math.max(0, vv1 - a1 - b1);
+    var a2 = votesOf(r2, fin[0].n), b2 = votesOf(r2, fin[1].n), vv2 = vvOf(r2);
+    var max = Math.max(a1, b1, o1, a2, b2, 1), cols = [colorOf(fin[0].n), colorOf(fin[1].n), 'var(--muted2)'];
+    var bar = function(v, pct, col, scale, top, tip){
+      return '<div class="b" title="' + esc(tip) + '"><div class="v">' + top + '</div><div class="q">' + pct + '</div>' +
+        '<i style="height:' + (Math.abs(v) / scale * 72).toFixed(1) + '%;background:' + col + (v < 0 ? ';opacity:.45' : '') + '"></i></div>';
+    };
+    var names = function(list){ return '<div class="nm">' + list.map(function(t){ return '<span>' + esc(t) + '</span>'; }).join('') + '</div>'; };
+    var short = function(c){ var p = c.nm.split(' '); return p.length > 1 && c.nm.length > 12 ? p[0] + ' ' + p[p.length - 1] : c.nm; };
+    var h = '<div><h4>1º turno</h4><div class="ps">votos válidos · final</div><div class="bars">' +
+      bar(a1, fmtPct(vv1 ? a1 / vv1 * 100 : 0), cols[0], max, fmtK(a1), fin[0].nm + ': ' + fmtInt(a1)) +
+      bar(b1, fmtPct(vv1 ? b1 / vv1 * 100 : 0), cols[1], max, fmtK(b1), fin[1].nm + ': ' + fmtInt(b1)) +
+      bar(o1, fmtPct(vv1 ? o1 / vv1 * 100 : 0), cols[2], max, fmtK(o1), 'Outros: ' + fmtInt(o1)) + '</div>' +
+      names([short(fin[0]), short(fin[1]), 'Outros']) + '</div>';
+    h += '<div><h4>2º turno</h4><div class="ps">votos válidos · ' + (r2.pst >= 100 ? 'final' : 'até agora (' + fmtPct(r2.pst, 1) + ' das seções)') + '</div><div class="bars">' +
+      bar(a2, fmtPct(vv2 ? a2 / vv2 * 100 : 0), cols[0], max, fmtK(a2), fin[0].nm + ': ' + fmtInt(a2)) +
+      bar(b2, fmtPct(vv2 ? b2 / vv2 * 100 : 0), cols[1], max, fmtK(b2), fin[1].nm + ': ' + fmtInt(b2)) + '</div>' +
+      names([short(fin[0]), short(fin[1])]) + '</div>';
+    h += '<div class="p3"><h4>Ganho de votos</h4><div class="ps">' + gainSub + '</div>';
+    if (gain) {
+      var ga = gain.a2 - gain.a1, gb = gain.b2 - gain.b1, gmax = Math.max(Math.abs(ga), Math.abs(gb), 1);
+      var rel = function(g, base){ return base ? (g >= 0 ? '+' : '−') + fmtPct(Math.abs(g / base * 100), 1) : '—'; };
+      h += '<div class="bars">' +
+        bar(ga, rel(ga, gain.a1), cols[0], gmax, (ga >= 0 ? '+' : '') + fmtK(ga), fin[0].nm + ': ' + fmtInt(gain.a1) + ' → ' + fmtInt(gain.a2)) +
+        bar(gb, rel(gb, gain.b1), cols[1], gmax, (gb >= 0 ? '+' : '') + fmtK(gb), fin[1].nm + ': ' + fmtInt(gain.b1) + ' → ' + fmtInt(gain.b2)) + '</div>' +
+        names([short(fin[0]), short(fin[1])]);
+    } else h += '<div class="msg">' + gainMsg + '</div>';
+    return h + '</div>';
+  }
+  function renderVs1(){
+    var card = $('vs1Card'); if (!card) return;
+    var fin = finalists();
+    card.hidden = !isRunoff() || fin.length < 2;
+    if (card.hidden || $('tab-live').hidden) return;
+    if (!state.demo) { if (!state.mun.r1) loadMun1(); if (state.mun.e !== state.eleicao && !state.mun.loading) loadMun(); }
+    var cur = current(), sc = vs1Scope(cur), r2 = sc.r2;
+    $('vs1Title').textContent = '1º × 2º turno · ' + cur.title;
+    if (!sc.r1 || !r2 || !r2.cands || !r2.cands.length) {
+      $('vs1').innerHTML = '<div class="msg" style="grid-column:1/-1">' + (sc.r1 ? 'Sem votos apurados aqui ainda.' : 'Carregando o resultado do 1º turno…') + '</div>';
+      $('vs1Info').textContent = ''; $('vs1Note').textContent = ''; return;
+    }
+    var done = r2.pst >= 100, gain = null, sub, msg = '', note = '';
+    if (done) { gain = { a1: votesOf(sc.r1, fin[0].n), b1: votesOf(sc.r1, fin[1].n), a2: votesOf(r2, fin[0].n), b2: votesOf(r2, fin[1].n) }; sub = 'variação entre os turnos'; }
+    else if (sc.mun) { sub = 'variação entre os turnos'; msg = 'Aparece quando este município estiver 100% apurado (' + fmtPct(r2.pst, 1) + ' agora).'; }
+    else {
+      var f = fairGain(sc.inScope, fin);
+      if (f && f.n) { gain = f; sub = 'nos ' + fmtInt(f.n) + ' de ' + fmtInt(f.tot) + ' municípios já 100% apurados'; }
+      else { sub = 'mesmos lugares nos dois turnos'; msg = f ? 'Aparece quando o primeiro município estiver 100% apurado.' : 'Carregando dados por município…'; }
+      note = 'O ganho só compara lugares já 100% apurados: somar o 2º turno parcial e comparar com o 1º turno completo faria todo mundo parecer perder votos.';
+    }
+    $('vs1Info').textContent = done ? 'apuração completa' : fmtPct(r2.pst, 1) + ' apurado';
+    $('vs1').innerHTML = vs1Html(sc.r1, r2, fin, gain, sub, msg);
+    $('vs1Note').textContent = note;
+  }
+  function renderVs1Ext(){
+    var card = $('vs1ExtCard'); if (!card) return;
+    var fin = finalists(), r1 = state.ref.ZZ, r2 = state.data.ZZ;
+    card.hidden = !isRunoff() || fin.length < 2 || !r1 || !r2 || !r2.cands || !r2.cands.length;
+    if (card.hidden) return;
+    var done = r2.pst >= 100;
+    $('vs1ExtInfo').textContent = done ? 'apuração completa' : fmtPct(r2.pst, 1) + ' das seções apuradas';
+    $('vs1Ext').innerHTML = vs1Html(r1, r2, fin,
+      done ? { a1: votesOf(r1, fin[0].n), b1: votesOf(r1, fin[1].n), a2: votesOf(r2, fin[0].n), b2: votesOf(r2, fin[1].n) } : null,
+      'variação entre os turnos', 'Aparece quando a apuração no exterior chegar a 100% (' + fmtPct(r2.pst, 1) + ' agora): antes disso o 2º turno tem menos urnas contadas que o 1º.');
+    $('vs1ExtNote').textContent = '';
+  }
+
   function renderMap(){
     var useMun = munMode() && !(state.mun.missing && state.mode === 'mun');
     // SVG elements have no .hidden property, so toggle the attribute itself
@@ -1243,7 +1397,7 @@ tr.click:hover td{background:var(--ink3)}
         (c.partido ? ' <em>' + esc(c.partido) + '</em>' : '') + '</div><div class="pc">' + fmtPct(c.pct) + '</div>' +
         '<div class="bar"><i style="width:' + Math.min(100, c.pct || 0) + '%;background:' + colorOf(c.n) + '"></i></div>' +
         '<div class="vt">' + fmtInt(c.votos) + ' votos' + (c.eleito ? ' · ELEITO' : (c.st && /turno/i.test(c.st) ? ' · ' + esc(c.st) : '')) +
-        (refKeys && refPct(refKeys, c.n) != null ? ' · 1º turno ' + fmtPct(refPct(refKeys, c.n), 1) : '') + '</div></div>';
+        (refKeys && refPct(refKeys, c.n) != null ? ' · 1º turno (só os 2) ' + fmtPct(refPct(refKeys, c.n), 1) : '') + '</div></div>';
     }).join('');
   }
 
@@ -1264,6 +1418,7 @@ tr.click:hover td{background:var(--ink3)}
     $('detail').innerHTML = d ? candRows(d.cands, 0, isRunoff() && cur.keys ? cur.keys : null) : '<div class="empty">Sem dados para este local ainda.</div>';
     if (cur.keys === null) $('detail').innerHTML += '<div class="vt" style="margin-top:10px;font:11px \'IBM Plex Mono\',monospace;color:var(--muted2)">por município o TSE detalha os 3 mais votados aqui · ' +
       '<a href="#" id="toState">ver ' + esc(UF_NAMES[d.uf] || d.uf) + '</a></div>';
+    renderVs1();   // follows the same selection
   }
 
   function stackBar(cands){
@@ -1717,6 +1872,7 @@ tr.click:hover td{background:var(--ink3)}
     renderExtDetail(C, tot);
     renderExtTable(C);
     renderExtHistory();
+    renderVs1Ext();
   }
 
   function renderWorld(C){

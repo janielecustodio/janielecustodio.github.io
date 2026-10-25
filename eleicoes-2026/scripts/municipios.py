@@ -92,7 +92,8 @@ def main():
         p = progress.get(cd)
         if not p:
             continue
-        sig = f"{p['s']['st']}|{p.get('ht', '')}"
+        # "2|": rows written before the stale-file check below get refetched once
+        sig = f"2|{p['s']['st']}|{p.get('ht', '')}"
         r = rows.get(ibge)
         if r and r[-1] == sig:
             continue
@@ -100,7 +101,7 @@ def main():
         rows[ibge] = [nm.title(), uf.upper(), num(p['e']['te']), num(p['e']['est']), num(p['e']['a']),
                       num(p['s']['st']), num(p['s']['ts']), r[7] if r else [], r[8] if r else 0, '']
         if num(p['s']['st']) > 0:
-            todo.append((cd, uf, ibge, sig))
+            todo.append((cd, uf, ibge, sig, num(p['s']['st'])))
         else:
             rows[ibge][-1] = sig
 
@@ -110,14 +111,23 @@ def main():
         return
 
     def fetch(job):
-        cd, uf, ibge, sig = job
+        cd, uf, ibge, sig, st = job
         return job, get(f'{BASE}{e}/dados/{uf}/{uf}{cd}-c0001-e{e6}-u.json')
 
-    done = 0
+    done = stale = 0
     with cf.ThreadPoolExecutor(a.workers) as ex:
-        for (cd, uf, ibge, sig), j in ex.map(fetch, todo):
+        for (cd, uf, ibge, sig, st), j in ex.map(fetch, todo):
             if not j:
                 continue
+            # The CDN can still serve an older copy of the municipality's file than the state summary
+            # describes (e.g. 0 votes with every section already counted). Keep what it has, but leave
+            # the row unsigned so the next run fetches it again.
+            if num((j.get('s') or {}).get('st')) < st:
+                stale += 1
+                sig = ''
+                # progress as of that copy, so the row's "% counted" matches its votes
+                je = j.get('e') or {}
+                rows[ibge][3], rows[ibge][4], rows[ibge][5] = num(je.get('est')), num(je.get('a')), num(j['s'].get('st'))
             v, nm = votes(j)
             names.update(nm)
             top = sorted(v.items(), key=lambda kv: -kv[1])
@@ -133,7 +143,7 @@ def main():
     with open(tmp, 'w') as f:
         json.dump(doc, f, ensure_ascii=False, separators=(',', ':'))
     os.replace(tmp, out_path)
-    print(f'{len(rows)} municipalities, {len(todo)} changed, {done} fetched -> {out_path}')
+    print(f'{len(rows)} municipalities, {len(todo)} changed, {done} fetched ({stale} stale, retry next run) -> {out_path}')
     snapshot(e, e6, rows, names, out_path)
 
 
