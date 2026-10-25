@@ -10,6 +10,11 @@ on:
     # Each run loops for ~25 minutes, so runs every 30 minutes give continuous coverage.
     - cron: '0,30 20-23 25 10 *'
     - cron: '0,30 0-5 26 10 *'
+  # Scheduled runs may be delayed or skipped by GitHub, so a change to this file also starts
+  # one long run (pushes made by the job itself use GITHUB_TOKEN and never retrigger it).
+  push:
+    branches: [master]
+    paths: ['.github/workflows/eleicoes-municipios.yml']
   workflow_dispatch:
     inputs:
       eleicao:
@@ -29,17 +34,17 @@ concurrency:
 jobs:
   coletar:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 350
     steps:
       - uses: actions/checkout@v4
 
       - name: Collect and publish
         env:
           ELEICAO: ${{ github.event.inputs.eleicao || '6258' }}
-          MINUTOS: ${{ github.event.inputs.minutos || '25' }}
+          MINUTOS: ${{ github.event.inputs.minutos || (github.event_name == 'push' && '330') || '25' }}
         run: |
           # the schedule repeats every year; only collect for this election
-          if [ "${{ github.event_name }}" = schedule ] && [ "$(date -u +%Y)" != 2026 ]; then echo 'not 2026'; exit 0; fi
+          if [ "${{ github.event_name }}" != workflow_dispatch ] && [ "$(date -u +%Y-%m)" != 2026-10 ]; then echo 'outside the 2026 runoff'; exit 0; fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           out="eleicoes-2026/dados/mun-${ELEICAO}.json"
