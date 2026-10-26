@@ -616,7 +616,13 @@ tr.click:hover td{background:var(--ink3)}
   function showBanner(html, demo){ var b = $('banner'); b.innerHTML = html; b.className = 'banner' + (html ? ' show' : '') + (demo ? ' demo' : ''); }
 
   // ── aggregation by region (sum of state files) ──
-  function aggregate(ufs){ return aggList(ufs.map(function(u){ return state.data[u]; })); }
+  // Sum of states: only when every state of the set has arrived; a partial sum would pass off a few
+  // states as the whole region. Until then: an empty total that says how many states are in.
+  function aggregate(ufs){
+    var list = ufs.map(function(u){ return state.data[u]; }), have = list.filter(Boolean).length;
+    if (have < ufs.length) return { cands: [], e: 0, ea: 0, pea: null, s: 0, st: 0, pst: null, vv: 0, a: 0, pa: null, have: have, partial: true };
+    return aggList(list);
+  }
   function aggList(list){
     var tot = { e:0, ea:0, s:0, st:0, vv:0, a:0, have:0 }, byN = {};
     list.forEach(function(d){
@@ -680,6 +686,27 @@ tr.click:hover td{background:var(--ink3)}
     });
   }
   // 1st-round share of candidate n in a state key or a list of states (summed).
+  // 1st-round abstention (% of voters in counted sections) for a set of states, 'BR' or 'ZZ': all of them or
+  // nothing; the 1st round is final, so its municipalities add up to the same totals when a state file is missing.
+  function refAbs(keys){
+    keys = [].concat(keys);
+    var src = null, a = 0, ea = 0;
+    if (keys.every(function(k){ return state.ref[k]; })) src = keys.map(function(k){ return state.ref[k]; });
+    else if (keys[0] !== 'BR' && keys[0] !== 'ZZ' && state.mun.r1) src = Object.keys(state.mun.r1).map(function(k){ return state.mun.r1[k]; })
+      .filter(function(d){ return keys.indexOf(d.uf) >= 0; });
+    if (!src) return null;
+    src.forEach(function(d){ a += d.a || 0; ea += d.ea || 0; });
+    return ea ? a / ea * 100 : null;
+  }
+  // "Abstenção 1º turno" row: the 1st-round rate and how the runoff compares (runoff only)
+  function absRow(keys, d){
+    if (!isRunoff()) return '';
+    var r1 = refAbs(keys); if (r1 == null) return '';
+    var diff = d && d.ea ? d.pa - r1 : null;
+    return '<div class="falta"><span>Abstenção 1º turno</span><b>' + fmtPct(r1, 1) +
+      (diff == null ? '' : Math.abs(diff) < 0.05 ? ' · igual' : ' · ' + (diff > 0 ? 'subiu ' : 'caiu ') + f1(Math.abs(diff)) + ' p.p.') + '</b></div>';
+  }
+
   // Scaled to the two runoff finalists only, so it sums to 100% and compares directly with the runoff.
   function refPct(keys, n){
     var tot = 0, mine = 0, any = false, fin = finalists().map(function(c){ return c.n; });
@@ -702,9 +729,7 @@ tr.click:hover td{background:var(--ink3)}
     // Prefer the official BR file (includes votes abroad). The sum of the states is only a stand-in when all 27
     // arrived: a partial sum would show a lopsided "national" result driven by whichever states happened to load.
     if (state.data.BR && state.data.BR.cands.length) return state.data.BR;
-    var agg = aggregate(UFS);
-    if (agg.have < UFS.length) return { cands: [], e: 0, ea: 0, pea: null, s: 0, st: 0, pst: null, vv: 0, have: agg.have, a: 0, pa: null };
-    return agg;
+    return aggregate(UFS);
   }
 
   function assignColors(){
@@ -1413,7 +1438,8 @@ tr.click:hover td{background:var(--ink3)}
   function renderDetail(){
     var cur = current(), d = cur.d;
     $('detailTitle').textContent = cur.title;
-    $('detailAp').textContent = d && d.e ? 'eleitorado apurado ' + fmtPct(d.pea) + ' · faltam ' + fmtInt(falta(d)) + ' eleitores' + (d.ea ? ' · abstenção ' + fmtPct(d.pa, 1) : '') : '';
+    $('detailAp').textContent = d && d.e ? 'eleitorado apurado ' + fmtPct(d.pea) + ' · faltam ' + fmtInt(falta(d)) + ' eleitores' + (d.ea ? ' · abstenção ' + fmtPct(d.pa, 1) : '') +
+      (d.ea && isRunoff() && cur.keys && refAbs(cur.keys) != null ? ' (1º turno ' + fmtPct(refAbs(cur.keys), 1) + ')' : '') : '';
     $('detailBar').firstChild.style.width = (d && d.pea || 0) + '%';
     $('detail').innerHTML = d ? candRows(d.cands, 0, isRunoff() && cur.keys ? cur.keys : null) : '<div class="empty">Sem dados para este local ainda.</div>';
     if (cur.keys === null) $('detail').innerHTML += '<div class="vt" style="margin-top:10px;font:11px \'IBM Plex Mono\',monospace;color:var(--muted2)">por município o TSE detalha os 3 mais votados aqui · ' +
@@ -1428,9 +1454,11 @@ tr.click:hover td{background:var(--ink3)}
   }
 
   function projLine(r){
-    var c = project(r.ufs).cands;
+    if (r.ufs.some(function(u){ return !state.data[u]; })) return '';   // a state's file is missing: no projection from the rest
+    var P = project(r.ufs), c = P.cands;
     if (!c.length) return '';
-    return '<div class="pj">Projeção final: ' + c.slice(0, 2).map(function(x){ return '<b>' + esc(x.nm) + ' ' + fmtPct(x.pct, 1) + '</b>'; }).join(' · ') + '</div>';
+    return '<div class="pj">Projeção final: ' + c.slice(0, 2).map(function(x){ return '<b>' + esc(x.nm) + ' ' + fmtPct(x.pct, 1) + '</b>'; }).join(' · ') +
+      (P.missing.length ? ' <span style="color:var(--muted2)">(sem votos ainda: ' + P.missing.join(', ') + ')</span>' : '') + '</div>';
   }
 
   function renderProjection(){
@@ -2035,16 +2063,17 @@ tr.click:hover td{background:var(--ink3)}
     var extCard = '<a class="region" href="#exterior" style="text-decoration:none;color:inherit;display:block">' +
       '<h3>Exterior<small>' + (zz && zz.e ? fmtInt(zz.e) + ' eleitores' : 'eleitores fora do Brasil') + '</small></h3>' +
       (zz && zz.e ? '<div class="ap"><span>Eleitorado apurado</span><b>' + fmtPct(zz.pea) + '</b></div><div class="bar"><i style="width:' + (zz.pea || 0) + '%"></i></div>' +
-        '<div class="falta"><span>Abstenção</span><b>' + (zz.ea ? fmtPct(zz.pa, 1) : '—') + '</b></div><div class="cands">' + candRows(zz.cands, 2) + '</div>' : '') +
+        '<div class="falta"><span>Abstenção' + (isRunoff() ? ' 2º turno' : '') + '</span><b>' + (zz.ea ? fmtPct(zz.pa, 1) : '—') + '</b></div>' + absRow('ZZ', zz) + '<div class="cands">' + candRows(zz.cands, 2) + '</div>' : '') +
       '<div class="pj">Ver por país →</div></a>';
     $('regions').innerHTML = REGIONS.map(function(r){
       var d = aggregate(r.ufs);
       return '<div class="region' + (state.sel === r.id ? ' sel' : '') + '" data-r="' + r.id + '">' +
-        '<h3>' + r.nm + '<small>' + r.ufs.length + ' UFs · ' + fmtInt(d.e) + ' eleitores</small></h3>' +
+        '<h3>' + r.nm + '<small>' + r.ufs.length + ' UFs' + (d.partial ? ' · carregando (' + d.have + ' de ' + r.ufs.length + ')' : ' · ' + fmtInt(d.e) + ' eleitores') + '</small></h3>' +
         '<div class="ap"><span>Eleitorado apurado</span><b>' + fmtPct(d.pea) + '</b></div>' +
         '<div class="bar"><i style="width:' + (d.pea || 0) + '%"></i></div>' +
         '<div class="falta"><span>Faltam apurar</span><b>' + (d.e ? fmtInt(falta(d)) + ' eleitores' : '—') + '</b></div>' +
-        '<div class="falta"><span>Abstenção</span><b>' + (d.ea ? fmtPct(d.pa, 1) + ' (' + fmtInt(d.a) + ')' : '—') + '</b></div>' +
+        '<div class="falta"><span>Abstenção' + (isRunoff() ? ' 2º turno' : '') + '</span><b>' + (d.ea ? fmtPct(d.pa, 1) + ' (' + fmtInt(d.a) + ')' : '—') + '</b></div>' +
+        absRow(r.ufs, d) +
         '<div class="cands">' + candRows(d.cands, 3, isRunoff() ? r.ufs : null) + '</div>' + projLine(r) + '</div>';
     }).join('') + extCard;
   }
