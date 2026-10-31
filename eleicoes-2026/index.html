@@ -148,6 +148,14 @@ h1{font-size:22px;font-weight:600;color:var(--head);margin-top:6px}
 .hist .ln{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
 #trendCard{margin-top:18px;position:relative}
 .vs1card{margin-top:18px}
+#btCard{margin-top:18px;position:relative}
+.bt-legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin:8px 0 0;font-size:12px;color:var(--body)}
+.bt-legend i{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle;margin-right:5px}
+.bt-legend i.dash{height:0;border-top:2px dashed}
+#btTable td small{display:block;color:var(--muted2);font-size:10px}
+#btTable th,#btTable td{padding:6px 4px}
+#btTable th{cursor:default;letter-spacing:.04em}
+#btTable caption{caption-side:bottom;text-align:left;font-size:11px;color:var(--muted2);padding-top:6px}
 .vs1{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
 @media(max-width:560px){.vs1{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.vs1 .p3{grid-column:1 / -1}}
 .vs1 h4{margin:0;font:600 12px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--head)}
@@ -296,6 +304,18 @@ tr.click:hover td{background:var(--ink3)}
       <div><div class="proj-sub">Brasil</div><div class="cands" id="projBR"></div></div>
       <div><div class="proj-sub">Por região</div><div id="projReg"></div></div>
     </div>
+  </div>
+
+  <div class="card hist" id="btCard" hidden>
+    <h2><span>Backtest da projeção</span><small id="btInfo"></small></h2>
+    <p class="proj-note">Como a projeção teria se saído em cada momento da apuração, recalculada com os dados guardados a cada 3 minutos durante a noite.
+      <b>Por estado</b> é o método da projeção acima (votos de cada estado × eleitorado ÷ eleitorado apurado).
+      <b>Por município</b> aplica a mesma regra a cada município; os ainda sem votos apurados seguem o ritmo do seu estado.</p>
+    <figure style="margin:10px 0 0"><figcaption id="btCap"></figcaption><svg id="btChart" role="img" aria-label="Projeção ao longo da apuração comparada ao resultado final"></svg></figure>
+    <div class="bt-legend" id="btLegend"></div>
+    <p class="proj-note" id="btNote" style="margin:10px 0 0"></p>
+    <div class="tablewrap" style="margin-top:10px"><table id="btTable"></table></div>
+    <div class="histtip" id="bttip" hidden></div>
   </div>
 
   <div class="regions" id="regions"></div>
@@ -761,6 +781,7 @@ tr.click:hover td{background:var(--ink3)}
     renderDetail();
     renderRegions();
     renderProjection();
+    loadBacktest();
     renderTrend();
     renderHistory();
     renderExt();
@@ -1188,6 +1209,102 @@ tr.click:hover td{background:var(--ink3)}
       tip.style.top = (gr.top - br.top - tip.offsetHeight + 8) + 'px';
     });
     box.addEventListener('mouseleave', function(){ tip.hidden = true; });
+  })();
+
+  // ── Backtest of the projection (dados/backtest-<e>.json, written by scripts/backtest.py after the count) ──
+  var BT = { e: null, d: null };
+  var BT_COL = { raw: 'var(--muted2)', uf: 'var(--accent)', mun: '#f0a830' };
+  var BT_NM = { raw: 'Apurado até o momento', uf: 'Projeção por estado', mun: 'Projeção por município' };
+  function loadBacktest(){
+    var e = state.eleicao;
+    if (state.demo) { $('btCard').hidden = true; return; }
+    if (BT.e === e) { renderBacktest(); return; }
+    BT.e = e; BT.d = null; renderBacktest();
+    fetch('dados/backtest-' + e + '.json', { cache: 'no-cache' }).then(function(r){ return r.ok ? r.json() : null; }).then(function(j){
+      if (state.eleicao !== e) return;
+      BT.d = j && j.eleicao === e ? j : null; renderBacktest();
+    }).catch(function(){});
+  }
+  function brt(t){ var d = new Date(new Date(t).getTime() - 3 * 3600e3); return ('0' + d.getUTCHours()).slice(-2) + ':' + ('0' + d.getUTCMinutes()).slice(-2); }
+  // first moment after which a method stayed within tol p.p. of the final result for good
+  function btSettled(pts, k, n, fin, tol){
+    var at = null;
+    pts.forEach(function(p){ var ok = p[k] && Math.abs(p[k][n] - fin) < tol; if (!ok) at = null; else if (!at) at = p; });
+    return at;
+  }
+  function renderBacktest(){
+    var card = $('btCard'), D = BT.d;
+    card.hidden = !D || $('tab-live').hidden;
+    if (card.hidden) return;
+    var n = Object.keys(D.final).sort(function(a, b){ return D.final[b] - D.final[a]; })[0], fin = D.final[n], nm = (D.c[n] || [n])[0];
+    // from the first 1% of sections to the first point at 99.9% (after that every line sits on the final result)
+    var pts = [], all = D.pontos.filter(function(p){ return p.pst >= 1 && p.raw && p.uf && p.mun; });
+    for (var i = 0; i < all.length; i++) { pts.push(all[i]); if (all[i].pst >= 99.9) break; }
+    if (pts.length < 2) { card.hidden = true; return; }
+    $('btInfo').textContent = 'resultado final ' + fmtPct(fin);
+    $('btCap').textContent = '% de ' + nm + ' nos votos válidos · horário de Brasília';
+    var svg = $('btChart'), W = Math.max(280, Math.round(svg.getBoundingClientRect().width) || 320), H = 230, L = 36, R = 64, T = 10, Bm = 22;
+    var lo = fin, hi = fin;
+    pts.forEach(function(p){ ['raw', 'uf', 'mun'].forEach(function(k){ lo = Math.min(lo, p[k][n]); hi = Math.max(hi, p[k][n]); }); });
+    lo = Math.floor(lo - 0.3); hi = Math.ceil(hi + 0.3);
+    var t0 = Date.parse(pts[0].t), t1 = Date.parse(pts[pts.length - 1].t);
+    var x = function(t){ return L + (W - L - R) * (Date.parse(t) - t0) / (t1 - t0); }, y = function(v){ return T + (H - T - Bm) * (1 - (v - lo) / (hi - lo)); };
+    var out = '', step = hi - lo > 8 ? 2 : 1;
+    for (var g = lo; g <= hi; g += step)
+      out += '<line class="gl" x1="' + L + '" x2="' + (W - R) + '" y1="' + y(g) + '" y2="' + y(g) + '"/><text class="ax" x="' + (L - 5) + '" y="' + (y(g) + 3) + '" text-anchor="end">' + g + '%</text>';
+    // x ticks on the hour and half hour (Brasília), at most ~5 labels
+    var half = 1800e3, first = Math.ceil((t0 - 3 * 3600e3) / half) * half + 3 * 3600e3, ticks = [];
+    for (var tt = first; tt <= t1; tt += half) ticks.push(tt);
+    var every = Math.max(1, Math.ceil(ticks.length / 5));
+    ticks.forEach(function(tt, i){ if (i % every) return; var iso = new Date(tt).toISOString(), xx = x(iso);
+      out += '<line class="gl" x1="' + xx + '" x2="' + xx + '" y1="' + (H - Bm) + '" y2="' + (H - Bm + 4) + '"/><text class="ax" x="' + xx + '" y="' + (H - 4) + '" text-anchor="middle">' + brt(iso) + '</text>'; });
+    out += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(fin) + '" y2="' + y(fin) + '" style="stroke:' + colorOf(n) + ';stroke-width:1.5;stroke-dasharray:5 4"/>' +
+      '<text class="el" x="' + (W - R + 6) + '" y="' + (y(fin) + 3) + '">final ' + fmtPct(fin) + '</text>';
+    ['raw', 'uf', 'mun'].forEach(function(k){
+      out += '<path class="ln" d="' + pts.map(function(p, i){ return (i ? 'L' : 'M') + x(p.t).toFixed(1) + ' ' + y(p[k][n]).toFixed(1); }).join('') + '" style="stroke:' + BT_COL[k] + (k === 'raw' ? ';stroke-width:1.5' : '') + '"/>';
+    });
+    pts.forEach(function(p, i){
+      var x0 = i ? (x(pts[i - 1].t) + x(p.t)) / 2 : L, x1 = i < pts.length - 1 ? (x(p.t) + x(pts[i + 1].t)) / 2 : W - R;
+      var f = function(k){ var v = p[k][n], dv = v - fin; return fmtPct(v) + ' (' + dpp(dv) + ')'; };
+      out += '<g class="col" data-tip="' + esc(brt(p.t) + ' · ' + fmtPct(p.pst, 1) + ' das seções ¦ apurado ' + f('raw') + ' ¦ proj. por estado ' + f('uf') + ' ¦ proj. por município ' + f('mun')) + '">' +
+        '<line class="xh" x1="' + x(p.t) + '" x2="' + x(p.t) + '" y1="' + T + '" y2="' + (H - Bm) + '"/><rect class="hit" x="' + x0 + '" y="' + T + '" width="' + Math.max(1, x1 - x0) + '" height="' + (H - T - Bm) + '"/></g>';
+    });
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H); svg.innerHTML = out;
+    $('btLegend').innerHTML = ['raw', 'uf', 'mun'].map(function(k){ return '<span><i style="background:' + BT_COL[k] + '"></i>' + BT_NM[k] + '</span>'; }).join('') +
+      '<span><i class="dash" style="border-color:' + colorOf(n) + '"></i>Resultado final</span>';
+    // when each method settled
+    var short = { raw: 'só o apurado', uf: 'por estado', mun: 'por município' };
+    var line = function(tol){
+      return ['mun', 'uf', 'raw'].map(function(k){ var a = btSettled(pts, k, n, fin, tol);
+        return short[k] + ' <b>' + (a ? brt(a.t) + '</b> (' + fmtPct(a.pst, 0) + ' das seções)' : '—</b>'); }).join(' · ');
+    };
+    $('btNote').innerHTML = 'Hora em que cada linha chegou perto do final e não se afastou mais.<br>' +
+      'A menos de 0,5 p.p.: ' + line(0.5) + '.<br>A menos de 0,1 p.p.: ' + line(0.1) + '.';
+    // one row per half hour (Brasília): the count as it stood at that moment
+    var rows = [];
+    ticks.forEach(function(tt){ var at = null; pts.forEach(function(p){ if (Date.parse(p.t) <= tt) at = p; }); if (at && rows.indexOf(at) < 0) rows.push(at); });
+    if (rows.indexOf(pts[pts.length - 1]) < 0 && rows[rows.length - 1].pst < 99.9) rows.push(pts[pts.length - 1]);
+    var cell = function(p, k){ var dv = p[k][n] - fin; return '<td class="n">' + fmtPct(p[k][n]) + '<small>' + dpp(dv) + '</small></td>'; };
+    $('btTable').innerHTML = '<thead><tr><th>Hora</th><th style="text-align:right">Seções</th><th style="text-align:right">Apurado</th><th style="text-align:right">Estado</th><th style="text-align:right">Município</th></tr></thead><tbody>' +
+      rows.map(function(p){ return '<tr><td>' + brt(p.t) + '</td><td class="n">' + fmtPct(p.pst, 1) + '</td>' + cell(p, 'raw') + cell(p, 'uf') + cell(p, 'mun') + '</tr>'; }).join('') + '</tbody>' +
+      '<caption>a cada meia hora · embaixo de cada valor, a diferença para o resultado final em p.p.</caption>';
+  }
+  function f2(v){ return v.toFixed(2).replace('.', ','); }
+  // signed difference in p.p., without a "−0,00"
+  function dpp(dv){ return Math.abs(dv) < 0.005 ? '0,00' : (dv > 0 ? '+' : '−') + f2(Math.abs(dv)); }
+  (function(){
+    var box = $('btCard'), tip = $('bttip');
+    function move(ev){
+      var g = ev.target.closest && ev.target.closest('g[data-tip]');
+      if (!g) { tip.hidden = true; return; }
+      tip.textContent = g.getAttribute('data-tip').split(' ¦ ').join('\n'); tip.hidden = false;
+      var br = box.getBoundingClientRect(), gr = g.getBoundingClientRect();
+      tip.style.left = Math.max(4, Math.min(br.width - tip.offsetWidth - 4, gr.left + gr.width / 2 - br.left - tip.offsetWidth / 2)) + 'px';
+      tip.style.top = (gr.top - br.top - tip.offsetHeight + 8) + 'px';
+    }
+    box.addEventListener('mousemove', move); box.addEventListener('click', move);
+    box.addEventListener('mouseleave', function(){ tip.hidden = true; });
+    var rt; window.addEventListener('resize', function(){ clearTimeout(rt); rt = setTimeout(renderBacktest, 150); });
   })();
 
   // ── 1st round × runoff: votes of each finalist in both rounds, and what they gained ──
