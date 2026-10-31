@@ -297,9 +297,11 @@ tr.click:hover td{background:var(--ink3)}
 
   <div class="card proj">
     <h2><span>Projeção do resultado final</span><small id="projInfo"></small></h2>
-    <p class="proj-note">Se, em cada estado, os eleitores que faltam apurar votarem na mesma proporção dos já apurados.
-      Os votos de cada estado são multiplicados por eleitorado ÷ eleitorado apurado (mantém a abstenção, os brancos e os nulos do estado) e depois somados.
-      É uma extrapolação simples, não uma pesquisa: a apuração não avança de forma uniforme dentro de cada estado (capitais × interior).</p>
+    <p class="proj-note">Se, em cada município, os eleitores que faltam apurar votarem na mesma proporção dos já apurados ali.
+      Os votos de cada município são multiplicados por eleitorado ÷ eleitorado apurado (mantém a abstenção, os brancos e os nulos do lugar);
+      municípios ainda sem nenhum voto apurado seguem a proporção do seu estado. Depois tudo é somado.
+      Projetar por município corrige o fato de capitais e interior chegarem em ritmos diferentes: no 2º turno de 2026, ficou a menos de 0,5 p.p. do resultado final com 25% das seções apuradas (veja o backtest abaixo).
+      Continua sendo uma extrapolação simples, não uma pesquisa. Os dados por município são atualizados a cada ~3 minutos.</p>
     <div class="projgrid">
       <div><div class="proj-sub">Brasil</div><div class="cands" id="projBR"></div></div>
       <div><div class="proj-sub">Por região</div><div id="projReg"></div></div>
@@ -309,8 +311,8 @@ tr.click:hover td{background:var(--ink3)}
   <div class="card hist" id="btCard" hidden>
     <h2><span>Backtest da projeção</span><small id="btInfo"></small></h2>
     <p class="proj-note">Como a projeção teria se saído em cada momento da apuração, recalculada com os dados guardados a cada 3 minutos durante a noite.
-      <b>Por estado</b> é o método da projeção acima (votos de cada estado × eleitorado ÷ eleitorado apurado).
-      <b>Por município</b> aplica a mesma regra a cada município; os ainda sem votos apurados seguem o ritmo do seu estado.</p>
+      <b>Por estado</b> foi o método da projeção na noite da eleição (votos de cada estado × eleitorado ÷ eleitorado apurado).
+      <b>Por município</b> aplica a mesma regra a cada município, e os ainda sem votos apurados seguem o ritmo do seu estado; é o método que a projeção acima usa agora.</p>
     <figure style="margin:10px 0 0"><figcaption id="btCap"></figcaption><svg id="btChart" role="img" aria-label="Projeção ao longo da apuração comparada ao resultado final"></svg></figure>
     <div class="bt-legend" id="btLegend"></div>
     <p class="proj-note" id="btNote" style="margin:10px 0 0"></p>
@@ -612,8 +614,8 @@ tr.click:hover td{background:var(--ink3)}
         return;
       }
       state.data = data; state.lastOk = new Date();
-      // municipal file refreshes on the same cycle (the runoff comparison uses it in every map mode)
-      if ((munMode() || isRunoff()) && !$('tab-live').hidden) loadMun();
+      // municipal file refreshes on the same cycle (the projection and the runoff comparison use it in every map mode)
+      if (!$('tab-live').hidden) loadMun();
       sampleTrend();
       loadRef();   // retries any 1st-round file that failed
       var found = Object.keys(data).filter(function(k){ return data[k]; }).length;
@@ -668,12 +670,47 @@ tr.click:hover td{background:var(--ink3)}
   // Projection: assume each state's uncounted voters behave like its counted ones, i.e. scale the
   // state's votes by eleitorado / eleitorado apurado, then sum states. States with nothing counted
   // yet cannot be projected and are reported as missing.
+  // Per-municipality projection of one state: each counted municipality's votes × its electorate ÷ its counted
+  // electorate; municipalities with nothing counted yet take the state's counted rate. In the backtest of the
+  // 2026 runoff this settled within 0.5 p.p. of the final result at 25% of sections (the per-state rule: 78%),
+  // because capitals and the interior don't report at the same pace. Null when the municipal file can't
+  // support it (not loaded, another round, or a counted municipality without its full candidate list).
+  function munProjUF(uf){
+    var M = state.mun; if (!M.data || M.e !== state.eleicao) return null;
+    var out = { v: {}, nm: {}, e: 0, ea: 0, unc: 0 }, mv = {}, ok = true;
+    Object.keys(M.data).forEach(function(k){
+      var d = M.data[k]; if (d.uf !== uf) return;
+      out.e += d.e;
+      if (!d.ea || !d.vv) { out.unc += d.e; return; }   // nothing counted (or a stale copy: sections but no votes)
+      var sum = 0;
+      d.cands.forEach(function(c){
+        sum += c.votos; out.v[c.n] = (out.v[c.n] || 0) + c.votos; mv[c.n] = (mv[c.n] || 0) + c.votos * d.e / d.ea;
+        out.nm[c.n] = c;
+      });
+      if (sum !== d.vv) ok = false;   // only the top candidates listed: can't project the rest
+      out.ea += d.ea;
+    });
+    if (!ok || !out.ea) return null;
+    Object.keys(out.v).forEach(function(n){ mv[n] += out.unc * out.v[n] / out.ea; });
+    out.proj = mv;
+    return out;
+  }
   function project(keys){
-    var byN = {}, missing = [], eTot = 0, eCovered = 0;
+    var byN = {}, missing = [], eTot = 0, eCovered = 0, byState = [];
     keys.forEach(function(k){
-      var d = state.data[k];
+      var d = state.data[k], mp = k !== 'ZZ' ? munProjUF(k) : null;
+      if (mp) {
+        eTot += mp.e; eCovered += mp.e;
+        Object.keys(mp.proj).forEach(function(n){
+          var c = mp.nm[n], live = d && d.cands.filter(function(x){ return x.n === n; })[0];
+          if (!byN[n]) byN[n] = { n: n, nm: c.nm, partido: c.partido, votos: 0, atual: 0 };
+          byN[n].votos += mp.proj[n]; byN[n].atual += live ? live.votos : mp.v[n];
+        });
+        return;
+      }
       if (d && d.e) eTot += d.e;
       if (!d || !d.ea || !d.cands.length) { if (k !== 'ZZ') missing.push(k); return; }
+      if (k !== 'ZZ') byState.push(k);
       var f = d.e / d.ea; eCovered += d.e;
       d.cands.forEach(function(c){
         if (!byN[c.n]) byN[c.n] = { n:c.n, nm:c.nm, partido:c.partido, votos:0, atual:0 };
@@ -684,7 +721,7 @@ tr.click:hover td{background:var(--ink3)}
     var vv = cands.reduce(function(s, c){ return s + c.votos; }, 0);
     cands.forEach(function(c){ c.pct = vv ? c.votos / vv * 100 : 0; });
     cands.sort(function(a, b){ return b.votos - a.votos; });
-    return { cands: cands, vv: vv, missing: missing, eTot: eTot, eCovered: eCovered };
+    return { cands: cands, vv: vv, missing: missing, eTot: eTot, eCovered: eCovered, byState: byState };
   }
 
   function isRunoff(){ return state.eleicao === E2; }
@@ -970,7 +1007,7 @@ tr.click:hover td{background:var(--ink3)}
       var data = {};
       Object.keys(j.m).forEach(function(ibge){ data[ibge] = parseMun(j.m[ibge], j.c || {}); });
       M.data = data; M.e = e; M.missing = false; M.gerado = j.gerado;
-      renderMap(); renderDetail();
+      renderMap(); renderDetail(); renderProjection(); renderRegions();
     }).catch(function(){
       if (state.eleicao !== e) return;
       if (M.e !== e) { M.data = null; M.e = e; }
@@ -1559,7 +1596,8 @@ tr.click:hover td{background:var(--ink3)}
       (d.ea && isRunoff() && cur.keys && refAbs(cur.keys) != null ? ' (1º turno ' + fmtPct(refAbs(cur.keys), 1) + ')' : '') : '';
     $('detailBar').firstChild.style.width = (d && d.pea || 0) + '%';
     $('detail').innerHTML = d ? candRows(d.cands, 0, isRunoff() && cur.keys ? cur.keys : null) : '<div class="empty">Sem dados para este local ainda.</div>';
-    if (cur.keys === null) $('detail').innerHTML += '<div class="vt" style="margin-top:10px;font:11px \'IBM Plex Mono\',monospace;color:var(--muted2)">por município o TSE detalha os 3 mais votados aqui · ' +
+    var full = d && d.cands.reduce(function(t, c){ return t + c.votos; }, 0) === d.vv;   // older files list only the top 3
+    if (cur.keys === null) $('detail').innerHTML += '<div class="vt" style="margin-top:10px;font:11px \'IBM Plex Mono\',monospace;color:var(--muted2)">' + (full ? '' : 'por município mostramos os 3 mais votados · ') +
       '<a href="#" id="toState">ver ' + esc(UF_NAMES[d.uf] || d.uf) + '</a></div>';
     renderVs1();   // follows the same selection
   }
@@ -1585,7 +1623,9 @@ tr.click:hover td{background:var(--ink3)}
       $('projBR').innerHTML = '<div class="empty">Sem votos apurados para projetar ainda.</div>';
       $('projReg').innerHTML = ''; $('projInfo').textContent = ''; return;
     }
-    $('projInfo').textContent = P.missing.length ? 'sem dados ainda: ' + P.missing.join(', ') : 'todos os estados';
+    $('projInfo').textContent = (P.missing.length ? 'sem dados ainda: ' + P.missing.join(', ') : 'todos os estados') +
+      (!P.byState.length ? ' · por município' : P.byState.length + P.missing.length >= UFS.length ? ' · por estado (dados municipais incompletos)' :
+        ' · por estado em ' + P.byState.join(', ') + ' (dados municipais incompletos)');
     $('projBR').innerHTML = P.cands.slice(0, 6).map(function(c){
       return '<div class="cand"><div class="nm"><i class="sw" style="background:' + colorOf(c.n) + '"></i>' + esc(c.nm) +
         (c.partido ? ' <em>' + esc(c.partido) + '</em>' : '') + '</div><div class="pc">' + fmtPct(c.pct) + '</div>' +

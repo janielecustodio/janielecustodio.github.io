@@ -131,13 +131,14 @@ def main():
             v, nm = votes(j)
             names.update(nm)
             top = sorted(v.items(), key=lambda kv: -kv[1])
-            rows[ibge][7] = [[n, c] for n, c in top[:3]]
+            # every candidate with votes (not just the top 3), so the page can project each municipality
+            rows[ibge][7] = [[n, c] for n, c in top if c > 0]
             rows[ibge][8] = sum(v.values())
             rows[ibge][-1] = sig
             done += 1
 
     doc = {'eleicao': e, 'gerado': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
-           'campos': ['nome', 'uf', 'aptos', 'apurados', 'abstencoes', 'secoes_tot', 'secoes', 'top3 [numero, votos]', 'votos_validos', 'sig'],
+           'campos': ['nome', 'uf', 'aptos', 'apurados', 'abstencoes', 'secoes_tot', 'secoes', 'votos [numero, votos]', 'votos_validos', 'sig'],
            'c': names, 'm': rows}
     tmp = out_path + '.tmp'
     with open(tmp, 'w') as f:
