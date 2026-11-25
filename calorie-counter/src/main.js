@@ -1,4 +1,4 @@
-import { isConfigured } from "./supabaseClient.js";
+import { isConfigured, isLocalMode } from "./supabaseClient.js";
 import { onAuthChange, signIn, signUp, signOut } from "./auth.js";
 import { searchAll } from "./foodSearch.js";
 import { startScan, barcodeScanningSupported } from "./barcode.js";
@@ -20,8 +20,26 @@ import { renderPlan } from "./planView.js";
 import { saveWeight, getWeightForDate } from "./bodyLog.js";
 import { getTargets, saveTargets, clearTargets } from "./targets.js";
 
-if (!isConfigured) {
+if (!isConfigured && !isLocalMode) {
   document.getElementById("config-warning").hidden = false;
+}
+
+// ── Local mode (no Supabase account needed) ──
+// See supabaseClient.js/localClient.js — this just flips the flag that
+// decides which client gets constructed and reloads, since the already-
+// imported `supabase` binding elsewhere can't be swapped live.
+document.getElementById("local-mode-link").addEventListener("click", () => {
+  try {
+    localStorage.setItem("jc_local_mode", "1");
+  } catch {
+    // if storage is unavailable there's nowhere to persist the flag, but
+    // the reload below is a no-op then — same as declining local mode.
+  }
+  location.reload();
+});
+if (isLocalMode) {
+  document.getElementById("local-mode-banner").hidden = false;
+  document.getElementById("signout-btn").textContent = "Sair do modo local";
 }
 
 // Supabase errors don't always carry a plain string `.message` (e.g. a raw

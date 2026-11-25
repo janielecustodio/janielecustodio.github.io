@@ -113,6 +113,11 @@ button{font-family:inherit}
 .btn-primary:hover{opacity:.9}
 .auth-toggle{margin-top:14px;font-size:12px;color:var(--muted2);text-align:center}
 .auth-toggle a{cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.local-mode-toggle{margin-top:18px;padding-top:14px;border-top:1px solid var(--line)}
+.local-mode-banner{
+  display:flex;align-items:center;gap:8px;background:var(--ink3);border:1px solid var(--line2);
+  border-radius:var(--r);padding:8px 12px;font-size:12px;color:var(--muted2);margin-bottom:16px;
+}
 .auth-error{color:var(--bad);font-size:12px;margin-top:8px}
 .auth-warning{
   border:1px solid var(--bad);border-radius:var(--r);color:var(--bad);
@@ -479,10 +484,16 @@ button{font-family:inherit}
         <span id="auth-toggle-text">Need an account?</span>
         <a id="auth-toggle-link">Sign up</a>
       </div>
+      <div class="auth-toggle local-mode-toggle">
+        <a id="local-mode-link">Usar sem conta (dados salvos neste aparelho)</a>
+      </div>
     </div>
   </div>
 
   <div id="app" hidden>
+    <div class="local-mode-banner" id="local-mode-banner" hidden>
+      Modo local — dados salvos só neste aparelho, sem conexão com a nuvem.
+    </div>
     <section class="section" id="summary-panel">
       <div class="section-title">Daily Summary</div>
       <div id="summary-body"></div>
