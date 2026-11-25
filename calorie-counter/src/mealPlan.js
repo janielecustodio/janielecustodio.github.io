@@ -104,3 +104,35 @@ export async function unlogMealPlanItem(item, date) {
 
   for (const row of rows || []) await deleteEntry(row.id);
 }
+
+// Local Y-M-D, not toISOString().slice(0,10) — that goes through UTC and
+// shifts the calendar date for any positive UTC-offset timezone (a local
+// midnight becomes the previous day once converted to UTC).
+function toDateStr(d) {
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+// One free-text note per slot per day — a place to jot "troquei o salmão
+// por frango" etc. Returns a Map(slot_id -> note text) for the given day.
+export async function getNotesForDate(date) {
+  const dateStr = toDateStr(date);
+  const { data, error } = await supabase.from("meal_plan_notes").select("slot_id, note").eq("date", dateStr);
+  if (error) throw error;
+  const bySlot = new Map();
+  for (const row of data || []) bySlot.set(row.slot_id, row.note);
+  return bySlot;
+}
+
+// Upserted, not appended — logging a note again the same day for the
+// same slot updates the existing row (same pattern as saveWeight).
+export async function saveNote(slotId, date, note) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const dateStr = toDateStr(date);
+  const { error } = await supabase
+    .from("meal_plan_notes")
+    .upsert({ user_id: user.id, slot_id: slotId, date: dateStr, note }, { onConflict: "user_id,slot_id,date" });
+  if (error) throw error;
+}

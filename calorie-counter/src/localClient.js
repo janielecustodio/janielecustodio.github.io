@@ -24,6 +24,7 @@ function freshDb() {
     food_logs: [],
     weight_logs: [],
     user_targets: [],
+    meal_plan_notes: [],
     meal_plan_slots: JSON.parse(JSON.stringify(MEAL_PLAN_SLOTS)),
     meal_plan_options: JSON.parse(JSON.stringify(MEAL_PLAN_OPTIONS)),
     meal_plan_items: JSON.parse(JSON.stringify(MEAL_PLAN_ITEMS)),
