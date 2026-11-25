@@ -115,6 +115,19 @@ create table if not exists public.meal_plan_items (
 create index if not exists meal_plan_options_slot_idx on public.meal_plan_options (slot_id);
 create index if not exists meal_plan_items_option_idx on public.meal_plan_items (option_id);
 
+-- Free-text note per slot per day (e.g. "troquei o salmão por frango") —
+-- private per-user data, same pattern as weight_logs: one row per
+-- (user, slot, day), upserted rather than appended to.
+create table if not exists public.meal_plan_notes (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  slot_id uuid not null references public.meal_plan_slots (id) on delete cascade,
+  date date not null,
+  note text not null default '',
+  updated_at timestamptz not null default now(),
+  unique (user_id, slot_id, date)
+);
+
 alter table public.foods enable row level security;
 alter table public.food_logs enable row level security;
 alter table public.weight_logs enable row level security;
@@ -122,6 +135,7 @@ alter table public.user_targets enable row level security;
 alter table public.meal_plan_slots enable row level security;
 alter table public.meal_plan_options enable row level security;
 alter table public.meal_plan_items enable row level security;
+alter table public.meal_plan_notes enable row level security;
 
 -- `foods` is a shared lookup cache, not per-user data: any authenticated
 -- user of this app can read it and add/refresh entries via search.
@@ -184,6 +198,25 @@ create policy weight_logs_insert_own
 drop policy if exists weight_logs_update_own on public.weight_logs;
 create policy weight_logs_update_own
   on public.weight_logs for update
+  to authenticated
+  using (user_id = auth.uid());
+
+-- `meal_plan_notes` is private per-user data, same pattern as weight_logs.
+drop policy if exists meal_plan_notes_select_own on public.meal_plan_notes;
+create policy meal_plan_notes_select_own
+  on public.meal_plan_notes for select
+  to authenticated
+  using (user_id = auth.uid());
+
+drop policy if exists meal_plan_notes_insert_own on public.meal_plan_notes;
+create policy meal_plan_notes_insert_own
+  on public.meal_plan_notes for insert
+  to authenticated
+  with check (user_id = auth.uid());
+
+drop policy if exists meal_plan_notes_update_own on public.meal_plan_notes;
+create policy meal_plan_notes_update_own
+  on public.meal_plan_notes for update
   to authenticated
   using (user_id = auth.uid());
 

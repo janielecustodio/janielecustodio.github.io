@@ -1,4 +1,4 @@
-import { getMealPlan, logMealPlanItem, unlogMealPlanItem } from "./mealPlan.js";
+import { getMealPlan, logMealPlanItem, unlogMealPlanItem, getNotesForDate, saveNote } from "./mealPlan.js";
 import { getEntriesForDate } from "./log.js";
 
 function escapeHtml(s) {
@@ -68,7 +68,17 @@ function logAllButton(option, loggedItemIds) {
     </button>`;
 }
 
-function slotCard(slot, loggedItemIds) {
+function notesSection(slot, note) {
+  return `
+    <div class="plan-notes">
+      <div class="plan-notes-label">Notas</div>
+      <textarea class="plan-note-input" data-slot-id="${slot.id}" placeholder="Algum detalhe sobre esta refeição hoje?">${escapeHtml(
+        note || ""
+      )}</textarea>
+    </div>`;
+}
+
+function slotCard(slot, loggedItemIds, notesBySlot) {
   const hasTabs = slot.options.length > 1 && slot.options.some((o) => o.option_number != null);
   if (!activeOptionBySlot.has(slot.id)) {
     activeOptionBySlot.set(slot.id, defaultActiveOption(slot, loggedItemIds));
@@ -98,12 +108,17 @@ function slotCard(slot, loggedItemIds) {
       </div>
       ${tabs}
       <div class="plan-option-body">${activeOption ? optionBody(activeOption, loggedItemIds) : ""}</div>
+      ${notesSection(slot, notesBySlot.get(slot.id))}
     </div>`;
 }
 
 export async function renderPlan(container, date) {
   container.innerHTML = `<div class="no-entries">Carregando…</div>`;
-  const [slots, entries] = await Promise.all([getMealPlan(), getEntriesForDate(date)]);
+  const [slots, entries, notesBySlot] = await Promise.all([
+    getMealPlan(),
+    getEntriesForDate(date),
+    getNotesForDate(date),
+  ]);
 
   if (slots.length === 0) {
     container.innerHTML = `<div class="no-entries">Nenhum plano cadastrado ainda.</div>`;
@@ -114,7 +129,7 @@ export async function renderPlan(container, date) {
     entries.filter((e) => e.foods?.source === "mealplan").map((e) => e.foods.source_id)
   );
 
-  container.innerHTML = slots.map((slot) => slotCard(slot, loggedItemIds)).join("");
+  container.innerHTML = slots.map((slot) => slotCard(slot, loggedItemIds, notesBySlot)).join("");
 
   container.querySelectorAll(".plan-tab").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -160,6 +175,16 @@ export async function renderPlan(container, date) {
       } finally {
         renderPlan(container, date);
       }
+    });
+  });
+
+  // Saved on blur, not on every keystroke — a full renderPlan() on each
+  // keystroke would be wasteful and risks yanking focus mid-sentence.
+  container.querySelectorAll(".plan-note-input").forEach((textarea) => {
+    const initial = textarea.value;
+    textarea.addEventListener("blur", () => {
+      if (textarea.value === initial) return;
+      saveNote(textarea.dataset.slotId, date, textarea.value);
     });
   });
 }
