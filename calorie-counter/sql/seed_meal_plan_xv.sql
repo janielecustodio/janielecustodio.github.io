@@ -49,16 +49,17 @@
 -- to EVERY option of a multi-option slot (Café da manhã, Lanche I,
 -- Jantar), not just one.
 --
--- NOT YET MODELED — two things from the PDF's "Orientações" page don't
--- fit the meal-item structure and aren't included here; flagged for a
--- separate decision rather than guessed at:
---   Ciclo das sementes (seed cycling) — alternates which seeds to add
---     depending on day of the menstrual cycle, not a fixed daily item.
---   Hidratação — a 2.5 L/day water target. There's an unused water_logs
---     table in the schema already (migration 006) but no UI built on it.
+-- "Ciclo das sementes" (seed cycling) IS modeled, as its own slot with
+-- two options — which one applies today is computed client-side from a
+-- user-entered cycle start date (cycle_settings table, migration
+-- 010_add_cycle_settings.sql) on a fixed 28-day split, not stored here.
+--
+-- NOT YET MODELED — Hidratação, a 2.5 L/day water target from the same
+-- "Orientações" page. There's an unused water_logs table in the schema
+-- already (migration 006) but no UI built on it.
 
 delete from public.meal_plan_slots where title in (
-  'Em jejum', 'Shot', 'Café da manhã', 'Almoço', 'Lanche I', 'Pós-treino', 'Jantar'
+  'Ciclo das sementes', 'Em jejum', 'Shot', 'Café da manhã', 'Almoço', 'Lanche I', 'Pós-treino', 'Jantar'
 );
 
 do $$
@@ -66,6 +67,30 @@ declare
   v_slot_id uuid;
   v_opt_id uuid;
 begin
+
+  -- ── Ciclo das sementes — which option applies today is computed in
+  -- planView.js from cycle_settings.cycle_start_date, not fixed here.
+  insert into public.meal_plan_slots (order_index, time_label, title, meal_type)
+  values (0, null, 'Ciclo das sementes', 'breakfast')
+  returning id into v_slot_id;
+
+  insert into public.meal_plan_options (slot_id, option_number, option_label, observations)
+  values (v_slot_id, 1, '1º ao 14º dia (dia que menstrua)',
+    'Pode acrescentar em qualquer refeição — a sugestão é colocar nas que já estão no plano (ex.: no café da manhã).')
+  returning id into v_opt_id;
+
+  insert into public.meal_plan_items (option_id, order_index, name, quantity_label, kcal, protein_g, fat_g, carbs_g, is_supplement) values
+    (v_opt_id, 1, 'Semente de abóbora', '1 Colher de sopa (15 g)', 84, 5, 7, 2, false),
+    (v_opt_id, 2, 'Semente de linhaça', '1 Colher de sopa (10 g)', 53, 2, 4, 3, false);
+
+  insert into public.meal_plan_options (slot_id, option_number, option_label, observations)
+  values (v_slot_id, 2, '15º ao 28º dia',
+    'Pode acrescentar em qualquer refeição — a sugestão é colocar nas que já estão no plano (ex.: no café da manhã).')
+  returning id into v_opt_id;
+
+  insert into public.meal_plan_items (option_id, order_index, name, quantity_label, kcal, protein_g, fat_g, carbs_g, is_supplement) values
+    (v_opt_id, 1, 'Semente de girassol', '1 Colher de sopa (9 g)', 53, 2, 5, 2, false),
+    (v_opt_id, 2, 'Semente de gergelim', '1 Colher de sopa (9 g)', 51, 2, 5, 2, false);
 
   -- ── Em jejum (06:00) ──────────────────────────────────────────────
   insert into public.meal_plan_slots (order_index, time_label, title, meal_type)

@@ -128,8 +128,22 @@ create table if not exists public.meal_plan_notes (
   unique (user_id, slot_id, date)
 );
 
+-- Tracks the start date of the user's current menstrual cycle, to
+-- auto-select the right "ciclo das sementes" seed pairing for today
+-- (day 1-14 from this date: semente de abóbora + linhaça; day 15-28:
+-- girassol + gergelim — see the "Ciclo das sementes" slot below). One
+-- settings row per user, same pattern as user_targets — update the date
+-- whenever a new period starts; the 28-day split then just repeats from
+-- there.
+create table if not exists public.cycle_settings (
+  user_id uuid primary key references auth.users (id) on delete cascade,
+  cycle_start_date date,
+  updated_at timestamptz not null default now()
+);
+
 alter table public.foods enable row level security;
 alter table public.food_logs enable row level security;
+alter table public.cycle_settings enable row level security;
 alter table public.weight_logs enable row level security;
 alter table public.user_targets enable row level security;
 alter table public.meal_plan_slots enable row level security;
@@ -198,6 +212,25 @@ create policy weight_logs_insert_own
 drop policy if exists weight_logs_update_own on public.weight_logs;
 create policy weight_logs_update_own
   on public.weight_logs for update
+  to authenticated
+  using (user_id = auth.uid());
+
+-- `cycle_settings` is private per-user data, same pattern as user_targets.
+drop policy if exists cycle_settings_select_own on public.cycle_settings;
+create policy cycle_settings_select_own
+  on public.cycle_settings for select
+  to authenticated
+  using (user_id = auth.uid());
+
+drop policy if exists cycle_settings_insert_own on public.cycle_settings;
+create policy cycle_settings_insert_own
+  on public.cycle_settings for insert
+  to authenticated
+  with check (user_id = auth.uid());
+
+drop policy if exists cycle_settings_update_own on public.cycle_settings;
+create policy cycle_settings_update_own
+  on public.cycle_settings for update
   to authenticated
   using (user_id = auth.uid());
 

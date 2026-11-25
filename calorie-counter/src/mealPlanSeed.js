@@ -37,6 +37,7 @@ const JANTAR_SUPPLEMENTS = supplementRows([
 ]);
 
 export const MEAL_PLAN_SLOTS = [
+  { id: "slot-ciclo", order_index: 0, time_label: null, title: "Ciclo das sementes", meal_type: "breakfast" },
   { id: "slot-jejum", order_index: 1, time_label: "06:00", title: "Em jejum", meal_type: "breakfast" },
   { id: "slot-shot", order_index: 2, time_label: "06:05", title: "Shot", meal_type: "breakfast" },
   { id: "slot-cafe", order_index: 3, time_label: "07:00", title: "Café da manhã", meal_type: "breakfast" },
@@ -46,7 +47,25 @@ export const MEAL_PLAN_SLOTS = [
   { id: "slot-jantar", order_index: 7, time_label: null, title: "Jantar", meal_type: "dinner" },
 ];
 
+const CYCLE_OBSERVATION =
+  "Pode acrescentar em qualquer refeição — a sugestão é colocar nas que já estão no plano (ex.: no café da manhã).";
+
 export const MEAL_PLAN_OPTIONS = [
+  {
+    id: "opt-ciclo-1",
+    slot_id: "slot-ciclo",
+    option_number: 1,
+    option_label: "1º ao 14º dia (dia que menstrua)",
+    observations: CYCLE_OBSERVATION,
+  },
+  {
+    id: "opt-ciclo-2",
+    slot_id: "slot-ciclo",
+    option_number: 2,
+    option_label: "15º ao 28º dia",
+    observations: CYCLE_OBSERVATION,
+  },
+
   { id: "opt-jejum", slot_id: "slot-jejum", option_number: null, option_label: null, observations: null },
 
   {
@@ -158,6 +177,15 @@ function itemsFor(optionId, rows) {
 }
 
 export const MEAL_PLAN_ITEMS = [
+  ...itemsFor("opt-ciclo-1", [
+    { order_index: 1, name: "Semente de abóbora", quantity_label: "1 Colher de sopa (15 g)", kcal: 84, protein_g: 5, fat_g: 7, carbs_g: 2, is_supplement: false },
+    { order_index: 2, name: "Semente de linhaça", quantity_label: "1 Colher de sopa (10 g)", kcal: 53, protein_g: 2, fat_g: 4, carbs_g: 3, is_supplement: false },
+  ]),
+  ...itemsFor("opt-ciclo-2", [
+    { order_index: 1, name: "Semente de girassol", quantity_label: "1 Colher de sopa (9 g)", kcal: 53, protein_g: 2, fat_g: 5, carbs_g: 2, is_supplement: false },
+    { order_index: 2, name: "Semente de gergelim", quantity_label: "1 Colher de sopa (9 g)", kcal: 51, protein_g: 2, fat_g: 5, carbs_g: 2, is_supplement: false },
+  ]),
+
   ...itemsFor("opt-jejum", [
     { order_index: 1, name: "Água", quantity_label: "500 mL", kcal: 0, protein_g: 0, fat_g: 0, carbs_g: 0, is_supplement: false },
   ]),
