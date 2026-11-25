@@ -15,34 +15,46 @@
 // that already has local data saved. Without it, local mode's plan view
 // would stay frozen at whatever was seeded the very first time the
 // person used it, silently missing every later fix.
-export const MEAL_PLAN_SEED_VERSION = 5;
+export const MEAL_PLAN_SEED_VERSION = 6;
 
-function supplementRows(names) {
-  return names.map((n, i) => ({ order_index: 100 + i, ...n, is_supplement: true }));
+// `defaultTiming` applies to every row unless the row itself sets its
+// own supplement_timing (needed where a group mixes "antes" and
+// "depois", like JANTAR_SUPPLEMENTS below).
+function supplementRows(names, defaultTiming) {
+  return names.map((n, i) => ({ order_index: 100 + i, supplement_timing: defaultTiming, ...n, is_supplement: true }));
 }
 
-const MORNING_SUPPLEMENTS = supplementRows([
-  { name: "Vitamina D", quantity_label: "1 dose", kcal: 0, protein_g: 0, fat_g: 0, carbs_g: 0 },
-  { name: "Ferro", quantity_label: "1 dose", kcal: 0, protein_g: 0, fat_g: 0, carbs_g: 0 },
-  { name: "Red Yeast Rice + CoQ10", quantity_label: "2 cápsulas", kcal: 0, protein_g: 0, fat_g: 0, carbs_g: 0 },
-  {
-    name: "Manipulado (zinco, selênio, magnésio, B6, B2, B9, B12, colina, vit. C, PQQ, vit. E)",
-    quantity_label: "1 dose",
-    kcal: 0,
-    protein_g: 0,
-    fat_g: 0,
-    carbs_g: 0,
-  },
-]);
+// Taken as separate doses "após o café da manhã" — not mixed into the
+// food, so they render in their own "depois" block.
+const MORNING_SUPPLEMENTS = supplementRows(
+  [
+    { name: "Vitamina D", quantity_label: "1 dose", kcal: 0, protein_g: 0, fat_g: 0, carbs_g: 0 },
+    { name: "Ferro", quantity_label: "1 dose", kcal: 0, protein_g: 0, fat_g: 0, carbs_g: 0 },
+    { name: "Red Yeast Rice + CoQ10", quantity_label: "2 cápsulas", kcal: 0, protein_g: 0, fat_g: 0, carbs_g: 0 },
+    {
+      name: "Manipulado (zinco, selênio, magnésio, B6, B2, B9, B12, colina, vit. C, PQQ, vit. E)",
+      quantity_label: "1 dose",
+      kcal: 0,
+      protein_g: 0,
+      fat_g: 0,
+      carbs_g: 0,
+    },
+  ],
+  "depois"
+);
 
-const LANCHE_SUPPLEMENTS = supplementRows([
-  { name: "Rhodiola rosea", quantity_label: "1 dose (150 mg) — 17h", kcal: 0, protein_g: 0, fat_g: 0, carbs_g: 0 },
-  { name: "Gengibre extrato seco", quantity_label: "1 dose (500 mg)", kcal: 0, protein_g: 0, fat_g: 0, carbs_g: 0 },
-]);
+// Both taken as separate doses before the snack.
+const LANCHE_SUPPLEMENTS = supplementRows(
+  [
+    { name: "Rhodiola rosea", quantity_label: "1 dose (150 mg) — 17h", kcal: 0, protein_g: 0, fat_g: 0, carbs_g: 0 },
+    { name: "Gengibre extrato seco", quantity_label: "1 dose (500 mg)", kcal: 0, protein_g: 0, fat_g: 0, carbs_g: 0 },
+  ],
+  "antes"
+);
 
 const JANTAR_SUPPLEMENTS = supplementRows([
-  { name: "Morosil", quantity_label: "1 dose (250 mg) — antes do jantar", kcal: 0, protein_g: 0, fat_g: 0, carbs_g: 0 },
-  { name: "Magnésio Inositol Relief 3.0", quantity_label: "1 dose — antes de dormir", kcal: 0, protein_g: 0, fat_g: 0, carbs_g: 0 },
+  { name: "Morosil", quantity_label: "1 dose (250 mg) — antes do jantar", kcal: 0, protein_g: 0, fat_g: 0, carbs_g: 0, supplement_timing: "antes" },
+  { name: "Magnésio Inositol Relief 3.0", quantity_label: "1 dose — antes de dormir", kcal: 0, protein_g: 0, fat_g: 0, carbs_g: 0, supplement_timing: "depois" },
 ]);
 
 export const MEAL_PLAN_SLOTS = [
@@ -214,9 +226,9 @@ export const MEAL_PLAN_ITEMS = [
     // "junto com alguma refeição" (unspecified) — anchored here as a
     // neutral main meal; "antes do almoço" and the 10h dose, both
     // exactly as prescribed for this slot.
-    { order_index: 8, name: "Ômega-3", quantity_label: "1 cápsula", kcal: 9, protein_g: 0, fat_g: 1, carbs_g: 0, is_supplement: true },
-    { order_index: 9, name: "Morosil", quantity_label: "1 dose (250 mg) — antes do almoço", kcal: 0, protein_g: 0, fat_g: 0, carbs_g: 0, is_supplement: true },
-    { order_index: 10, name: "Rhodiola rosea", quantity_label: "1 dose (150 mg) — 10h", kcal: 0, protein_g: 0, fat_g: 0, carbs_g: 0, is_supplement: true },
+    { order_index: 8, name: "Ômega-3", quantity_label: "1 cápsula", kcal: 9, protein_g: 0, fat_g: 1, carbs_g: 0, is_supplement: true, supplement_timing: "depois" },
+    { order_index: 9, name: "Morosil", quantity_label: "1 dose (250 mg) — antes do almoço", kcal: 0, protein_g: 0, fat_g: 0, carbs_g: 0, is_supplement: true, supplement_timing: "antes" },
+    { order_index: 10, name: "Rhodiola rosea", quantity_label: "1 dose (150 mg) — 10h", kcal: 0, protein_g: 0, fat_g: 0, carbs_g: 0, is_supplement: true, supplement_timing: "antes" },
     { order_index: 11, name: "Peito de frango grelhado", quantity_label: "1 Filé grande (180 g)", kcal: 297, protein_g: 56, fat_g: 6.5, carbs_g: 0, is_supplement: false, substitution_group: "g1" },
     { order_index: 12, name: "Batata inglesa cozida", quantity_label: "5 Colheres de sopa (150 g)", kcal: 131, protein_g: 3, fat_g: 0, carbs_g: 30, is_supplement: false, substitution_group: "g2" },
     { order_index: 13, name: "Quinoa em grão cozida", quantity_label: "2,5 Colheres de sopa cheias (62,5 g)", kcal: 75, protein_g: 3, fat_g: 1, carbs_g: 13, is_supplement: false, substitution_group: "g2" },

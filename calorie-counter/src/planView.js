@@ -65,18 +65,35 @@ function groupItems(items) {
   return result;
 }
 
+// Where a supplement renders, relative to the food items: "inline"
+// means it's an ingredient of the recipe it's listed under (e.g.
+// collagen blended into a shake, or glutamina dissolved into the
+// "Shot") and stays in its normal order_index position among the food
+// items — still tagged "Suplemento", just not physically separated.
+// "before"/"after" means it's taken as its own dose outside the meal
+// and renders in a dedicated block above/below the food items.
+function supplementPlacement(item) {
+  if (!item.is_supplement) return "inline";
+  if (item.supplement_timing === "antes") return "before";
+  if (item.supplement_timing === "depois") return "after";
+  return "inline";
+}
+
 // The item actually counted for "all logged" / "Registrar tudo" per
 // group: whichever alternative is currently active (default: the one
 // with the lowest order_index, i.e. the plan's primary pick) — never
 // every alternative, since only one of them is ever meant to be eaten.
 function effectiveItems(option) {
-  const foodGroups = groupItems(option.items.filter((i) => !i.is_supplement));
-  const activeFood = foodGroups.map((g) => {
+  const inline = option.items.filter((i) => supplementPlacement(i) === "inline");
+  const before = option.items.filter((i) => supplementPlacement(i) === "before");
+  const after = option.items.filter((i) => supplementPlacement(i) === "after");
+  const inlineGroups = groupItems(inline);
+  const activeInline = inlineGroups.map((g) => {
     if (g.type === "single") return g.item;
     const activeId = activeSubstituteByGroup.get(groupKey(g.items[0]));
     return g.items.find((i) => i.id === activeId) || g.items[0];
   });
-  return [...activeFood, ...option.items.filter((i) => i.is_supplement)];
+  return [...before, ...activeInline, ...after];
 }
 
 // Day 1 = cycleStartDate itself, repeating every 28 days from there —
@@ -147,11 +164,6 @@ function substitutionGroupRow(groupItemsList, loggedItemIds) {
   return `
     ${row}
     <div class="plan-sub-picker">
-      <div class="plan-sub-picker-label">No seu plano</div>
-      <div class="plan-sub-current">
-        <span class="plan-sub-option-name">${escapeHtml(activeItem.name)}</span>
-        ${activeItem.quantity_label ? `<span class="plan-sub-option-qty">${escapeHtml(activeItem.quantity_label)}</span>` : ""}
-      </div>
       <div class="plan-sub-picker-label">Opções disponíveis</div>
       ${options}
     </div>`;
@@ -161,24 +173,31 @@ function optionBody(option, loggedItemIds) {
   if (option.items.length === 0) {
     return `<div class="plan-empty">Ainda não cadastrado — envie o print dessa opção.</div>`;
   }
-  const foodGroups = groupItems(option.items.filter((i) => !i.is_supplement));
-  const supplementItems = option.items.filter((i) => i.is_supplement);
-  const foodList = foodGroups.length
-    ? `<div class="plan-items">${foodGroups
+  const before = option.items.filter((i) => supplementPlacement(i) === "before");
+  const after = option.items.filter((i) => supplementPlacement(i) === "after");
+  const inlineGroups = groupItems(option.items.filter((i) => supplementPlacement(i) === "inline"));
+
+  const beforeList = before.length
+    ? `<div class="plan-supplement-divider">Antes da refeição</div>
+       <div class="plan-items">${before.map((i) => itemRow(i, loggedItemIds.has(i.id))).join("")}</div>`
+    : "";
+  const mainList = inlineGroups.length
+    ? `<div class="plan-items">${inlineGroups
         .map((g) => (g.type === "single" ? itemRow(g.item, loggedItemIds.has(g.item.id)) : substitutionGroupRow(g.items, loggedItemIds)))
         .join("")}</div>`
     : "";
-  const supplementList = supplementItems.length
-    ? `<div class="plan-supplement-divider">Suplementos</div>
-       <div class="plan-items">${supplementItems.map((i) => itemRow(i, loggedItemIds.has(i.id))).join("")}</div>`
+  const afterList = after.length
+    ? `<div class="plan-supplement-divider">Depois da refeição</div>
+       <div class="plan-items">${after.map((i) => itemRow(i, loggedItemIds.has(i.id))).join("")}</div>`
     : "";
   const observations = option.observations
     ? `<div class="plan-observations"><div class="plan-observations-label">Observações</div>${escapeHtml(option.observations)}</div>`
     : "";
   return `
     ${option.option_label ? `<div class="plan-option-label">Opção ${escapeHtml(option.option_label)}</div>` : ""}
-    ${foodList}
-    ${supplementList}
+    ${beforeList}
+    ${mainList}
+    ${afterList}
     ${observations}`;
 }
 

@@ -115,6 +115,13 @@ create table if not exists public.meal_plan_items (
   -- display/logging is a client-side choice (see planView.js), not
   -- stored here, same as which option tab is showing.
   substitution_group text,
+  -- Only meaningful when is_supplement is true. null means the
+  -- supplement is an ingredient of the recipe it's listed under (e.g.
+  -- collagen blended into a shake) and renders inline with the food
+  -- items, in its normal order_index position. 'antes'/'depois' means
+  -- it's taken as a separate dose before/after the meal, and renders in
+  -- its own block above/below the food items instead.
+  supplement_timing text check (supplement_timing in ('antes', 'depois')),
   created_at timestamptz not null default now()
 );
 

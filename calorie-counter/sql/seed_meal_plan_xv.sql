@@ -180,9 +180,11 @@ begin
     (v_opt_id, 6, 'Chia (semente)', '1 Colher de sopa (12 g)', 58, 2, 3.7, 5, false);
 
   -- Supplements taken "pela manhã" / "após café da manhã" — added to
-  -- every option of this slot, see note at the top of this file.
-  insert into public.meal_plan_items (option_id, order_index, name, quantity_label, kcal, protein_g, fat_g, carbs_g, is_supplement)
-  select o.id, 100, v.name, v.qty, v.kcal, v.protein_g, v.fat_g, v.carbs_g, true
+  -- every option of this slot, see note at the top of this file. Taken
+  -- as separate doses (not mixed into the food), so they render in
+  -- their own "depois" block rather than inline with the food items.
+  insert into public.meal_plan_items (option_id, order_index, name, quantity_label, kcal, protein_g, fat_g, carbs_g, is_supplement, supplement_timing)
+  select o.id, 100, v.name, v.qty, v.kcal, v.protein_g, v.fat_g, v.carbs_g, true, 'depois'
   from public.meal_plan_options o
   cross join (values
     ('Vitamina D', '1 dose', 0, 0, 0, 0),
@@ -201,25 +203,25 @@ begin
   values (v_slot_id, null, 'Saladão')
   returning id into v_opt_id;
 
-  insert into public.meal_plan_items (option_id, order_index, name, quantity_label, kcal, protein_g, fat_g, carbs_g, is_supplement, substitution_group) values
-    (v_opt_id, 1, 'Salada de folhas', 'À vontade', 0, 0, 0, 0, false, null),
-    (v_opt_id, 2, 'Azeite de oliva', '1 Colher de sobremesa rasa (5 mL)', 41, 0, 4.6, 0, false, null),
-    (v_opt_id, 3, 'Salmão grelhado', '130 g', 270, 26, 16.9, 0, false, 'g1'),
-    (v_opt_id, 4, 'Arroz branco', '3 Colheres de sopa (60 g)', 78, 1.6, 0.2, 16.8, false, 'g2'),
-    (v_opt_id, 5, 'Beterraba, cenoura, abóbora...', 'À vontade', 0, 0, 0, 0, false, null),
-    (v_opt_id, 6, 'Laranja', '1 Unidade (140 g)', 66, 1.3, 0.1, 16.5, false, 'g3'),
-    (v_opt_id, 7, 'Barra de proteína RX Bar', '0,5 barra (26 g)', 105, 6, 3.5, 11.5, false, null),
-    -- "junto com alguma refeição" (unspecified) — anchored here as a
-    -- neutral main meal; "antes do almoço" and the 10h dose, both
-    -- exactly as prescribed for this slot.
-    (v_opt_id, 8, 'Ômega-3', '1 cápsula', 9, 0, 1, 0, true, null),
-    (v_opt_id, 9, 'Morosil', '1 dose (250 mg) — antes do almoço', 0, 0, 0, 0, true, null),
-    (v_opt_id, 10, 'Rhodiola rosea', '1 dose (150 mg) — 10h', 0, 0, 0, 0, true, null),
-    (v_opt_id, 11, 'Peito de frango grelhado', '1 Filé grande (180 g)', 297, 56, 6.5, 0, false, 'g1'),
-    (v_opt_id, 12, 'Batata inglesa cozida', '5 Colheres de sopa (150 g)', 131, 3, 0, 30, false, 'g2'),
-    (v_opt_id, 13, 'Quinoa em grão cozida', '2,5 Colheres de sopa cheias (62,5 g)', 75, 3, 1, 13, false, 'g2'),
-    (v_opt_id, 14, 'Tangerina', '1 Unidade (135 g)', 72, 1, 0.4, 18, false, 'g3'),
-    (v_opt_id, 15, 'Abacaxi', '2 Rodelas (150 g)', 75, 1, 0, 20, false, 'g3');
+  insert into public.meal_plan_items (option_id, order_index, name, quantity_label, kcal, protein_g, fat_g, carbs_g, is_supplement, substitution_group, supplement_timing) values
+    (v_opt_id, 1, 'Salada de folhas', 'À vontade', 0, 0, 0, 0, false, null, null),
+    (v_opt_id, 2, 'Azeite de oliva', '1 Colher de sobremesa rasa (5 mL)', 41, 0, 4.6, 0, false, null, null),
+    (v_opt_id, 3, 'Salmão grelhado', '130 g', 270, 26, 16.9, 0, false, 'g1', null),
+    (v_opt_id, 4, 'Arroz branco', '3 Colheres de sopa (60 g)', 78, 1.6, 0.2, 16.8, false, 'g2', null),
+    (v_opt_id, 5, 'Beterraba, cenoura, abóbora...', 'À vontade', 0, 0, 0, 0, false, null, null),
+    (v_opt_id, 6, 'Laranja', '1 Unidade (140 g)', 66, 1.3, 0.1, 16.5, false, 'g3', null),
+    (v_opt_id, 7, 'Barra de proteína RX Bar', '0,5 barra (26 g)', 105, 6, 3.5, 11.5, false, null, null),
+    -- Taken as separate doses, not mixed into the food — "junto com
+    -- alguma refeição" (unspecified) anchored here as "depois"; Morosil
+    -- and the 10h Rhodiola dose are both explicitly "antes".
+    (v_opt_id, 8, 'Ômega-3', '1 cápsula', 9, 0, 1, 0, true, null, 'depois'),
+    (v_opt_id, 9, 'Morosil', '1 dose (250 mg) — antes do almoço', 0, 0, 0, 0, true, null, 'antes'),
+    (v_opt_id, 10, 'Rhodiola rosea', '1 dose (150 mg) — 10h', 0, 0, 0, 0, true, null, 'antes'),
+    (v_opt_id, 11, 'Peito de frango grelhado', '1 Filé grande (180 g)', 297, 56, 6.5, 0, false, 'g1', null),
+    (v_opt_id, 12, 'Batata inglesa cozida', '5 Colheres de sopa (150 g)', 131, 3, 0, 30, false, 'g2', null),
+    (v_opt_id, 13, 'Quinoa em grão cozida', '2,5 Colheres de sopa cheias (62,5 g)', 75, 3, 1, 13, false, 'g2', null),
+    (v_opt_id, 14, 'Tangerina', '1 Unidade (135 g)', 72, 1, 0.4, 18, false, 'g3', null),
+    (v_opt_id, 15, 'Abacaxi', '2 Rodelas (150 g)', 75, 1, 0, 20, false, 'g3', null);
 
   -- ── Lanche I — 4 options, all confirmed ──────────────────────────
   insert into public.meal_plan_slots (order_index, time_label, title, meal_type)
@@ -275,9 +277,10 @@ begin
     (v_opt_id, 6, 'Farelo de aveia', '2 Colheres de sopa (20 g)', 49, 3.5, 1.4, 13.2, false);
 
   -- Rhodiola's 17h dose + gengibre ("antes do treino", the slot right
-  -- before Pós-treino) — added to every option of this slot.
-  insert into public.meal_plan_items (option_id, order_index, name, quantity_label, kcal, protein_g, fat_g, carbs_g, is_supplement)
-  select o.id, 100, v.name, v.qty, v.kcal, v.protein_g, v.fat_g, v.carbs_g, true
+  -- before Pós-treino) — added to every option of this slot, both taken
+  -- as separate doses before the snack.
+  insert into public.meal_plan_items (option_id, order_index, name, quantity_label, kcal, protein_g, fat_g, carbs_g, is_supplement, supplement_timing)
+  select o.id, 100, v.name, v.qty, v.kcal, v.protein_g, v.fat_g, v.carbs_g, true, 'antes'
   from public.meal_plan_options o
   cross join (values
     ('Rhodiola rosea', '1 dose (150 mg) — 17h', 0, 0, 0, 0),
@@ -361,14 +364,15 @@ begin
     (v_opt_id, 3, 'Semente de abóbora inteira torrada', '1,5 Colheres de sobremesa rasas (15 g)', 84, 5, 7, 2, false);
 
   -- Morosil's "antes do jantar" dose + Magnésio Inositol ("à noite
-  -- antes de dormir", nearest meal = dinner) — every option of this slot.
-  insert into public.meal_plan_items (option_id, order_index, name, quantity_label, kcal, protein_g, fat_g, carbs_g, is_supplement)
-  select o.id, 100, v.name, v.qty, v.kcal, v.protein_g, v.fat_g, v.carbs_g, true
+  -- antes de dormir", nearest meal = dinner, so "depois") — every
+  -- option of this slot.
+  insert into public.meal_plan_items (option_id, order_index, name, quantity_label, kcal, protein_g, fat_g, carbs_g, is_supplement, supplement_timing)
+  select o.id, 100, v.name, v.qty, v.kcal, v.protein_g, v.fat_g, v.carbs_g, true, v.timing
   from public.meal_plan_options o
   cross join (values
-    ('Morosil', '1 dose (250 mg) — antes do jantar', 0, 0, 0, 0),
-    ('Magnésio Inositol Relief 3.0', '1 dose — antes de dormir', 0, 0, 0, 0)
-  ) as v(name, qty, kcal, protein_g, fat_g, carbs_g)
+    ('Morosil', '1 dose (250 mg) — antes do jantar', 0, 0, 0, 0, 'antes'),
+    ('Magnésio Inositol Relief 3.0', '1 dose — antes de dormir', 0, 0, 0, 0, 'depois')
+  ) as v(name, qty, kcal, protein_g, fat_g, carbs_g, timing)
   where o.slot_id = v_slot_id;
 
 end $$;
