@@ -136,7 +136,7 @@ begin
     -- neutral main meal; "antes do almoço" and the 10h dose, both
     -- exactly as prescribed for this slot.
     (v_opt_id, 8, 'Ômega-3', '1 cápsula', 9, 0, 1, 0, true),
-    (v_opt_id, 9, 'Morosil', '1 dose (250 mg)', 0, 0, 0, 0, true),
+    (v_opt_id, 9, 'Morosil', '1 dose (250 mg) — antes do almoço', 0, 0, 0, 0, true),
     (v_opt_id, 10, 'Rhodiola rosea', '1 dose (150 mg) — 10h', 0, 0, 0, 0, true);
 
   -- ── Lanche I — 4 options, only Opção 1 known ─────────────────────
@@ -207,8 +207,8 @@ begin
   select o.id, 5, v.name, v.qty, v.kcal, v.protein_g, v.fat_g, v.carbs_g, true
   from public.meal_plan_options o
   cross join (values
-    ('Morosil', '1 dose (250 mg)', 0, 0, 0, 0),
-    ('Magnésio Inositol Relief 3.0', '1 dose', 0, 0, 0, 0)
+    ('Morosil', '1 dose (250 mg) — antes do jantar', 0, 0, 0, 0),
+    ('Magnésio Inositol Relief 3.0', '1 dose — antes de dormir', 0, 0, 0, 0)
   ) as v(name, qty, kcal, protein_g, fat_g, carbs_g)
   where o.slot_id = v_slot_id;
 

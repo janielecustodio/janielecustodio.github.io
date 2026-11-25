@@ -39,14 +39,22 @@ function optionBody(option, loggedItemIds) {
   if (option.items.length === 0) {
     return `<div class="plan-empty">Ainda não cadastrado — envie o print dessa opção.</div>`;
   }
-  const allLogged = option.items.every((i) => loggedItemIds.has(i.id));
-  const items = option.items.map((i) => itemRow(i, loggedItemIds.has(i.id))).join("");
+  const foodItems = option.items.filter((i) => !i.is_supplement);
+  const supplementItems = option.items.filter((i) => i.is_supplement);
+  const foodList = foodItems.length
+    ? `<div class="plan-items">${foodItems.map((i) => itemRow(i, loggedItemIds.has(i.id))).join("")}</div>`
+    : "";
+  const supplementList = supplementItems.length
+    ? `<div class="plan-supplement-divider">Suplementos</div>
+       <div class="plan-items">${supplementItems.map((i) => itemRow(i, loggedItemIds.has(i.id))).join("")}</div>`
+    : "";
   const observations = option.observations
     ? `<div class="plan-observations"><div class="plan-observations-label">Observações</div>${escapeHtml(option.observations)}</div>`
     : "";
   return `
     ${option.option_label ? `<div class="plan-option-label">Opção ${escapeHtml(option.option_label)}</div>` : ""}
-    <div class="plan-items">${items}</div>
+    ${foodList}
+    ${supplementList}
     ${observations}`;
 }
 
