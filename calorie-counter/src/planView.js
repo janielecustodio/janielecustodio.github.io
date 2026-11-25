@@ -30,12 +30,19 @@ const activeOptionBySlot = new Map();
 const activeSubstituteByGroup = new Map();
 // Which substitution groups currently have their "+N opções" picker open.
 const expandedGroups = new Set();
+// A slot auto-collapses once everything in its active option is logged
+// (less scrolling past meals already done), but tapping the header
+// always overrides that for the rest of the session — recorded here so
+// the auto-collapse doesn't immediately re-hide a slot the person just
+// chose to reopen, or vice versa.
+const collapseOverrideBySlot = new Map();
 let lastRenderedDateStr = null;
 function resetForDate(dateStr) {
   if (dateStr !== lastRenderedDateStr) {
     activeOptionBySlot.clear();
     activeSubstituteByGroup.clear();
     expandedGroups.clear();
+    collapseOverrideBySlot.clear();
     lastRenderedDateStr = dateStr;
   }
 }
@@ -245,6 +252,14 @@ function slotCard(slot, loggedItemIds, notesBySlot, cycleStartDate, viewDate) {
   const activeId = activeOptionBySlot.get(slot.id);
   const activeOption = slot.options.find((o) => o.id === activeId) || slot.options[0];
 
+  // Auto-collapses once everything in the active option is logged, so a
+  // finished meal doesn't take up scroll space — tapping the header
+  // always overrides this for the rest of the session (see
+  // collapseOverrideBySlot above).
+  const isFullyLogged =
+    !!activeOption && activeOption.items.length > 0 && effectiveItems(activeOption).every((i) => loggedItemIds.has(i.id));
+  const collapsed = collapseOverrideBySlot.has(slot.id) ? collapseOverrideBySlot.get(slot.id) : isFullyLogged;
+
   const tabs = hasTabs
     ? `<div class="plan-option-tabs" data-slot-id="${slot.id}">
         ${slot.options
@@ -256,19 +271,27 @@ function slotCard(slot, loggedItemIds, notesBySlot, cycleStartDate, viewDate) {
       </div>`
     : "";
 
-  return `
-    <div class="plan-slot">
-      <div class="plan-slot-header">
-        <span class="plan-slot-header-text">
-          ${slot.time_label ? `<span class="plan-slot-time">${escapeHtml(slot.time_label)}</span>` : ""}
-          <span class="plan-slot-title">${escapeHtml(slot.title)}</span>
-        </span>
-        ${activeOption ? logAllButton(activeOption, loggedItemIds) : ""}
-      </div>
+  const body = collapsed
+    ? ""
+    : `
       ${isCycleSlot ? cycleDateControl(slot, cycleStartDate, cycleInfo) : ""}
       ${tabs}
       <div class="plan-option-body">${activeOption ? optionBody(activeOption, loggedItemIds) : ""}</div>
-      ${notesSection(slot, notesBySlot.get(slot.id))}
+      ${notesSection(slot, notesBySlot.get(slot.id))}`;
+
+  return `
+    <div class="plan-slot ${collapsed ? "is-collapsed" : ""}">
+      <div class="plan-slot-header">
+        <button type="button" class="plan-slot-header-toggle" data-slot-id="${slot.id}" aria-label="${collapsed ? "Expandir" : "Recolher"}">
+          <span class="plan-slot-chevron">${collapsed ? "›" : "⌄"}</span>
+          <span class="plan-slot-header-text">
+            ${slot.time_label ? `<span class="plan-slot-time">${escapeHtml(slot.time_label)}</span>` : ""}
+            <span class="plan-slot-title">${escapeHtml(slot.title)}</span>
+          </span>
+        </button>
+        ${activeOption ? logAllButton(activeOption, loggedItemIds) : ""}
+      </div>
+      ${body}
     </div>`;
 }
 
@@ -294,6 +317,14 @@ export async function renderPlan(container, date) {
   container.innerHTML = slots
     .map((slot) => slotCard(slot, loggedItemIds, notesBySlot, cycleStartDate, date))
     .join("");
+
+  container.querySelectorAll(".plan-slot-header-toggle").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const collapsedNow = btn.closest(".plan-slot").classList.contains("is-collapsed");
+      collapseOverrideBySlot.set(btn.dataset.slotId, !collapsedNow);
+      renderPlan(container, date);
+    });
+  });
 
   container.querySelectorAll(".plan-tab").forEach((btn) => {
     btn.addEventListener("click", () => {
