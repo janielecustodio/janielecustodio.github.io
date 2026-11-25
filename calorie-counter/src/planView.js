@@ -47,9 +47,16 @@ function optionBody(option, loggedItemIds) {
   return `
     ${option.option_label ? `<div class="plan-option-label">Opção ${escapeHtml(option.option_label)}</div>` : ""}
     <div class="plan-items">${items}</div>
-    ${observations}
-    <button class="plan-log-all-btn" data-option-id="${option.id}" ${allLogged ? "disabled" : ""}>
-      ${allLogged ? "Tudo registrado" : "Registrar tudo"}
+    ${observations}`;
+}
+
+function logAllButton(option, loggedItemIds) {
+  if (option.items.length === 0) return "";
+  const allLogged = option.items.every((i) => loggedItemIds.has(i.id));
+  const label = allLogged ? "Tudo registrado" : "Registrar tudo";
+  return `
+    <button class="plan-log-all-btn" data-option-id="${option.id}" ${allLogged ? "disabled" : ""} title="${label}" aria-label="${label}">
+      ✓
     </button>`;
 }
 
@@ -75,8 +82,11 @@ function slotCard(slot, loggedItemIds) {
   return `
     <div class="plan-slot">
       <div class="plan-slot-header">
-        ${slot.time_label ? `<span class="plan-slot-time">${escapeHtml(slot.time_label)}</span>` : ""}
-        <span class="plan-slot-title">${escapeHtml(slot.title)}</span>
+        <span class="plan-slot-header-text">
+          ${slot.time_label ? `<span class="plan-slot-time">${escapeHtml(slot.time_label)}</span>` : ""}
+          <span class="plan-slot-title">${escapeHtml(slot.title)}</span>
+        </span>
+        ${activeOption ? logAllButton(activeOption, loggedItemIds) : ""}
       </div>
       ${tabs}
       <div class="plan-option-body">${activeOption ? optionBody(activeOption, loggedItemIds) : ""}</div>
