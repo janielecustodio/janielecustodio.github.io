@@ -24,12 +24,59 @@ function toDateStr(d) {
 // manual tab pick on one day doesn't leak into another — this matters
 // most for the cycle slot, whose correct tab is date-dependent.
 const activeOptionBySlot = new Map();
+// Which alternative is showing for an item-level substitution group (see
+// groupItems below) — same lifecycle as activeOptionBySlot: UI-only,
+// reset on date change. Keyed by `${option_id}::${substitution_group}`.
+const activeSubstituteByGroup = new Map();
+// Which substitution groups currently have their "+N opções" picker open.
+const expandedGroups = new Set();
 let lastRenderedDateStr = null;
 function resetForDate(dateStr) {
   if (dateStr !== lastRenderedDateStr) {
     activeOptionBySlot.clear();
+    activeSubstituteByGroup.clear();
+    expandedGroups.clear();
     lastRenderedDateStr = dateStr;
   }
+}
+
+function groupKey(item) {
+  return `${item.option_id}::${item.substitution_group}`;
+}
+
+// Splits an option's food items into single rows and substitution
+// groups (items sharing a substitution_group, e.g. "Salmão grelhado" /
+// "Peito de frango grelhado"). Order follows each group's first
+// appearance by order_index.
+function groupItems(items) {
+  const result = [];
+  const seen = new Set();
+  for (const item of items) {
+    if (!item.substitution_group) {
+      result.push({ type: "single", item });
+      continue;
+    }
+    const key = groupKey(item);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const siblings = items.filter((i) => i.substitution_group === item.substitution_group).sort((a, b) => a.order_index - b.order_index);
+    result.push({ type: "group", items: siblings });
+  }
+  return result;
+}
+
+// The item actually counted for "all logged" / "Registrar tudo" per
+// group: whichever alternative is currently active (default: the one
+// with the lowest order_index, i.e. the plan's primary pick) — never
+// every alternative, since only one of them is ever meant to be eaten.
+function effectiveItems(option) {
+  const foodGroups = groupItems(option.items.filter((i) => !i.is_supplement));
+  const activeFood = foodGroups.map((g) => {
+    if (g.type === "single") return g.item;
+    const activeId = activeSubstituteByGroup.get(groupKey(g.items[0]));
+    return g.items.find((i) => i.id === activeId) || g.items[0];
+  });
+  return [...activeFood, ...option.items.filter((i) => i.is_supplement)];
 }
 
 // Day 1 = cycleStartDate itself, repeating every 28 days from there —
@@ -58,26 +105,68 @@ function defaultActiveOption(slot, loggedItemIds) {
   return sorted[0]?.id;
 }
 
-function itemRow(item, isLogged) {
+function itemRow(item, isLogged, badgeHtml = "") {
   const supplementTag = item.is_supplement ? `<span class="plan-item-tag">Suplemento</span>` : "";
   return `
-    <label class="plan-item ${isLogged ? "is-logged" : ""}">
-      <input type="checkbox" class="plan-item-checkbox" data-item-id="${item.id}" ${isLogged ? "checked" : ""}>
-      <span class="plan-item-info">
-        <span class="plan-item-name">${escapeHtml(item.name)}${supplementTag}</span>
-        ${item.quantity_label ? `<span class="plan-item-qty">${escapeHtml(item.quantity_label)}</span>` : ""}
-      </span>
-    </label>`;
+    <div class="plan-item-row">
+      <label class="plan-item ${isLogged ? "is-logged" : ""}">
+        <input type="checkbox" class="plan-item-checkbox" data-item-id="${item.id}" ${isLogged ? "checked" : ""}>
+        <span class="plan-item-info">
+          <span class="plan-item-name">${escapeHtml(item.name)}${supplementTag}</span>
+          ${item.quantity_label ? `<span class="plan-item-qty">${escapeHtml(item.quantity_label)}</span>` : ""}
+        </span>
+      </label>
+      ${badgeHtml}
+    </div>`;
+}
+
+// Renders a substitution group: the active alternative as a normal
+// logging row, plus a "+N opções" toggle that expands a small picker
+// below it listing the others — tapping one makes it the active row.
+function substitutionGroupRow(groupItemsList, loggedItemIds) {
+  const key = groupKey(groupItemsList[0]);
+  const activeId = activeSubstituteByGroup.get(key);
+  const activeItem = groupItemsList.find((i) => i.id === activeId) || groupItemsList[0];
+  const altCount = groupItemsList.length - 1;
+  const altLabel = altCount === 1 ? "+1 opção" : `+${altCount} opções`;
+  const badge = `<button type="button" class="plan-sub-badge" data-group-key="${key}">${altLabel}</button>`;
+  const row = itemRow(activeItem, loggedItemIds.has(activeItem.id), badge);
+
+  if (!expandedGroups.has(key)) return row;
+
+  const options = groupItemsList
+    .filter((i) => i.id !== activeItem.id)
+    .map(
+      (i) => `
+        <button type="button" class="plan-sub-option" data-group-key="${key}" data-item-id="${i.id}">
+          <span class="plan-sub-option-name">${escapeHtml(i.name)}</span>
+          ${i.quantity_label ? `<span class="plan-sub-option-qty">${escapeHtml(i.quantity_label)}</span>` : ""}
+        </button>`
+    )
+    .join("");
+  return `
+    ${row}
+    <div class="plan-sub-picker">
+      <div class="plan-sub-picker-label">No seu plano</div>
+      <div class="plan-sub-current">
+        <span class="plan-sub-option-name">${escapeHtml(activeItem.name)}</span>
+        ${activeItem.quantity_label ? `<span class="plan-sub-option-qty">${escapeHtml(activeItem.quantity_label)}</span>` : ""}
+      </div>
+      <div class="plan-sub-picker-label">Opções disponíveis</div>
+      ${options}
+    </div>`;
 }
 
 function optionBody(option, loggedItemIds) {
   if (option.items.length === 0) {
     return `<div class="plan-empty">Ainda não cadastrado — envie o print dessa opção.</div>`;
   }
-  const foodItems = option.items.filter((i) => !i.is_supplement);
+  const foodGroups = groupItems(option.items.filter((i) => !i.is_supplement));
   const supplementItems = option.items.filter((i) => i.is_supplement);
-  const foodList = foodItems.length
-    ? `<div class="plan-items">${foodItems.map((i) => itemRow(i, loggedItemIds.has(i.id))).join("")}</div>`
+  const foodList = foodGroups.length
+    ? `<div class="plan-items">${foodGroups
+        .map((g) => (g.type === "single" ? itemRow(g.item, loggedItemIds.has(g.item.id)) : substitutionGroupRow(g.items, loggedItemIds)))
+        .join("")}</div>`
     : "";
   const supplementList = supplementItems.length
     ? `<div class="plan-supplement-divider">Suplementos</div>
@@ -95,7 +184,8 @@ function optionBody(option, loggedItemIds) {
 
 function logAllButton(option, loggedItemIds) {
   if (option.items.length === 0) return "";
-  const allLogged = option.items.every((i) => loggedItemIds.has(i.id));
+  const items = effectiveItems(option);
+  const allLogged = items.every((i) => loggedItemIds.has(i.id));
   const label = allLogged ? "Tudo registrado" : "Registrar tudo";
   return `
     <button class="plan-log-all-btn" data-option-id="${option.id}" ${allLogged ? "disabled" : ""} title="${label}" aria-label="${label}">
@@ -224,12 +314,30 @@ export async function renderPlan(container, date) {
       btn.disabled = true;
       try {
         const now = new Date();
-        for (const item of option.items) {
+        for (const item of effectiveItems(option)) {
           if (!loggedItemIds.has(item.id)) await logMealPlanItem(item, option.slot.meal_type, now);
         }
       } finally {
         renderPlan(container, date);
       }
+    });
+  });
+
+  container.querySelectorAll(".plan-sub-badge").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const key = btn.dataset.groupKey;
+      if (expandedGroups.has(key)) expandedGroups.delete(key);
+      else expandedGroups.add(key);
+      renderPlan(container, date);
+    });
+  });
+
+  container.querySelectorAll(".plan-sub-option").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const key = btn.dataset.groupKey;
+      activeSubstituteByGroup.set(key, btn.dataset.itemId);
+      expandedGroups.delete(key);
+      renderPlan(container, date);
     });
   });
 
