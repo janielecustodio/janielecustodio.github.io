@@ -109,6 +109,12 @@ create table if not exists public.meal_plan_items (
   fat_g numeric not null default 0,
   carbs_g numeric not null default 0,
   is_supplement boolean not null default false,
+  -- Items sharing the same (option_id, substitution_group) are
+  -- interchangeable ("ou peito de frango" etc.) — the one with the
+  -- lowest order_index is the plan's default; which one is "active" for
+  -- display/logging is a client-side choice (see planView.js), not
+  -- stored here, same as which option tab is showing.
+  substitution_group text,
   created_at timestamptz not null default now()
 );
 
