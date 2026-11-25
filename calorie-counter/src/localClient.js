@@ -10,15 +10,22 @@
 // exactly the tradeoff local mode is for. See supabaseClient.js for how
 // this gets swapped in, and index.html/main.js for the "Usar sem conta"
 // entry point and the way back out.
-import { MEAL_PLAN_SLOTS, MEAL_PLAN_OPTIONS, MEAL_PLAN_ITEMS } from "./mealPlanSeed.js";
+import { MEAL_PLAN_SLOTS, MEAL_PLAN_OPTIONS, MEAL_PLAN_ITEMS, MEAL_PLAN_SEED_VERSION } from "./mealPlanSeed.js";
 
 const DB_KEY = "jc_local_db";
 const LOCAL_USER = { id: "local-device-user", email: "local@device" };
 
+function freshMealPlanTables() {
+  // Deep-copied, not shared by reference, so nothing here can mutate the
+  // imported seed module's own arrays.
+  return {
+    meal_plan_slots: JSON.parse(JSON.stringify(MEAL_PLAN_SLOTS)),
+    meal_plan_options: JSON.parse(JSON.stringify(MEAL_PLAN_OPTIONS)),
+    meal_plan_items: JSON.parse(JSON.stringify(MEAL_PLAN_ITEMS)),
+  };
+}
+
 function freshDb() {
-  // Deep-copied, not shared by reference — nothing currently writes to
-  // the meal_plan_* tables, but cloning keeps the imported seed module's
-  // own arrays untouched regardless, in case that ever changes.
   return {
     foods: [],
     food_logs: [],
@@ -26,16 +33,28 @@ function freshDb() {
     user_targets: [],
     meal_plan_notes: [],
     cycle_settings: [],
-    meal_plan_slots: JSON.parse(JSON.stringify(MEAL_PLAN_SLOTS)),
-    meal_plan_options: JSON.parse(JSON.stringify(MEAL_PLAN_OPTIONS)),
-    meal_plan_items: JSON.parse(JSON.stringify(MEAL_PLAN_ITEMS)),
+    ...freshMealPlanTables(),
+    mealPlanSeedVersion: MEAL_PLAN_SEED_VERSION,
   };
 }
 
 function loadDb() {
   try {
     const raw = localStorage.getItem(DB_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const db = JSON.parse(raw);
+      // The nutritionist's plan (slots/options/items) is shared
+      // reference data baked into the app, not something the person
+      // edits — so unlike their own logs/notes/targets, it's always
+      // safe to overwrite wholesale whenever this file ships an update,
+      // rather than leaving local mode frozen at whatever was seeded
+      // the first time they used it.
+      if (db.mealPlanSeedVersion !== MEAL_PLAN_SEED_VERSION) {
+        Object.assign(db, freshMealPlanTables());
+        db.mealPlanSeedVersion = MEAL_PLAN_SEED_VERSION;
+      }
+      return db;
+    }
   } catch {
     // corrupt/unavailable storage — fall through to a fresh db rather than
     // crash the whole app over locally-cached data.
@@ -54,6 +73,12 @@ function persist() {
     // works, it just won't survive a reload.
   }
 }
+
+// Writes back a just-upgraded meal plan immediately, rather than only on
+// whatever the person happens to do next — otherwise a session that only
+// reads (no checkbox ticked, no note typed) would silently re-run this
+// same upgrade on every load.
+persist();
 
 function matchFilters(row, filters) {
   return filters.every(({ type, col, val }) => {

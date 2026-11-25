@@ -7,6 +7,15 @@
 //
 // IDs are stable short strings (not real UUIDs) — fine for local mode,
 // where nothing ever has to match a server-generated id.
+//
+// Bump this on every change to the arrays below (even a single item's
+// macros) — localClient.js compares it on load and re-seeds the
+// meal_plan_* tables from scratch when it doesn't match what's stored,
+// which is the only way an update to this file ever reaches a browser
+// that already has local data saved. Without it, local mode's plan view
+// would stay frozen at whatever was seeded the very first time the
+// person used it, silently missing every later fix.
+export const MEAL_PLAN_SEED_VERSION = 5;
 
 function supplementRows(names) {
   return names.map((n, i) => ({ order_index: 100 + i, ...n, is_supplement: true }));
