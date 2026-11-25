@@ -32,8 +32,8 @@ const LANCHE_SUPPLEMENTS = supplementRows([
 ]);
 
 const JANTAR_SUPPLEMENTS = supplementRows([
-  { name: "Morosil", quantity_label: "1 dose (250 mg)", kcal: 0, protein_g: 0, fat_g: 0, carbs_g: 0 },
-  { name: "Magnésio Inositol Relief 3.0", quantity_label: "1 dose", kcal: 0, protein_g: 0, fat_g: 0, carbs_g: 0 },
+  { name: "Morosil", quantity_label: "1 dose (250 mg) — antes do jantar", kcal: 0, protein_g: 0, fat_g: 0, carbs_g: 0 },
+  { name: "Magnésio Inositol Relief 3.0", quantity_label: "1 dose — antes de dormir", kcal: 0, protein_g: 0, fat_g: 0, carbs_g: 0 },
 ]);
 
 export const MEAL_PLAN_SLOTS = [
@@ -133,7 +133,7 @@ export const MEAL_PLAN_ITEMS = [
     { order_index: 6, name: "Laranja", quantity_label: "1 Unidade (140 g)", kcal: 66, protein_g: 1.3, fat_g: 0.1, carbs_g: 16.5, is_supplement: false },
     { order_index: 7, name: "Barra de proteína RX Bar", quantity_label: "0,5 barra (26 g)", kcal: 105, protein_g: 6, fat_g: 3.5, carbs_g: 11.5, is_supplement: false },
     { order_index: 8, name: "Ômega-3", quantity_label: "1 cápsula", kcal: 9, protein_g: 0, fat_g: 1, carbs_g: 0, is_supplement: true },
-    { order_index: 9, name: "Morosil", quantity_label: "1 dose (250 mg)", kcal: 0, protein_g: 0, fat_g: 0, carbs_g: 0, is_supplement: true },
+    { order_index: 9, name: "Morosil", quantity_label: "1 dose (250 mg) — antes do almoço", kcal: 0, protein_g: 0, fat_g: 0, carbs_g: 0, is_supplement: true },
     { order_index: 10, name: "Rhodiola rosea", quantity_label: "1 dose (150 mg) — 10h", kcal: 0, protein_g: 0, fat_g: 0, carbs_g: 0, is_supplement: true },
   ]),
 
