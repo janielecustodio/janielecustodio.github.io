@@ -140,14 +140,23 @@ document.getElementById("date-today").addEventListener("click", () => {
 onAuthChange((session) => {
   const authed = !!session;
   document.getElementById("auth-gate").hidden = authed;
-  document.getElementById("app").hidden = !authed;
+  // Never shown as the very first thing on sign-in — Plano takes over
+  // immediately below, before this would otherwise get a chance to paint.
+  document.getElementById("app").hidden = true;
   document.getElementById("date-nav").hidden = !authed;
   document.getElementById("signout-btn").hidden = !authed;
   document.getElementById("trends-toggle-btn").hidden = !authed;
   document.getElementById("targets-toggle-btn").hidden = !authed;
   document.getElementById("plan-toggle-btn").hidden = !authed;
   if (authed) {
-    loadTargets().then(refresh);
+    loadTargets().then(() => {
+      refresh();
+      // Plano is the landing view — the daily log/summary ("Hoje") is one
+      // tap away via the Plan view's back button, not the other way
+      // around, since checking off the nutritionist's plan is the main
+      // thing this app is for day to day.
+      showPlanView();
+    });
   } else {
     document.getElementById("auth-form").reset();
     clearAddTarget();
