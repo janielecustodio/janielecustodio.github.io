@@ -16,6 +16,7 @@ import {
 import { computeSummary, KCAL_PER_G } from "./summary.js";
 import { MEAL_TYPES, inferMealType } from "./mealTypes.js";
 import { renderTrends } from "./trends.js";
+import { renderPlan } from "./planView.js";
 import { saveWeight, getWeightForDate } from "./bodyLog.js";
 import { getTargets, saveTargets, clearTargets } from "./targets.js";
 
@@ -126,6 +127,7 @@ onAuthChange((session) => {
   document.getElementById("signout-btn").hidden = !authed;
   document.getElementById("trends-toggle-btn").hidden = !authed;
   document.getElementById("targets-toggle-btn").hidden = !authed;
+  document.getElementById("plan-toggle-btn").hidden = !authed;
   if (authed) {
     loadTargets().then(refresh);
   } else {
@@ -141,6 +143,7 @@ async function refresh() {
   renderSummary(entries);
   renderLog(entries);
   refreshBodyLog();
+  if (!planView.hidden) renderPlan(planBody, currentDate);
 }
 
 // ── Today / Trends view switch ──
@@ -152,10 +155,11 @@ let trendsCurrentView = "calories";
 // Only ever reachable while authenticated (trends-toggle-btn is hidden
 // otherwise) — this must NOT touch #app/#date-nav's visibility itself.
 // It's also called from the sign-out path below just to clear a
-// still-open trends view; if it unhid #app/#date-nav there, it would
+// still-open trends/plan view; if it unhid #app/#date-nav there, it would
 // undo the auth handler's own hiding of them one line earlier.
 function showTodayView() {
   trendsView.hidden = true;
+  planView.hidden = true;
 }
 
 function showTrendsView() {
@@ -189,7 +193,27 @@ document.getElementById("trends-view-tabs").addEventListener("click", (e) => {
   renderTrends(trendsBody, trendsRangeDays, trendsCurrentView);
 });
 
-// ── Summary (donut) ──
+// ── Today / Plan view switch ──
+// Unlike Trends (which spans multiple days and hides date-nav), the plan
+// is for one specific day — logging an item uses currentDate, so date-nav
+// stays visible and usable while this view is open.
+const planView = document.getElementById("plan-view");
+const planBody = document.getElementById("plan-body");
+
+function showPlanView() {
+  document.getElementById("app").hidden = true;
+  planView.hidden = false;
+  renderPlan(planBody, currentDate);
+}
+
+document.getElementById("plan-toggle-btn").addEventListener("click", showPlanView);
+document.getElementById("plan-back-btn").addEventListener("click", () => {
+  showTodayView();
+  document.getElementById("app").hidden = false;
+  refresh();
+});
+
+
 // r/gap are the donut's SVG geometry — see index.html .donut-svg (viewBox 0 0 140 140).
 const DONUT_R = 60;
 const DONUT_C = 2 * Math.PI * DONUT_R;
