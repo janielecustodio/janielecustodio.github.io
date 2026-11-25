@@ -1,5 +1,8 @@
 import { getMealPlan, logMealPlanItem, unlogMealPlanItem, getNotesForDate, saveNote } from "./mealPlan.js";
+import { getCycleStartDate, saveCycleStartDate } from "./cycleSettings.js";
 import { getEntriesForDate } from "./log.js";
+
+const CYCLE_SLOT_TITLE = "Ciclo das sementes";
 
 function escapeHtml(s) {
   const div = document.createElement("div");
@@ -7,10 +10,42 @@ function escapeHtml(s) {
   return div.innerHTML;
 }
 
+// Local Y-M-D, not toISOString().slice(0,10) — that goes through UTC and
+// shifts the calendar date for any positive UTC-offset timezone.
+function toDateStr(d) {
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
 // Which option tab is showing per slot — UI-only state, not persisted.
 // Keyed by slot id so it survives the full re-render every action causes
 // (same re-render-the-whole-container pattern as renderSummary/renderLog).
+// Cleared whenever the viewed date changes (see resetForDate below) so a
+// manual tab pick on one day doesn't leak into another — this matters
+// most for the cycle slot, whose correct tab is date-dependent.
 const activeOptionBySlot = new Map();
+let lastRenderedDateStr = null;
+function resetForDate(dateStr) {
+  if (dateStr !== lastRenderedDateStr) {
+    activeOptionBySlot.clear();
+    lastRenderedDateStr = dateStr;
+  }
+}
+
+// Day 1 = cycleStartDate itself, repeating every 28 days from there —
+// phase 1 covers days 1-14 (the PDF's "dia que menstrua" start), phase 2
+// covers days 15-28. Returns null if no start date has been entered yet.
+function cyclePhaseForDate(date, cycleStartDate) {
+  if (!cycleStartDate) return null;
+  const start = new Date(cycleStartDate + "T00:00:00");
+  const target = new Date(date);
+  target.setHours(0, 0, 0, 0);
+  start.setHours(0, 0, 0, 0);
+  const msPerDay = 24 * 60 * 60 * 1000;
+  const diffDays = Math.round((target - start) / msPerDay);
+  const dayOfCycle = (((diffDays % 28) + 28) % 28) + 1;
+  return { dayOfCycle, phase: dayOfCycle <= 14 ? 1 : 2 };
+}
 
 // Picks a sensible default tab the first time a slot is rendered: whichever
 // option already has something logged today, else the lowest option
@@ -78,10 +113,25 @@ function notesSection(slot, note) {
     </div>`;
 }
 
-function slotCard(slot, loggedItemIds, notesBySlot) {
+function cycleDateControl(slot, cycleStartDate, cycleInfo) {
+  const phaseText = cycleInfo
+    ? `Hoje: dia ${cycleInfo.dayOfCycle} do ciclo — Fase ${cycleInfo.phase}.`
+    : "Informe a data de início do ciclo para selecionar a fase automaticamente.";
+  return `
+    <div class="plan-cycle-tracker">
+      <label class="plan-cycle-label">Início do ciclo (dia que menstruou)</label>
+      <input type="date" class="plan-cycle-date-input" data-slot-id="${slot.id}" value="${cycleStartDate || ""}">
+      <div class="plan-cycle-phase-info">${escapeHtml(phaseText)}</div>
+    </div>`;
+}
+
+function slotCard(slot, loggedItemIds, notesBySlot, cycleStartDate, viewDate) {
+  const isCycleSlot = slot.title === CYCLE_SLOT_TITLE;
   const hasTabs = slot.options.length > 1 && slot.options.some((o) => o.option_number != null);
+  const cycleInfo = isCycleSlot ? cyclePhaseForDate(viewDate, cycleStartDate) : null;
   if (!activeOptionBySlot.has(slot.id)) {
-    activeOptionBySlot.set(slot.id, defaultActiveOption(slot, loggedItemIds));
+    const cycleOptionId = cycleInfo ? slot.options.find((o) => o.option_number === cycleInfo.phase)?.id : null;
+    activeOptionBySlot.set(slot.id, cycleOptionId || defaultActiveOption(slot, loggedItemIds));
   }
   const activeId = activeOptionBySlot.get(slot.id);
   const activeOption = slot.options.find((o) => o.id === activeId) || slot.options[0];
@@ -106,6 +156,7 @@ function slotCard(slot, loggedItemIds, notesBySlot) {
         </span>
         ${activeOption ? logAllButton(activeOption, loggedItemIds) : ""}
       </div>
+      ${isCycleSlot ? cycleDateControl(slot, cycleStartDate, cycleInfo) : ""}
       ${tabs}
       <div class="plan-option-body">${activeOption ? optionBody(activeOption, loggedItemIds) : ""}</div>
       ${notesSection(slot, notesBySlot.get(slot.id))}
@@ -114,10 +165,12 @@ function slotCard(slot, loggedItemIds, notesBySlot) {
 
 export async function renderPlan(container, date) {
   container.innerHTML = `<div class="no-entries">Carregando…</div>`;
-  const [slots, entries, notesBySlot] = await Promise.all([
+  resetForDate(toDateStr(date));
+  const [slots, entries, notesBySlot, cycleStartDate] = await Promise.all([
     getMealPlan(),
     getEntriesForDate(date),
     getNotesForDate(date),
+    getCycleStartDate(),
   ]);
 
   if (slots.length === 0) {
@@ -129,7 +182,9 @@ export async function renderPlan(container, date) {
     entries.filter((e) => e.foods?.source === "mealplan").map((e) => e.foods.source_id)
   );
 
-  container.innerHTML = slots.map((slot) => slotCard(slot, loggedItemIds, notesBySlot)).join("");
+  container.innerHTML = slots
+    .map((slot) => slotCard(slot, loggedItemIds, notesBySlot, cycleStartDate, date))
+    .join("");
 
   container.querySelectorAll(".plan-tab").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -185,6 +240,16 @@ export async function renderPlan(container, date) {
     textarea.addEventListener("blur", () => {
       if (textarea.value === initial) return;
       saveNote(textarea.dataset.slotId, date, textarea.value);
+    });
+  });
+
+  container.querySelectorAll(".plan-cycle-date-input").forEach((input) => {
+    input.addEventListener("change", async () => {
+      // Clear this slot's cached tab so the new date re-derives the
+      // phase fresh, instead of keeping whatever was selected before.
+      activeOptionBySlot.delete(input.dataset.slotId);
+      await saveCycleStartDate(input.value || null);
+      renderPlan(container, date);
     });
   });
 }
