@@ -189,7 +189,8 @@ function optionBody(option, loggedItemIds) {
        <div class="plan-items">${before.map((i) => itemRow(i, loggedItemIds.has(i.id))).join("")}</div>`
     : "";
   const mainList = inlineGroups.length
-    ? `<div class="plan-items">${inlineGroups
+    ? `${before.length ? `<div class="plan-supplement-divider">Refeição</div>` : ""}
+       <div class="plan-items">${inlineGroups
         .map((g) => (g.type === "single" ? itemRow(g.item, loggedItemIds.has(g.item.id)) : substitutionGroupRow(g.items, loggedItemIds)))
         .join("")}</div>`
     : "";
