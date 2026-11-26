@@ -171,6 +171,11 @@ async function refresh() {
   renderLog(entries);
   refreshBodyLog();
   if (!planView.hidden) renderPlan(planBody, currentDate);
+  // Re-hide the on-demand Plano summary on any date change rather than
+  // leave the previous day's numbers showing under a stale label.
+  const planSummaryLine = document.getElementById("plan-summary-line");
+  planSummaryLine.hidden = true;
+  document.getElementById("plan-summary-toggle").setAttribute("aria-expanded", "false");
 }
 
 // ── Today / Trends view switch ──
@@ -190,6 +195,11 @@ function showTodayView() {
 }
 
 function showTrendsView() {
+  // Tapping "Trends" works from Plano too, not just from "Hoje" — without
+  // this, jumping there directly left plan-view still unhidden underneath
+  // (showPlanView() never un-showed it), so Plano's own content stayed
+  // visible behind/alongside Trends.
+  showTodayView();
   document.getElementById("app").hidden = true;
   document.getElementById("date-nav").hidden = true;
   trendsView.hidden = false;
@@ -228,6 +238,9 @@ const planView = document.getElementById("plan-view");
 const planBody = document.getElementById("plan-body");
 
 function showPlanView() {
+  // Same reasoning as showTrendsView(): tapping "Plano" directly from
+  // Trends left trends-view still unhidden underneath otherwise.
+  showTodayView();
   document.getElementById("app").hidden = true;
   planView.hidden = false;
   renderPlan(planBody, currentDate);
@@ -238,6 +251,23 @@ document.getElementById("plan-back-btn").addEventListener("click", () => {
   showTodayView();
   document.getElementById("app").hidden = false;
   refresh();
+});
+
+// Hidden by default — a tap-to-reveal total, not a persistent fixture,
+// per the explicit ask: an idea of the numbers without the plan screen
+// being about them all the time. Computed fresh at the moment it's
+// opened (not kept live) so it always reflects whatever's been logged
+// since, including anything logged from inside Plano itself.
+document.getElementById("plan-summary-toggle").addEventListener("click", async (e) => {
+  const line = document.getElementById("plan-summary-line");
+  const willShow = line.hidden;
+  if (willShow) {
+    const entries = await getEntriesForDate(currentDate);
+    const s = computeSummary(entries);
+    line.textContent = `${Math.round(s.kcal)} kcal · P ${s.protein_g.toFixed(0)}g · C ${s.carbs_g.toFixed(0)}g · F ${s.fat_g.toFixed(0)}g`;
+  }
+  line.hidden = !willShow;
+  e.currentTarget.setAttribute("aria-expanded", String(willShow));
 });
 
 
