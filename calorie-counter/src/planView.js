@@ -443,15 +443,42 @@ function slotCard(slot, notesBySlot, cycleStartDate, viewDate, dayEditsByOption,
 export async function renderPlan(container, date) {
   container.innerHTML = `<div class="no-entries">Carregando…</div>`;
   resetForDate(toDateStr(date));
-  const [slots, entries, notesBySlot, cycleStartDate] = await Promise.all([
-    getMealPlan(),
-    getEntriesForDate(date),
-    getNotesForDate(date),
-    getCycleStartDate(),
-  ]);
 
-  if (slots.length === 0) {
-    container.innerHTML = `<div class="no-entries">Nenhum plano cadastrado ainda.</div>`;
+  // A failure here used to leave "Carregando…" on screen forever —
+  // nothing past this point ever ran to replace it, so a real backend
+  // error (e.g. a database schema out of date on a real Supabase project
+  // vs. local mode, which always has the latest tables) looked
+  // indistinguishable from "still loading." Same reasoning as the
+  // render-step try/catch below: a visible error is strictly better than
+  // an indefinite spinner.
+  let slots, entries, notesBySlot, cycleStartDate, dayEditsByOption;
+  try {
+    [slots, entries, notesBySlot, cycleStartDate] = await Promise.all([
+      getMealPlan(),
+      getEntriesForDate(date),
+      getNotesForDate(date),
+      getCycleStartDate(),
+    ]);
+
+    if (slots.length === 0) {
+      container.innerHTML = `<div class="no-entries">Nenhum plano cadastrado ainda.</div>`;
+      return;
+    }
+
+    // Day-edits (including `confirmed`) are fetched for EVERY option up
+    // front, not just the active one — defaultActiveOption needs to know
+    // which option (if any) was already confirmed today, to keep showing
+    // that one on return visits instead of resetting to the first tab.
+    const allOptions = slots.flatMap((slot) => slot.options.map((o) => ({ ...o, slot })));
+    dayEditsByOption = new Map();
+    await Promise.all(
+      allOptions.map(async (opt) => {
+        dayEditsByOption.set(opt.id, await getDayEdits(opt.id, date));
+      })
+    );
+  } catch (err) {
+    console.error("Plano: não foi possível carregar os dados", err);
+    container.innerHTML = `<div class="no-entries">Não foi possível carregar o plano.\n\n${escapeHtml(err?.message || String(err))}</div>`;
     return;
   }
 
@@ -464,18 +491,6 @@ export async function renderPlan(container, date) {
     if (!extraEntriesByMealType.has(e.meal_type)) extraEntriesByMealType.set(e.meal_type, []);
     extraEntriesByMealType.get(e.meal_type).push(e);
   }
-
-  // Day-edits (including `confirmed`) are fetched for EVERY option up
-  // front, not just the active one — defaultActiveOption needs to know
-  // which option (if any) was already confirmed today, to keep showing
-  // that one on return visits instead of resetting to the first tab.
-  const allOptions = slots.flatMap((slot) => slot.options.map((o) => ({ ...o, slot })));
-  const dayEditsByOption = new Map();
-  await Promise.all(
-    allOptions.map(async (opt) => {
-      dayEditsByOption.set(opt.id, await getDayEdits(opt.id, date));
-    })
-  );
 
   // A bad row anywhere in here (e.g. a logged food missing a macro field)
   // used to throw mid-render and leave the view frozen on whatever it
