@@ -199,8 +199,12 @@ button{font-family:inherit;-webkit-tap-highlight-color:transparent}
 .view-tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
 
 /* ── MEAL PLAN ── */
-.plan-back-row{margin-bottom:16px}
+.plan-back-row{margin-bottom:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .plan-back-row .btn-secondary{flex:0 0 auto;width:auto;padding:8px 14px}
+#plan-summary-line{
+  font-size:12px;color:var(--muted2);font-family:'IBM Plex Mono',monospace;
+  margin:-8px 0 16px;padding:8px 10px;background:var(--ink2);border-radius:var(--r);
+}
 .plan-slot{
   background:var(--ink2);border:1px solid var(--line);border-radius:8px;
   padding:16px;margin-bottom:14px;
@@ -622,7 +626,9 @@ button{font-family:inherit;-webkit-tap-highlight-color:transparent}
   <div id="plan-view" hidden>
     <div class="plan-back-row">
       <button class="btn-secondary" id="plan-back-btn">‹ Hoje</button>
+      <button class="btn-secondary" id="plan-summary-toggle" type="button" aria-expanded="false">Resumo do dia</button>
     </div>
+    <div id="plan-summary-line" hidden></div>
     <div id="plan-body"></div>
   </div>
 
