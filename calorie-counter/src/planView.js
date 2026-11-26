@@ -2,7 +2,6 @@ import { getMealPlan, logMealPlanItem, unlogMealPlanItem, relogMealPlanItem, get
 import { getCycleStartDate, saveCycleStartDate } from "./cycleSettings.js";
 import { getDayEdits, setItemExcluded, setItemMultiplier } from "./mealPlanDayEdits.js";
 import { getEntriesForDate, deleteEntry } from "./log.js";
-import { wireSwipe } from "./planSwipe.js";
 
 const CYCLE_SLOT_TITLE = "Ciclo das sementes";
 
@@ -171,16 +170,14 @@ function defaultActiveOption(slot, loggedItemIds) {
 // A plan item's row: no checkbox — being listed here already means
 // "part of today's menu" (see collapse/Registrar tudo for how logging
 // itself works). A small dot shows whether it's actually been logged
-// yet. Swipeable left (exclude from today) / right (edit quantity),
-// unless `noSwipe` — used for extra (non-plan) rows, which swipe to
-// delete/edit the real food_log entry instead (see extraItemRow).
-function itemRow(item, isLogged, { badgeHtml = "", swipeKind = "plan" } = {}) {
+// yet. A pencil button edits its quantity (via setItemMultiplier), an
+// X button excludes it from today — used for extra (non-plan) rows,
+// which edit/delete the real food_log entry instead (see extraItemRow).
+function itemRow(item, isLogged, { badgeHtml = "" } = {}) {
   const supplementTag = item.is_supplement ? `<span class="plan-item-tag">Suplemento</span>` : "";
   const multTag = item._multiplier ? `<span class="plan-item-mult">× ${item._multiplier}</span>` : "";
   return `
-    <div class="plan-item-row" data-item-id="${item.id}" data-swipe-kind="${swipeKind}">
-      <div class="plan-swipe-bg-left">Excluir</div>
-      <div class="plan-swipe-bg-right">Editar</div>
+    <div class="plan-item-row" data-item-id="${item.id}">
       <div class="plan-item ${isLogged ? "is-logged" : ""}">
         <span class="plan-item-status">${isLogged ? "✓" : ""}</span>
         <span class="plan-item-info">
@@ -188,25 +185,31 @@ function itemRow(item, isLogged, { badgeHtml = "", swipeKind = "plan" } = {}) {
           ${item.quantity_label ? `<span class="plan-item-qty">${escapeHtml(item.quantity_label)}${multTag}</span>` : multTag}
         </span>
         ${badgeHtml}
+        <span class="plan-item-actions">
+          <button type="button" class="plan-item-edit-btn" data-item-id="${item.id}" aria-label="Editar quantidade" title="Editar quantidade">✎</button>
+          <button type="button" class="plan-item-del-btn" data-item-id="${item.id}" aria-label="Excluir" title="Excluir">✕</button>
+        </span>
       </div>
     </div>`;
 }
 
 // An "extra" row: something logged for this meal that isn't part of the
 // plan at all (added via the "+" button, or from the regular daily log
-// while browsing this same date) — same swipeable look, but swiping
-// acts on the real food_log entry via the bridges into main.js.
+// while browsing this same date) — same look, but its buttons act on
+// the real food_log entry via the bridges into main.js.
 function extraItemRow(entry) {
   const macros = `P ${entry.protein_g.toFixed(0)} · C ${entry.carbs_g.toFixed(0)} · F ${entry.fat_g.toFixed(0)}`;
   return `
-    <div class="plan-item-row" data-entry-id="${entry.id}" data-swipe-kind="extra">
-      <div class="plan-swipe-bg-left">Excluir</div>
-      <div class="plan-swipe-bg-right">Editar</div>
+    <div class="plan-item-row" data-entry-id="${entry.id}">
       <div class="plan-item is-logged">
         <span class="plan-item-status">✓</span>
         <span class="plan-item-info">
           <span class="plan-item-name">${escapeHtml(entry.foods?.name || "Item")}<span class="plan-item-tag plan-item-tag-extra">Extra</span></span>
           <span class="plan-item-qty">${escapeHtml(entry.quantity_label || `${entry.quantity_g} g`)} · ${Math.round(entry.kcal)} kcal · ${macros}</span>
+        </span>
+        <span class="plan-item-actions">
+          <button type="button" class="plan-extra-edit-btn" data-entry-id="${entry.id}" aria-label="Editar" title="Editar">✎</button>
+          <button type="button" class="plan-extra-del-btn" data-entry-id="${entry.id}" aria-label="Excluir" title="Excluir">✕</button>
         </span>
       </div>
     </div>`;
@@ -518,52 +521,62 @@ export async function renderPlan(container, date) {
     });
   });
 
-  // ── Swipe actions ──────────────────────────────────────────────────
-  container.querySelectorAll('.plan-item-row[data-swipe-kind="plan"]').forEach((wrap) => {
-    const row = wrap.querySelector(".plan-item");
-    const itemId = wrap.dataset.itemId;
-    const found = itemById.get(itemId);
-    if (!found) return;
-    const { item, slot, option } = found;
-    wireSwipe(wrap, row, {
-      onDelete: async () => {
-        await setItemExcluded(option.id, date, itemId, true);
-        if (loggedItemIds.has(itemId)) await unlogMealPlanItem(item, date);
-        renderPlan(container, date);
-      },
-      onEdit: () => {
-        const dayEdits = dayEditsByOption.get(option.id) || { quantity_multipliers: {} };
-        const current = dayEdits.quantity_multipliers[itemId] || 1;
-        const input = window.prompt(
-          `${item.name}${item.quantity_label ? ` — ${item.quantity_label}` : ""}\n\nQuantas vezes a porção do plano? (ex.: 2 para dobro, 0.5 para metade)`,
-          String(current)
-        );
-        if (input === null) return;
-        const mult = Number(input.replace(",", "."));
-        if (!Number.isFinite(mult) || mult <= 0) return;
-        (async () => {
-          await setItemMultiplier(option.id, date, itemId, mult);
-          if (loggedItemIds.has(itemId)) {
-            const scaled = { ...item, kcal: item.kcal * mult, protein_g: item.protein_g * mult, fat_g: item.fat_g * mult, carbs_g: item.carbs_g * mult };
-            await relogMealPlanItem(scaled, slot.meal_type, date);
-          }
-          renderPlan(container, date);
-        })();
-      },
+  // ── Plan item actions (edit quantity / exclude) ─────────────────────
+  container.querySelectorAll(".plan-item-del-btn").forEach((btn) => {
+    btn.addEventListener("click", async (ev) => {
+      ev.stopPropagation();
+      const itemId = btn.dataset.itemId;
+      const found = itemById.get(itemId);
+      if (!found) return;
+      const { item, option } = found;
+      await setItemExcluded(option.id, date, itemId, true);
+      if (loggedItemIds.has(itemId)) await unlogMealPlanItem(item, date);
+      renderPlan(container, date);
     });
   });
 
-  const entryById = new Map(entries.map((e) => [e.id, e]));
-  container.querySelectorAll('.plan-item-row[data-swipe-kind="extra"]').forEach((wrap) => {
-    const row = wrap.querySelector(".plan-item");
-    const entry = entryById.get(wrap.dataset.entryId);
-    if (!entry) return;
-    wireSwipe(wrap, row, {
-      onDelete: async () => {
-        await deleteEntry(entry.id);
+  container.querySelectorAll(".plan-item-edit-btn").forEach((btn) => {
+    btn.addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      const itemId = btn.dataset.itemId;
+      const found = itemById.get(itemId);
+      if (!found) return;
+      const { item, slot, option } = found;
+      const dayEdits = dayEditsByOption.get(option.id) || { quantity_multipliers: {} };
+      const current = dayEdits.quantity_multipliers[itemId] || 1;
+      const input = window.prompt(
+        `${item.name}${item.quantity_label ? ` — ${item.quantity_label}` : ""}\n\nQuantas vezes a porção do plano? (ex.: 2 para dobro, 0.5 para metade)`,
+        String(current)
+      );
+      if (input === null) return;
+      const mult = Number(input.replace(",", "."));
+      if (!Number.isFinite(mult) || mult <= 0) return;
+      (async () => {
+        await setItemMultiplier(option.id, date, itemId, mult);
+        if (loggedItemIds.has(itemId)) {
+          const scaled = { ...item, kcal: item.kcal * mult, protein_g: item.protein_g * mult, fat_g: item.fat_g * mult, carbs_g: item.carbs_g * mult };
+          await relogMealPlanItem(scaled, slot.meal_type, date);
+        }
         renderPlan(container, date);
-      },
-      onEdit: () => onEditFoodLogRequested?.(entry),
+      })();
+    });
+  });
+
+  // ── Extra item actions (edit / delete the real food_log entry) ─────
+  const entryById = new Map(entries.map((e) => [e.id, e]));
+  container.querySelectorAll(".plan-extra-del-btn").forEach((btn) => {
+    btn.addEventListener("click", async (ev) => {
+      ev.stopPropagation();
+      await deleteEntry(btn.dataset.entryId);
+      renderPlan(container, date);
+    });
+  });
+
+  container.querySelectorAll(".plan-extra-edit-btn").forEach((btn) => {
+    btn.addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      const entry = entryById.get(btn.dataset.entryId);
+      if (entry) onEditFoodLogRequested?.(entry);
     });
   });
 }
