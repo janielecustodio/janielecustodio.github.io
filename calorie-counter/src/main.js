@@ -17,7 +17,7 @@ import { computeSummary, KCAL_PER_G } from "./summary.js";
 import { MEAL_TYPES, inferMealType } from "./mealTypes.js";
 import { renderTrends } from "./trends.js";
 import { renderPlan, setAddFoodHandler, setEditFoodLogHandler } from "./planView.js";
-import { getMealPlan } from "./mealPlan.js";
+import { getMealPlan, getNotesForDate } from "./mealPlan.js";
 import { saveWeight, getWeightForDate } from "./bodyLog.js";
 import { getTargets, saveTargets, clearTargets } from "./targets.js";
 
@@ -186,7 +186,18 @@ async function refresh() {
   renderDateLabel();
   const entries = await getEntriesForDate(currentDate);
   renderSummary(entries);
-  renderLog(entries, await getPlanSlots());
+  // Notes are per (slot, day), same as the food itself, written from
+  // inside Plano (see planView.js's own NOTAS textarea) — showing them
+  // here too means the daily log stays a complete record of a day on its
+  // own, without having to also go flip back through Plano for context
+  // like "why did I log a substitution" or an allergy/craving note.
+  let notesBySlot = new Map();
+  try {
+    notesBySlot = await getNotesForDate(currentDate);
+  } catch {
+    // Non-fatal — the log still renders fine without notes attached.
+  }
+  renderLog(entries, await getPlanSlots(), notesBySlot);
   refreshBodyLog();
   if (!planView.hidden) renderPlan(planBody, currentDate);
   // Re-hide the on-demand Plano summary on any date change rather than
@@ -444,7 +455,7 @@ const timeFmt = new Intl.DateTimeFormat(undefined, {
 // is unambiguous, so its bucket keeps today's exact behavior (same
 // label, same copy-from-yesterday) — only a meal_type split across
 // several slots changes anything.
-function buildLogSections(entries, slots) {
+function buildLogSections(entries, slots, notesBySlot = new Map()) {
   const itemSlot = new Map();
   for (const slot of slots) {
     for (const option of slot.options) {
@@ -483,6 +494,7 @@ function buildLogSections(entries, slots) {
         entries: slotEntries,
         addMealType: slot.meal_type,
         copyMealType: null,
+        note: notesBySlot.get(slot.id) || "",
       });
     } else {
       handledMealTypes.add(slot.meal_type);
@@ -492,6 +504,7 @@ function buildLogSections(entries, slots) {
         entries: [...slotEntries, ...(leftoverByMealType.get(slot.meal_type) || [])],
         addMealType: slot.meal_type,
         copyMealType: slot.meal_type,
+        note: notesBySlot.get(slot.id) || "",
       });
     }
   }
@@ -530,12 +543,12 @@ function buildLogSections(entries, slots) {
 // All six meal sections always render, even empty — each with its own
 // "+ Add" button that pins where the next searched/scanned food lands
 // (see setAddTarget below), instead of guessing from the current time.
-function renderLog(entries, slots = []) {
+function renderLog(entries, slots = [], notesBySlot = new Map()) {
   const list = document.getElementById("log-list");
-  const sections = buildLogSections(entries, slots);
+  const sections = buildLogSections(entries, slots, notesBySlot);
 
   list.innerHTML = "";
-  for (const { key, label, entries: groupEntries, addMealType, copyMealType } of sections) {
+  for (const { key, label, entries: groupEntries, addMealType, copyMealType, note } of sections) {
     const groupKcal = groupEntries.reduce((sum, e) => sum + (Number(e.kcal) || 0), 0);
 
     const group = document.createElement("div");
@@ -555,6 +568,11 @@ function renderLog(entries, slots = []) {
     const copyBtnHtml = copyMealType
       ? `<button class="log-group-copy" type="button" title="Copy from yesterday">⧉</button>`
       : "";
+    // The same per-day note written from inside Plano for this slot (see
+    // planView.js's NOTAS textarea) — shown read-only here so the log is
+    // a complete record of the day on its own, without flipping back to
+    // Plano just to remember why something was swapped or how it felt.
+    const noteHtml = note ? `<div class="log-group-note">${escapeHtml(note)}</div>` : "";
     group.innerHTML = `
       <div class="log-group-header">
         <span>${escapeHtml(label)} ${timeHtml} ${kcalHtml}</span>
@@ -563,6 +581,7 @@ function renderLog(entries, slots = []) {
           <button class="log-group-add" type="button">+ Add</button>
         </span>
       </div>
+      ${noteHtml}
     `;
     group.querySelector(".log-group-add").addEventListener("click", () => setAddTarget(addMealType));
     if (copyMealType) {
