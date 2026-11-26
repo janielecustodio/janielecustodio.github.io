@@ -16,7 +16,7 @@ import {
 import { computeSummary, KCAL_PER_G } from "./summary.js";
 import { MEAL_TYPES, inferMealType } from "./mealTypes.js";
 import { renderTrends } from "./trends.js";
-import { renderPlan } from "./planView.js";
+import { renderPlan, setAddFoodHandler, setEditFoodLogHandler } from "./planView.js";
 import { saveWeight, getWeightForDate } from "./bodyLog.js";
 import { getTargets, saveTargets, clearTargets } from "./targets.js";
 
@@ -613,6 +613,11 @@ function clearAddTarget() {
 }
 
 document.getElementById("add-target-clear").addEventListener("click", clearAddTarget);
+
+// Plano's "+" and extra-item "Editar" swipe action reuse this same
+// modal instead of duplicating search/quantity UI.
+setAddFoodHandler((mealType) => setAddTarget(mealType));
+setEditFoodLogHandler((entry) => openEditModal(entry));
 
 // Quick-pick chips for the 5-6 most-logged foods in this meal, pre-filled
 // with whatever quantity was used last time — skips search entirely for

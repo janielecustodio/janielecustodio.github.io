@@ -1,5 +1,5 @@
 import { supabase } from "./supabaseClient.js";
-import { addEntry, deleteEntry } from "./log.js";
+import { addEntry, deleteEntry, updateEntry } from "./log.js";
 
 // Fetches the whole plan (slots -> options -> items), already ordered.
 // Shared reference data (see migrations/008_add_meal_plan.sql), not
@@ -74,11 +74,10 @@ export async function logMealPlanItem(item, mealType, loggedAt) {
   await addEntry(itemAsFood(item), 100, loggedAt, mealType, item.quantity_label);
 }
 
-// Undoes logMealPlanItem for today — looks up the specific food_log row
-// (there should only ever be one per item per day under normal use) via
-// the foods row's (source, source_id) mapping, scoped to the given date,
-// and deletes it.
-export async function unlogMealPlanItem(item, date) {
+// Looks up today's food_log row(s) for this plan item (there should only
+// ever be one under normal use) via the foods row's (source, source_id)
+// mapping, scoped to the given date — shared by unlog/relog below.
+async function findTodayLogRows(item, date) {
   const start = new Date(date);
   start.setHours(0, 0, 0, 0);
   const end = new Date(start);
@@ -92,17 +91,36 @@ export async function unlogMealPlanItem(item, date) {
     .limit(1)
     .maybeSingle();
   if (foodErr) throw foodErr;
-  if (!food) return;
+  if (!food) return [];
 
   const { data: rows, error: rowsErr } = await supabase
     .from("food_logs")
-    .select("id")
+    .select("id, logged_at, meal_type")
     .eq("food_id", food.id)
     .gte("logged_at", start.toISOString())
     .lt("logged_at", end.toISOString());
   if (rowsErr) throw rowsErr;
+  return rows || [];
+}
 
-  for (const row of rows || []) await deleteEntry(row.id);
+// Undoes logMealPlanItem for today.
+export async function unlogMealPlanItem(item, date) {
+  for (const row of await findTodayLogRows(item, date)) await deleteEntry(row.id);
+}
+
+// Re-applies the item's current macros to whatever's already logged
+// today (e.g. after editing its quantity multiplier), preserving the
+// original logged_at/meal_type — or logs it fresh if it wasn't logged
+// yet, same as logMealPlanItem.
+export async function relogMealPlanItem(item, mealType, date) {
+  const rows = await findTodayLogRows(item, date);
+  if (rows.length === 0) {
+    await logMealPlanItem(item, mealType, new Date());
+    return;
+  }
+  for (const row of rows) {
+    await updateEntry(row.id, itemAsFood(item), 100, new Date(row.logged_at), row.meal_type || mealType, item.quantity_label);
+  }
 }
 
 // Local Y-M-D, not toISOString().slice(0,10) — that goes through UTC and
