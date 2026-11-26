@@ -313,14 +313,23 @@ function optionBody(option, extraEntries) {
 
 // The header button's green/disabled state is driven purely by
 // `confirmed` — never by checking whether each item has its own
-// food_logs row, which is what let the two silently disagree.
+// food_logs row, which is what let the two silently disagree. Once
+// confirmed, a separate "Editar" button appears alongside it — tapping
+// that is the only way back into editing a day already registered
+// (today's or a past one): it un-confirms so the menu is editable
+// again, and the green state only comes back once "Registrar tudo" is
+// tapped again, deliberately, to resubmit.
 function logAllButton(option, confirmed) {
   if (option.items.length === 0) return "";
   const label = confirmed ? "Tudo registrado" : "Registrar tudo";
-  return `
+  const checkBtn = `
     <button class="plan-log-all-btn" data-option-id="${option.id}" ${confirmed ? "disabled" : ""} title="${label}" aria-label="${label}">
       ✓
     </button>`;
+  const editBtn = confirmed
+    ? `<button type="button" class="plan-edit-all-btn" data-option-id="${option.id}" title="Editar refeição registrada" aria-label="Editar refeição registrada">✎</button>`
+    : "";
+  return editBtn + checkBtn;
 }
 
 function addFoodButton(slot) {
@@ -519,20 +528,39 @@ export async function renderPlan(container, date) {
       const effectiveOption = { ...option, items: applyDayEdits(option.items, dayEdits) };
       btn.disabled = true;
       try {
-        const now = new Date();
-        // logMealPlanItem is idempotent at the data layer (checks for an
-        // existing row itself) — called unconditionally for every
-        // effective item rather than first checking some separate
-        // "is this logged" set, which is exactly the computation that
-        // could drift out of sync with reality.
+        // A true reconcile, not just "log whatever's missing" — relogMealPlanItem
+        // logs fresh if an item was never logged, or corrects the existing row
+        // in place if it was (e.g. edited to a different quantity while this
+        // option sat un-confirmed after tapping "Editar"). Either way it's
+        // idempotent and safe to call unconditionally for every effective item.
         for (const item of effectiveItems(effectiveOption)) {
-          await logMealPlanItem(item, option.slot.meal_type, now);
+          await relogMealPlanItem(item, option.slot.meal_type, date);
         }
         await setConfirmed(option.id, date, true);
       } catch (err) {
         reportActionError("registrar tudo", err);
       } finally {
         loggingInProgress.delete(option.id);
+        renderPlan(container, date);
+      }
+    });
+  });
+
+  container.querySelectorAll(".plan-edit-all-btn").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const option = slots.flatMap((s) => s.options.map((o) => ({ ...o, slot: s }))).find((o) => o.id === btn.dataset.optionId);
+      if (!option) return;
+      try {
+        // Un-confirming is the only way back into editing an already-
+        // registered meal (today's or a past day's) — the slot stays
+        // expanded afterward so the per-item pencil/X buttons and the
+        // now-active "Registrar tudo" are immediately visible, not
+        // hidden behind the auto-collapse.
+        await setConfirmed(option.id, date, false);
+        collapseOverrideBySlot.set(option.slot.id, false);
+      } catch (err) {
+        reportActionError("editar a refeição", err);
+      } finally {
         renderPlan(container, date);
       }
     });
