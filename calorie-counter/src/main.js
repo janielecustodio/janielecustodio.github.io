@@ -520,21 +520,26 @@ function buildLogSections(entries, slots, notesBySlot = new Map()) {
     }
 
     // Several slots share this meal_type — one section per slot, in
-    // their own order_index order, plus a trailing "(outros)" for
-    // anything logged under this type but not traceable to one of them.
-    for (const slot of slotsForType) {
+    // their own order_index order (same as Plano itself), and nothing
+    // extra: anything logged under this type but not traceable to one
+    // specific slot (e.g. a manual/search-added food) folds into the
+    // LAST of them — the one order_index puts right before the next
+    // meal_type starts (e.g. "Café da manhã" is the last of the 4
+    // breakfast slots) — rather than getting its own separate section.
+    // A second section with the same name just to hold a couple of
+    // untraceable items was more confusing than useful: one section per
+    // Plano slot, always, is the whole point.
+    slotsForType.forEach((slot, i) => {
+      const isLast = i === slotsForType.length - 1;
       sections.push({
         key: `slot-${slot.id}`,
         label: slot.title,
-        entries: bySlotId.get(slot.id) || [],
+        entries: isLast ? [...(bySlotId.get(slot.id) || []), ...leftover] : bySlotId.get(slot.id) || [],
         addMealType: mealType,
         copyMealType: null,
         note: notesBySlot.get(slot.id) || "",
       });
-    }
-    if (leftover.length > 0) {
-      sections.push({ key: `extra-${mealType}`, label: `${label} (outros)`, entries: leftover, addMealType: mealType, copyMealType: null, note: "" });
-    }
+    });
   }
   return sections;
 }
