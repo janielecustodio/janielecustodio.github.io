@@ -215,14 +215,18 @@ function itemRow(item, isLogged, { badgeHtml = "", excludeIds = [item.id] } = {}
 // while browsing this same date) — same look, but its buttons act on
 // the real food_log entry via the bridges into main.js.
 function extraItemRow(entry) {
-  const macros = `P ${entry.protein_g.toFixed(0)} · C ${entry.carbs_g.toFixed(0)} · F ${entry.fat_g.toFixed(0)}`;
+  // A food whose source didn't report a given nutrient (some TACO/recipe
+  // rows lack one) stores that macro as null — .toFixed() on null/undefined
+  // throws and previously took down the ENTIRE Plano render with it (every
+  // slot, every button, no error shown), not just this one row.
+  const macros = `P ${(entry.protein_g || 0).toFixed(0)} · C ${(entry.carbs_g || 0).toFixed(0)} · F ${(entry.fat_g || 0).toFixed(0)}`;
   return `
     <div class="plan-item-row" data-entry-id="${entry.id}">
       <div class="plan-item is-logged">
         <span class="plan-item-status">✓</span>
         <span class="plan-item-info">
           <span class="plan-item-name">${escapeHtml(entry.foods?.name || "Item")}<span class="plan-item-tag plan-item-tag-extra">Extra</span></span>
-          <span class="plan-item-qty">${escapeHtml(entry.quantity_label || `${entry.quantity_g} g`)} · ${Math.round(entry.kcal)} kcal · ${macros}</span>
+          <span class="plan-item-qty">${escapeHtml(entry.quantity_label || `${entry.quantity_g} g`)} · ${Math.round(entry.kcal || 0)} kcal · ${macros}</span>
         </span>
         <span class="plan-item-actions">
           <button type="button" class="plan-extra-edit-btn" data-entry-id="${entry.id}" aria-label="Editar" title="Editar">✎</button>
@@ -465,9 +469,19 @@ export async function renderPlan(container, date) {
     })
   );
 
-  container.innerHTML = slots
-    .map((slot) => slotCard(slot, loggedItemIds, notesBySlot, cycleStartDate, date, dayEditsByOption, extraEntriesByMealType))
-    .join("");
+  // A bad row anywhere in here (e.g. a logged food missing a macro field)
+  // used to throw mid-render and leave the view frozen on whatever it
+  // last showed, with nothing to tell you it had actually crashed — a
+  // visible error, however ugly, is strictly better than silence.
+  try {
+    container.innerHTML = slots
+      .map((slot) => slotCard(slot, loggedItemIds, notesBySlot, cycleStartDate, date, dayEditsByOption, extraEntriesByMealType))
+      .join("");
+  } catch (err) {
+    console.error("Plano: render falhou", err);
+    container.innerHTML = `<div class="no-entries">Não foi possível exibir o plano.\n\n${escapeHtml(err?.message || String(err))}</div>`;
+    return;
+  }
 
   container.querySelectorAll(".plan-slot-header-toggle").forEach((btn) => {
     btn.addEventListener("click", () => {
