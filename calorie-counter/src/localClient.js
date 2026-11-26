@@ -33,6 +33,7 @@ function freshDb() {
     user_targets: [],
     meal_plan_notes: [],
     cycle_settings: [],
+    meal_plan_day_edits: [],
     ...freshMealPlanTables(),
     mealPlanSeedVersion: MEAL_PLAN_SEED_VERSION,
   };
