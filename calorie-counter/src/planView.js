@@ -1,6 +1,6 @@
 import { getMealPlan, logMealPlanItem, unlogMealPlanItem, relogMealPlanItem, getNotesForDate, saveNote } from "./mealPlan.js";
 import { getCycleStartDate, saveCycleStartDate } from "./cycleSettings.js";
-import { getDayEdits, setItemExcluded, setItemMultiplier, resetDayEdits } from "./mealPlanDayEdits.js";
+import { getDayEdits, setItemExcluded, setItemMultiplier, setConfirmed, resetDayEdits } from "./mealPlanDayEdits.js";
 import { getEntriesForDate, deleteEntry } from "./log.js";
 
 const CYCLE_SLOT_TITLE = "Ciclo das sementes";
@@ -171,23 +171,23 @@ function cyclePhaseForDate(date, cycleStartDate) {
   return { dayOfCycle, phase: dayOfCycle <= 14 ? 1 : 2 };
 }
 
-// Picks a sensible default tab the first time a slot is rendered: whichever
-// option already has something logged today, else the lowest option
-// number, else just the first option (covers the single-fixed-option case
-// where option_number is null).
-function defaultActiveOption(slot, loggedItemIds) {
-  const withLogged = slot.options.find((o) => o.items.some((i) => loggedItemIds.has(i.id)));
-  if (withLogged) return withLogged.id;
+// Picks a sensible default tab the first time a slot is rendered:
+// whichever option was already confirmed today, else the lowest option
+// number, else just the first option (covers the single-fixed-option
+// case where option_number is null).
+function defaultActiveOption(slot, dayEditsByOption) {
+  const confirmedOption = slot.options.find((o) => dayEditsByOption.get(o.id)?.confirmed);
+  if (confirmedOption) return confirmedOption.id;
   const sorted = [...slot.options].sort((a, b) => (a.option_number || 0) - (b.option_number || 0));
   return sorted[0]?.id;
 }
 
-// A plan item's row: no checkbox — being listed here already means
-// "part of today's menu" (see collapse/Registrar tudo for how logging
-// itself works). A small dot shows whether it's actually been logged
-// yet. A pencil button edits its quantity (via setItemMultiplier), an
-// X button excludes it from today — used for extra (non-plan) rows,
-// which edit/delete the real food_log entry instead (see extraItemRow).
+// A plan item's row — being listed here already means "part of today's
+// menu" (see Registrar tudo for how logging itself works; whether this
+// specific item has its own food_logs row is deliberately not tracked
+// or shown here — "confirmed" on the whole option is the only state
+// that matters, see logAllButton). A pencil button edits its quantity
+// (via setItemMultiplier), an X button excludes it from today.
 //
 // `excludeIds` is every id the X button should exclude at once — for a
 // substitution group this is ALL the alternatives, not just the one
@@ -195,13 +195,12 @@ function defaultActiveOption(slot, loggedItemIds) {
 // to immediately reveal the next alternative in its place (the picker
 // already covers "I want a different one" — X means "not eating this
 // food slot at all today").
-function itemRow(item, isLogged, { badgeHtml = "", excludeIds = [item.id] } = {}) {
+function itemRow(item, { badgeHtml = "", excludeIds = [item.id] } = {}) {
   const supplementTag = item.is_supplement ? `<span class="plan-item-tag">Suplemento</span>` : "";
   const multTag = item._multiplier ? `<span class="plan-item-mult">× ${item._multiplier}</span>` : "";
   return `
     <div class="plan-item-row" data-item-id="${item.id}">
-      <div class="plan-item ${isLogged ? "is-logged" : ""}">
-        <span class="plan-item-status">${isLogged ? "✓" : ""}</span>
+      <div class="plan-item">
         <span class="plan-item-info">
           <span class="plan-item-name">${escapeHtml(item.name)}${supplementTag}</span>
           ${item.quantity_label ? `<span class="plan-item-qty">${escapeHtml(item.quantity_label)}${multTag}</span>` : multTag}
@@ -218,7 +217,9 @@ function itemRow(item, isLogged, { badgeHtml = "", excludeIds = [item.id] } = {}
 // An "extra" row: something logged for this meal that isn't part of the
 // plan at all (added via the "+" button, or from the regular daily log
 // while browsing this same date) — same look, but its buttons act on
-// the real food_log entry via the bridges into main.js.
+// the real food_log entry via the bridges into main.js. Always actually
+// logged the instant it's added, independent of the option's own
+// confirmed state.
 function extraItemRow(entry) {
   // A food whose source didn't report a given nutrient (some TACO/recipe
   // rows lack one) stores that macro as null — .toFixed() on null/undefined
@@ -227,8 +228,7 @@ function extraItemRow(entry) {
   const macros = `P ${(entry.protein_g || 0).toFixed(0)} · C ${(entry.carbs_g || 0).toFixed(0)} · F ${(entry.fat_g || 0).toFixed(0)}`;
   return `
     <div class="plan-item-row" data-entry-id="${entry.id}">
-      <div class="plan-item is-logged">
-        <span class="plan-item-status">✓</span>
+      <div class="plan-item">
         <span class="plan-item-info">
           <span class="plan-item-name">${escapeHtml(entry.foods?.name || "Item")}<span class="plan-item-tag plan-item-tag-extra">Extra</span></span>
           <span class="plan-item-qty">${escapeHtml(entry.quantity_label || `${entry.quantity_g} g`)} · ${Math.round(entry.kcal || 0)} kcal · ${macros}</span>
@@ -244,14 +244,14 @@ function extraItemRow(entry) {
 // Renders a substitution group: the active alternative as a normal
 // logging row, plus a "+N opções" toggle that expands a small picker
 // below it listing the others — tapping one makes it the active row.
-function substitutionGroupRow(groupItemsList, loggedItemIds) {
+function substitutionGroupRow(groupItemsList) {
   const key = groupKey(groupItemsList[0]);
   const activeId = activeSubstituteByGroup.get(key);
   const activeItem = groupItemsList.find((i) => i.id === activeId) || groupItemsList[0];
   const altCount = groupItemsList.length - 1;
   const altLabel = altCount === 1 ? "+1 opção" : `+${altCount} opções`;
   const badge = `<button type="button" class="plan-sub-badge" data-group-key="${key}">${altLabel}</button>`;
-  const row = itemRow(activeItem, loggedItemIds.has(activeItem.id), {
+  const row = itemRow(activeItem, {
     badgeHtml: badge,
     excludeIds: groupItemsList.map((i) => i.id),
   });
@@ -276,7 +276,7 @@ function substitutionGroupRow(groupItemsList, loggedItemIds) {
     </div>`;
 }
 
-function optionBody(option, loggedItemIds, extraEntries) {
+function optionBody(option, extraEntries) {
   if (option.items.length === 0 && extraEntries.length === 0) {
     return `<div class="plan-empty">Ainda não cadastrado — envie o print dessa opção.</div>`;
   }
@@ -286,10 +286,10 @@ function optionBody(option, loggedItemIds, extraEntries) {
 
   const beforeList = before.length
     ? `<div class="plan-supplement-divider">Antes da refeição</div>
-       <div class="plan-items">${before.map((i) => itemRow(i, loggedItemIds.has(i.id))).join("")}</div>`
+       <div class="plan-items">${before.map((i) => itemRow(i)).join("")}</div>`
     : "";
   const mainRows = [
-    ...inlineGroups.map((g) => (g.type === "single" ? itemRow(g.item, loggedItemIds.has(g.item.id)) : substitutionGroupRow(g.items, loggedItemIds))),
+    ...inlineGroups.map((g) => (g.type === "single" ? itemRow(g.item) : substitutionGroupRow(g.items))),
     ...extraEntries.map((e) => extraItemRow(e)),
   ];
   const mainList = mainRows.length
@@ -298,7 +298,7 @@ function optionBody(option, loggedItemIds, extraEntries) {
     : "";
   const afterList = after.length
     ? `<div class="plan-supplement-divider">Depois da refeição</div>
-       <div class="plan-items">${after.map((i) => itemRow(i, loggedItemIds.has(i.id))).join("")}</div>`
+       <div class="plan-items">${after.map((i) => itemRow(i)).join("")}</div>`
     : "";
   const observations = option.observations
     ? `<div class="plan-observations"><div class="plan-observations-label">Observações</div>${escapeHtml(option.observations)}</div>`
@@ -311,13 +311,14 @@ function optionBody(option, loggedItemIds, extraEntries) {
     ${observations}`;
 }
 
-function logAllButton(option, loggedItemIds) {
+// The header button's green/disabled state is driven purely by
+// `confirmed` — never by checking whether each item has its own
+// food_logs row, which is what let the two silently disagree.
+function logAllButton(option, confirmed) {
   if (option.items.length === 0) return "";
-  const items = effectiveItems(option);
-  const allLogged = items.every((i) => loggedItemIds.has(i.id));
-  const label = allLogged ? "Tudo registrado" : "Registrar tudo";
+  const label = confirmed ? "Tudo registrado" : "Registrar tudo";
   return `
-    <button class="plan-log-all-btn" data-option-id="${option.id}" ${allLogged ? "disabled" : ""} title="${label}" aria-label="${label}">
+    <button class="plan-log-all-btn" data-option-id="${option.id}" ${confirmed ? "disabled" : ""} title="${label}" aria-label="${label}">
       ✓
     </button>`;
 }
@@ -364,36 +365,32 @@ function cycleDateControl(slot, cycleStartDate, cycleInfo) {
 // Picks which of a slot's options is "active" (shown) right now — same
 // logic used both to decide what to prefetch day-edits for, and inside
 // slotCard itself.
-function activeOptionForSlot(slot, loggedItemIds, cycleStartDate, viewDate) {
+function activeOptionForSlot(slot, dayEditsByOption, cycleStartDate, viewDate) {
   const isCycleSlot = slot.title === CYCLE_SLOT_TITLE;
   const cycleInfo = isCycleSlot ? cyclePhaseForDate(viewDate, cycleStartDate) : null;
   if (!activeOptionBySlot.has(slot.id)) {
     const cycleOptionId = cycleInfo ? slot.options.find((o) => o.option_number === cycleInfo.phase)?.id : null;
-    activeOptionBySlot.set(slot.id, cycleOptionId || defaultActiveOption(slot, loggedItemIds));
+    activeOptionBySlot.set(slot.id, cycleOptionId || defaultActiveOption(slot, dayEditsByOption));
   }
   const activeId = activeOptionBySlot.get(slot.id);
   return slot.options.find((o) => o.id === activeId) || slot.options[0];
 }
 
-function slotCard(slot, loggedItemIds, notesBySlot, cycleStartDate, viewDate, dayEditsByOption, extraEntriesByMealType) {
+function slotCard(slot, notesBySlot, cycleStartDate, viewDate, dayEditsByOption, extraEntriesByMealType) {
   const isCycleSlot = slot.title === CYCLE_SLOT_TITLE;
   const hasTabs = slot.options.length > 1 && slot.options.some((o) => o.option_number != null);
   const cycleInfo = isCycleSlot ? cyclePhaseForDate(viewDate, cycleStartDate) : null;
-  const rawActiveOption = activeOptionForSlot(slot, loggedItemIds, cycleStartDate, viewDate);
+  const rawActiveOption = activeOptionForSlot(slot, dayEditsByOption, cycleStartDate, viewDate);
   const activeId = rawActiveOption?.id;
-  const dayEdits = (rawActiveOption && dayEditsByOption.get(rawActiveOption.id)) || { excluded_item_ids: [], quantity_multipliers: {} };
+  const dayEdits = (rawActiveOption && dayEditsByOption.get(rawActiveOption.id)) || { excluded_item_ids: [], quantity_multipliers: {}, confirmed: false };
   const activeOption = rawActiveOption ? { ...rawActiveOption, items: applyDayEdits(rawActiveOption.items, dayEdits) } : null;
   const extraEntries = extraEntriesByMealType.get(slot.meal_type) || [];
 
-  // Auto-collapses once everything in the active option is logged, so a
+  // Auto-collapses once the active option has been confirmed, so a
   // finished meal doesn't take up scroll space — tapping the header
   // always overrides this for the rest of the session (see
   // collapseOverrideBySlot above).
-  const isFullyLogged =
-    !!activeOption &&
-    (activeOption.items.length > 0 || extraEntries.length > 0) &&
-    effectiveItems(activeOption).every((i) => loggedItemIds.has(i.id));
-  const collapsed = collapseOverrideBySlot.has(slot.id) ? collapseOverrideBySlot.get(slot.id) : isFullyLogged;
+  const collapsed = collapseOverrideBySlot.has(slot.id) ? collapseOverrideBySlot.get(slot.id) : dayEdits.confirmed;
 
   const tabs = hasTabs
     ? `<div class="plan-option-tabs" data-slot-id="${slot.id}">
@@ -411,7 +408,7 @@ function slotCard(slot, loggedItemIds, notesBySlot, cycleStartDate, viewDate, da
     : `
       ${isCycleSlot ? cycleDateControl(slot, cycleStartDate, cycleInfo) : ""}
       ${tabs}
-      <div class="plan-option-body">${activeOption ? optionBody(activeOption, loggedItemIds, extraEntries) : ""}</div>
+      <div class="plan-option-body">${activeOption ? optionBody(activeOption, extraEntries) : ""}</div>
       ${notesSection(slot, notesBySlot.get(slot.id))}`;
 
   return `
@@ -427,7 +424,7 @@ function slotCard(slot, loggedItemIds, notesBySlot, cycleStartDate, viewDate, da
         <span class="plan-slot-header-actions">
           ${rawActiveOption ? resetButton(rawActiveOption, dayEdits) : ""}
           ${addFoodButton(slot)}
-          ${activeOption ? logAllButton(activeOption, loggedItemIds) : ""}
+          ${activeOption ? logAllButton(activeOption, dayEdits.confirmed) : ""}
         </span>
       </div>
       ${body}
@@ -449,10 +446,6 @@ export async function renderPlan(container, date) {
     return;
   }
 
-  const loggedItemIds = new Set(
-    entries.filter((e) => e.foods?.source === "mealplan").map((e) => e.foods.source_id)
-  );
-
   // Rows logged for a slot's meal_type that aren't one of this plan's
   // own synthetic items — added via "+" (or from the regular daily log
   // while browsing this date) — rendered inline as "extra" rows.
@@ -463,13 +456,14 @@ export async function renderPlan(container, date) {
     extraEntriesByMealType.get(e.meal_type).push(e);
   }
 
-  // Only the currently-active option per slot needs its day-edits
-  // fetched — switching tabs re-renders and fetches the newly active
-  // one then, same pattern as everything else in this module.
-  const activeOptions = slots.map((slot) => activeOptionForSlot(slot, loggedItemIds, cycleStartDate, date)).filter(Boolean);
+  // Day-edits (including `confirmed`) are fetched for EVERY option up
+  // front, not just the active one — defaultActiveOption needs to know
+  // which option (if any) was already confirmed today, to keep showing
+  // that one on return visits instead of resetting to the first tab.
+  const allOptions = slots.flatMap((slot) => slot.options.map((o) => ({ ...o, slot })));
   const dayEditsByOption = new Map();
   await Promise.all(
-    activeOptions.map(async (opt) => {
+    allOptions.map(async (opt) => {
       dayEditsByOption.set(opt.id, await getDayEdits(opt.id, date));
     })
   );
@@ -480,7 +474,7 @@ export async function renderPlan(container, date) {
   // visible error, however ugly, is strictly better than silence.
   try {
     container.innerHTML = slots
-      .map((slot) => slotCard(slot, loggedItemIds, notesBySlot, cycleStartDate, date, dayEditsByOption, extraEntriesByMealType))
+      .map((slot) => slotCard(slot, notesBySlot, cycleStartDate, date, dayEditsByOption, extraEntriesByMealType))
       .join("");
   } catch (err) {
     console.error("Plano: render falhou", err);
@@ -521,33 +515,20 @@ export async function renderPlan(container, date) {
       // attribute on the button itself.
       if (loggingInProgress.has(option.id)) return;
       loggingInProgress.add(option.id);
-      const dayEdits = dayEditsByOption.get(option.id) || { excluded_item_ids: [], quantity_multipliers: {} };
+      const dayEdits = dayEditsByOption.get(option.id) || { excluded_item_ids: [], quantity_multipliers: {}, confirmed: false };
       const effectiveOption = { ...option, items: applyDayEdits(option.items, dayEdits) };
       btn.disabled = true;
       try {
         const now = new Date();
+        // logMealPlanItem is idempotent at the data layer (checks for an
+        // existing row itself) — called unconditionally for every
+        // effective item rather than first checking some separate
+        // "is this logged" set, which is exactly the computation that
+        // could drift out of sync with reality.
         for (const item of effectiveItems(effectiveOption)) {
-          if (!loggedItemIds.has(item.id)) await logMealPlanItem(item, option.slot.meal_type, now);
+          await logMealPlanItem(item, option.slot.meal_type, now);
         }
-        // Diagnostic, not a guess: re-fetch fresh from the data layer
-        // (not the stale loggedItemIds closure above) and check every
-        // item that was supposed to get logged actually did. This has
-        // never fired in testing, including against the live site with
-        // this exact plan — if it ever does, it names the exact item,
-        // which is the one thing needed to find a bug that otherwise
-        // can't be reproduced off of this device.
-        const freshEntries = await getEntriesForDate(date);
-        const freshLoggedIds = new Set(
-          freshEntries.filter((e) => e.foods?.source === "mealplan").map((e) => e.foods.source_id)
-        );
-        const stillMissing = effectiveItems(effectiveOption).filter((i) => !freshLoggedIds.has(i.id));
-        if (stillMissing.length > 0) {
-          window.alert(
-            `Registrar tudo: ${stillMissing.length} item(ns) não foram reconhecidos como registrados mesmo após tentar:\n\n${stillMissing
-              .map((i) => `• ${i.name} (id: ${i.id})`)
-              .join("\n")}\n\nOpção: ${option.id}`
-          );
-        }
+        await setConfirmed(option.id, date, true);
       } catch (err) {
         reportActionError("registrar tudo", err);
       } finally {
@@ -566,17 +547,20 @@ export async function renderPlan(container, date) {
       if (btn.disabled) return;
       const option = slots.flatMap((s) => s.options.map((o) => ({ ...o, slot: s }))).find((o) => o.id === btn.dataset.optionId);
       if (!option) return;
-      const dayEdits = dayEditsByOption.get(option.id) || { quantity_multipliers: {} };
+      const dayEdits = dayEditsByOption.get(option.id) || { quantity_multipliers: {}, confirmed: false };
       btn.disabled = true;
       try {
         // Items logged at a scaled quantity get relogged at the plan's
-        // original amount — excluded items are just made visible again,
-        // not auto-logged (whether they were actually eaten today is a
-        // separate question from whether they're on the menu).
-        for (const [itemId, mult] of Object.entries(dayEdits.quantity_multipliers)) {
-          if (mult === 1 || !loggedItemIds.has(itemId)) continue;
-          const found = itemById.get(itemId);
-          if (found) await relogMealPlanItem(found.item, option.slot.meal_type, date);
+        // original amount, but only if this option was actually
+        // confirmed (nothing to correct otherwise). Excluded items just
+        // reappear — resetDayEdits also clears `confirmed`, since the
+        // menu just changed back and needs a fresh confirm either way.
+        if (dayEdits.confirmed) {
+          for (const [itemId, mult] of Object.entries(dayEdits.quantity_multipliers)) {
+            if (mult === 1) continue;
+            const found = itemById.get(itemId);
+            if (found) await relogMealPlanItem(found.item, option.slot.meal_type, date);
+          }
         }
         await resetDayEdits(option.id, date);
       } catch (err) {
@@ -639,7 +623,10 @@ export async function renderPlan(container, date) {
       const excludeIds = (btn.dataset.excludeIds || itemId).split(",");
       try {
         for (const id of excludeIds) await setItemExcluded(option.id, date, id, true);
-        if (loggedItemIds.has(itemId)) await unlogMealPlanItem(item, date);
+        // Safe no-op if it was never logged — removes the need to track
+        // a separate "is this logged" state just to decide whether to
+        // bother calling this.
+        await unlogMealPlanItem(item, date);
       } catch (err) {
         reportActionError("excluir o item", err);
       } finally {
@@ -655,7 +642,7 @@ export async function renderPlan(container, date) {
       const found = itemById.get(itemId);
       if (!found) return;
       const { item, slot, option } = found;
-      const dayEdits = dayEditsByOption.get(option.id) || { quantity_multipliers: {} };
+      const dayEdits = dayEditsByOption.get(option.id) || { quantity_multipliers: {}, confirmed: false };
       const current = dayEdits.quantity_multipliers[itemId] || 1;
       const input = window.prompt(
         `${item.name}${item.quantity_label ? ` — ${item.quantity_label}` : ""}\n\nQuantas vezes a porção do plano? (ex.: 2 para dobro, 0.5 para metade)`,
@@ -667,7 +654,11 @@ export async function renderPlan(container, date) {
       (async () => {
         try {
           await setItemMultiplier(option.id, date, itemId, mult);
-          if (loggedItemIds.has(itemId)) {
+          // Only correct the real log entry if this option was already
+          // confirmed (i.e. actually logged) — otherwise there's nothing
+          // to update yet, and the new amount takes effect whenever
+          // "Registrar tudo" is next confirmed.
+          if (dayEdits.confirmed) {
             const scaled = { ...item, kcal: item.kcal * mult, protein_g: item.protein_g * mult, fat_g: item.fat_g * mult, carbs_g: item.carbs_g * mult };
             await relogMealPlanItem(scaled, slot.meal_type, date);
           }
