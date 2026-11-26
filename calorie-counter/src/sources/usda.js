@@ -135,12 +135,18 @@ export async function searchUSDA(query) {
   // POST with a JSON body is the reliable way to pass array filters like
   // dataType — the GET query-string form (dataType=Foundation,SR Legacy)
   // silently failed to filter anything, letting Branded/processed items
-  // through and diluting results for whole-food searches.
+  // through and diluting results for whole-food searches. "Survey (FNDDS)"
+  // is included alongside the raw-food sets for mixed/prepared dishes
+  // (e.g. "guacamole") that Foundation/SR Legacy don't cover — still an
+  // official USDA dataset (built for the national health survey, NHANES),
+  // just calculated from a representative recipe rather than lab-measured
+  // from one specific sample. "Branded" stays excluded — that one really
+  // is just manufacturer-submitted label data, unrelated to this.
   const { data, error } = await supabase.functions.invoke("usda-proxy", {
     body: {
       path: "/foods/search",
       method: "POST",
-      body: { query, pageSize: 25, dataType: ["Foundation", "SR Legacy"] },
+      body: { query, pageSize: 25, dataType: ["Foundation", "SR Legacy", "Survey (FNDDS)"] },
     },
   });
   if (error) throw error;
