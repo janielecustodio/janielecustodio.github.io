@@ -212,12 +212,18 @@ function defaultActiveOption(slot, dayEditsByOption) {
 function itemRow(item, { badgeHtml = "", excludeIds = [item.id] } = {}) {
   const supplementTag = item.is_supplement ? `<span class="plan-item-tag">Suplemento</span>` : "";
   const multTag = item._multiplier ? `<span class="plan-item-mult">× ${item._multiplier}</span>` : "";
+  // Plan items carry their own kcal/macros already (set once when the
+  // plan was built, not looked up fresh at log time) — showing them here
+  // too, same as extraItemRow() already does for manually-added foods, so
+  // it's visible per item that these numbers exist and get counted, not
+  // just a trust-me-it's-in-there total at the end of the day.
+  const macros = `${Math.round(item.kcal || 0)} kcal · P ${(item.protein_g || 0).toFixed(0)} · C ${(item.carbs_g || 0).toFixed(0)} · F ${(item.fat_g || 0).toFixed(0)}`;
   return `
     <div class="plan-item-row" data-item-id="${item.id}">
       <div class="plan-item">
         <span class="plan-item-info">
           <span class="plan-item-name">${escapeHtml(item.name)}${supplementTag}</span>
-          ${item.quantity_label ? `<span class="plan-item-qty">${escapeHtml(item.quantity_label)}${multTag}</span>` : multTag}
+          ${item.quantity_label ? `<span class="plan-item-qty">${escapeHtml(item.quantity_label)}${multTag} · ${macros}</span>` : `<span class="plan-item-qty">${multTag} ${macros}</span>`}
         </span>
         ${badgeHtml}
         <span class="plan-item-actions">
