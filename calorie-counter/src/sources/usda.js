@@ -29,6 +29,25 @@ function nutrient(food, names, unit) {
 // the unit name in `modifier`, some in `measureUnit.name` — which is often
 // the literal placeholder "undetermined"). Build a defensive label from
 // whatever's actually present rather than assuming one field is reliable.
+// Survey (FNDDS) records in particular carry internal bookkeeping in the
+// same fields that hold real portion text — a raw numeric ingredient
+// code in `modifier` (e.g. "40138"), or "NFS"/"NS as to" ("not further
+// specified" — USDA's own shorthand for "generic, no more detail given")
+// in `modifier`/`portionDescription`. None of that means anything to
+// someone just trying to read a quantity, so it's stripped rather than
+// shown verbatim.
+function cleanPortionPart(s) {
+  if (!s) return null;
+  const cleaned = s
+    .replace(/\b\d{3,}\b/g, "")
+    .replace(/\bNFS\b/gi, "")
+    .replace(/\bNS as to\b[^,]*/gi, "")
+    .replace(/\s{2,}/g, " ")
+    .replace(/^[\s,]+|[\s,]+$/g, "")
+    .trim();
+  return cleaned || null;
+}
+
 function parsePortions(food) {
   if (!Array.isArray(food.foodPortions)) return [];
   const seen = new Set();
@@ -43,8 +62,10 @@ function parsePortions(food) {
         ? p.measureUnit.name
         : null;
     if (unitName) parts.push(unitName);
-    if (p.modifier) parts.push(p.modifier);
-    if (p.portionDescription) parts.push(p.portionDescription);
+    const modifier = cleanPortionPart(p.modifier);
+    if (modifier) parts.push(modifier);
+    const portionDescription = cleanPortionPart(p.portionDescription);
+    if (portionDescription) parts.push(portionDescription);
     let label = parts.filter(Boolean).join(" ").trim();
     if (!label) label = `${Math.round(grams)}g portion`;
     const key = `${label}|${grams}`;

@@ -399,7 +399,7 @@ function activeOptionForSlot(slot, dayEditsByOption, cycleStartDate, viewDate) {
   return slot.options.find((o) => o.id === activeId) || slot.options[0];
 }
 
-function slotCard(slot, notesBySlot, cycleStartDate, viewDate, dayEditsByOption, extraEntriesByMealType) {
+function slotCard(slot, notesBySlot, cycleStartDate, viewDate, dayEditsByOption, extraEntriesBySlotId) {
   const isCycleSlot = slot.title === CYCLE_SLOT_TITLE;
   const hasTabs = slot.options.length > 1 && slot.options.some((o) => o.option_number != null);
   const cycleInfo = isCycleSlot ? cyclePhaseForDate(viewDate, cycleStartDate) : null;
@@ -407,7 +407,7 @@ function slotCard(slot, notesBySlot, cycleStartDate, viewDate, dayEditsByOption,
   const activeId = rawActiveOption?.id;
   const dayEdits = (rawActiveOption && dayEditsByOption.get(rawActiveOption.id)) || { excluded_item_ids: [], quantity_multipliers: {}, confirmed: false };
   const activeOption = rawActiveOption ? { ...rawActiveOption, items: applyDayEdits(rawActiveOption.items, dayEdits) } : null;
-  const extraEntries = extraEntriesByMealType.get(slot.meal_type) || [];
+  const extraEntries = extraEntriesBySlotId.get(slot.id) || [];
 
   // Auto-collapses once the active option has been confirmed, so a
   // finished meal doesn't take up scroll space — tapping the header
@@ -507,12 +507,33 @@ export async function renderPlan(container, date) {
 
   // Rows logged for a slot's meal_type that aren't one of this plan's
   // own synthetic items — added via "+" (or from the regular daily log
-  // while browsing this date) — rendered inline as "extra" rows.
-  const extraEntriesByMealType = new Map();
+  // while browsing this date) — rendered inline as "extra" rows. When
+  // several slots share one meal_type (e.g. "Ciclo das sementes"/"Em
+  // jejum"/"Shot"/"Café da manhã" are all breakfast), these used to be
+  // keyed by meal_type alone and so rendered redundantly inside EVERY
+  // one of those slots' own cards — the same "Peanuts" row showing up
+  // under all 4 breakfast cards, not just one, which read as the app
+  // double (or quadruple) counting it even though the real total (summed
+  // once from food_logs) was always correct. Attributed to just the last
+  // slot of that meal_type instead — same convention main.js's daily log
+  // uses for the same reason.
+  const slotsByMealType = new Map();
+  for (const slot of slots) {
+    if (!slotsByMealType.has(slot.meal_type)) slotsByMealType.set(slot.meal_type, []);
+    slotsByMealType.get(slot.meal_type).push(slot);
+  }
+  const lastSlotIdByMealType = new Map();
+  for (const [mealType, slotList] of slotsByMealType) {
+    const last = [...slotList].sort((a, b) => a.order_index - b.order_index).at(-1);
+    lastSlotIdByMealType.set(mealType, last.id);
+  }
+  const extraEntriesBySlotId = new Map();
   for (const e of entries) {
     if (e.foods?.source === "mealplan") continue;
-    if (!extraEntriesByMealType.has(e.meal_type)) extraEntriesByMealType.set(e.meal_type, []);
-    extraEntriesByMealType.get(e.meal_type).push(e);
+    const slotId = lastSlotIdByMealType.get(e.meal_type);
+    if (!slotId) continue;
+    if (!extraEntriesBySlotId.has(slotId)) extraEntriesBySlotId.set(slotId, []);
+    extraEntriesBySlotId.get(slotId).push(e);
   }
 
   // A bad row anywhere in here (e.g. a logged food missing a macro field)
@@ -521,7 +542,7 @@ export async function renderPlan(container, date) {
   // visible error, however ugly, is strictly better than silence.
   try {
     container.innerHTML = slots
-      .map((slot) => slotCard(slot, notesBySlot, cycleStartDate, date, dayEditsByOption, extraEntriesByMealType))
+      .map((slot) => slotCard(slot, notesBySlot, cycleStartDate, date, dayEditsByOption, extraEntriesBySlotId))
       .join("");
   } catch (err) {
     console.error("Plano: render falhou", err);
