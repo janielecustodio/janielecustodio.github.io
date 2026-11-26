@@ -5,6 +5,20 @@ import { getEntriesForDate, deleteEntry } from "./log.js";
 
 const CYCLE_SLOT_TITLE = "Ciclo das sementes";
 
+// The plan's slot/option/item structure is the nutritionist's fixed plan
+// — it doesn't change within a session, so there's no reason every tab
+// switch or "Registrar tudo" tap (each of which calls renderPlan again)
+// should re-fetch the whole thing over the network. Against local mode
+// this was never noticeable (no real round trip), but against a real
+// Supabase project it was the single biggest chunk of the delay behind
+// every interaction feeling like a full reload. A page reload still gets
+// a fresh copy, same as main.js's own cache of this same data.
+let planStructureCache = null;
+async function getCachedMealPlan() {
+  if (!planStructureCache) planStructureCache = await getMealPlan();
+  return planStructureCache;
+}
+
 function escapeHtml(s) {
   const div = document.createElement("div");
   div.textContent = s;
@@ -441,7 +455,16 @@ function slotCard(slot, notesBySlot, cycleStartDate, viewDate, dayEditsByOption,
 }
 
 export async function renderPlan(container, date) {
-  container.innerHTML = `<div class="no-entries">Carregando…</div>`;
+  // Only show the loading placeholder on a genuinely empty container
+  // (the very first render) — every later call (switching an option tab,
+  // confirming, excluding an item, ...) also goes through here, and
+  // blanking already-visible content on each of those made the whole
+  // view look like it was reloading from scratch on every tap, even
+  // though most of what's on screen hasn't changed. Keeping the current
+  // content up until the new content is ready reads as instant instead.
+  if (!container.firstElementChild) {
+    container.innerHTML = `<div class="no-entries">Carregando…</div>`;
+  }
   resetForDate(toDateStr(date));
 
   // A failure here used to leave "Carregando…" on screen forever —
@@ -454,7 +477,7 @@ export async function renderPlan(container, date) {
   let slots, entries, notesBySlot, cycleStartDate, dayEditsByOption;
   try {
     [slots, entries, notesBySlot, cycleStartDate] = await Promise.all([
-      getMealPlan(),
+      getCachedMealPlan(),
       getEntriesForDate(date),
       getNotesForDate(date),
       getCycleStartDate(),
