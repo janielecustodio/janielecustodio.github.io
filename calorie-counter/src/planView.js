@@ -62,6 +62,16 @@ function resetForDate(dateStr) {
   }
 }
 
+// Every plan-item action below used to let a thrown error vanish into an
+// unhandled promise rejection — the tap visually did nothing (no log, no
+// green state) with zero feedback, which is exactly the shape of bug
+// reports we couldn't otherwise reproduce. Surfacing it, even crudely,
+// turns the next one into an actual error message instead of a guess.
+function reportActionError(action, err) {
+  console.error(`Plano: ${action} falhou`, err);
+  window.alert(`Não foi possível ${action}.\n\n${err?.message || err}`);
+}
+
 function groupKey(item) {
   return `${item.option_id}::${item.substitution_group}`;
 }
@@ -494,6 +504,8 @@ export async function renderPlan(container, date) {
         for (const item of effectiveItems(effectiveOption)) {
           if (!loggedItemIds.has(item.id)) await logMealPlanItem(item, option.slot.meal_type, now);
         }
+      } catch (err) {
+        reportActionError("registrar tudo", err);
       } finally {
         renderPlan(container, date);
       }
@@ -522,6 +534,8 @@ export async function renderPlan(container, date) {
           if (found) await relogMealPlanItem(found.item, option.slot.meal_type, date);
         }
         await resetDayEdits(option.id, date);
+      } catch (err) {
+        reportActionError("restaurar o plano", err);
       } finally {
         renderPlan(container, date);
       }
@@ -578,9 +592,14 @@ export async function renderPlan(container, date) {
       // the one currently showing — otherwise "deleting" it just
       // reveals the next alternative in its place (see itemRow).
       const excludeIds = (btn.dataset.excludeIds || itemId).split(",");
-      for (const id of excludeIds) await setItemExcluded(option.id, date, id, true);
-      if (loggedItemIds.has(itemId)) await unlogMealPlanItem(item, date);
-      renderPlan(container, date);
+      try {
+        for (const id of excludeIds) await setItemExcluded(option.id, date, id, true);
+        if (loggedItemIds.has(itemId)) await unlogMealPlanItem(item, date);
+      } catch (err) {
+        reportActionError("excluir o item", err);
+      } finally {
+        renderPlan(container, date);
+      }
     });
   });
 
@@ -601,12 +620,17 @@ export async function renderPlan(container, date) {
       const mult = Number(input.replace(",", "."));
       if (!Number.isFinite(mult) || mult <= 0) return;
       (async () => {
-        await setItemMultiplier(option.id, date, itemId, mult);
-        if (loggedItemIds.has(itemId)) {
-          const scaled = { ...item, kcal: item.kcal * mult, protein_g: item.protein_g * mult, fat_g: item.fat_g * mult, carbs_g: item.carbs_g * mult };
-          await relogMealPlanItem(scaled, slot.meal_type, date);
+        try {
+          await setItemMultiplier(option.id, date, itemId, mult);
+          if (loggedItemIds.has(itemId)) {
+            const scaled = { ...item, kcal: item.kcal * mult, protein_g: item.protein_g * mult, fat_g: item.fat_g * mult, carbs_g: item.carbs_g * mult };
+            await relogMealPlanItem(scaled, slot.meal_type, date);
+          }
+        } catch (err) {
+          reportActionError("editar a quantidade", err);
+        } finally {
+          renderPlan(container, date);
         }
-        renderPlan(container, date);
       })();
     });
   });
@@ -616,8 +640,13 @@ export async function renderPlan(container, date) {
   container.querySelectorAll(".plan-extra-del-btn").forEach((btn) => {
     btn.addEventListener("click", async (ev) => {
       ev.stopPropagation();
-      await deleteEntry(btn.dataset.entryId);
-      renderPlan(container, date);
+      try {
+        await deleteEntry(btn.dataset.entryId);
+      } catch (err) {
+        reportActionError("excluir o item", err);
+      } finally {
+        renderPlan(container, date);
+      }
     });
   });
 
