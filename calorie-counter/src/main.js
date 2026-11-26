@@ -282,6 +282,56 @@ document.getElementById("plan-back-btn").addEventListener("click", () => {
   refresh();
 });
 
+// "Quantity" (grams) is the default, per the explicit ask — "percentage"
+// shows each meal's share of the day's total for that macro instead
+// (e.g. "lunch was 40% of today's protein"), useful for spotting which
+// meal a macro mostly came from without doing the math yourself. Kept as
+// module state (not per-render) so re-opening the panel later in the
+// same session remembers whichever mode was last picked.
+let planSummaryMode = "quantity";
+
+function macroShare(part, whole) {
+  if (!whole) return "0%";
+  return `${Math.round((part / whole) * 100)}%`;
+}
+
+function renderPlanSummaryLine(entries) {
+  const line = document.getElementById("plan-summary-line");
+  const s = computeSummary(entries);
+  // Broken down by meal, not just one grand total — this is what
+  // actually answers "where did each meal fit" and, since a duplicate
+  // shows up as a meal with an unexpectedly high kcal/item count, it
+  // doubles as the spot-check view asked for.
+  const byMeal = MEAL_TYPES.map(({ id, label }) => {
+    const mealEntries = entries.filter((en) => (en.meal_type || inferMealType(new Date(en.logged_at))) === id);
+    if (mealEntries.length === 0) return "";
+    const kcal = mealEntries.reduce((sum, en) => sum + (Number(en.kcal) || 0), 0);
+    const protein = mealEntries.reduce((sum, en) => sum + (Number(en.protein_g) || 0), 0);
+    const carbs = mealEntries.reduce((sum, en) => sum + (Number(en.carbs_g) || 0), 0);
+    const fat = mealEntries.reduce((sum, en) => sum + (Number(en.fat_g) || 0), 0);
+    const itemWord = mealEntries.length === 1 ? "item" : "itens";
+    const macroText =
+      planSummaryMode === "percentage"
+        ? `P ${macroShare(protein, s.protein_g)} · C ${macroShare(carbs, s.carbs_g)} · F ${macroShare(fat, s.fat_g)}`
+        : `P ${protein.toFixed(0)}g · C ${carbs.toFixed(0)}g · F ${fat.toFixed(0)}g`;
+    return `<div class="plan-summary-row">${escapeHtml(label)}: ${Math.round(kcal)} kcal · ${macroText} · ${mealEntries.length} ${itemWord}</div>`;
+  }).join("");
+  line.innerHTML = `
+    <div class="plan-summary-mode-toggle">
+      <button type="button" class="plan-summary-mode-btn ${planSummaryMode === "quantity" ? "active" : ""}" data-mode="quantity">Gramas</button>
+      <button type="button" class="plan-summary-mode-btn ${planSummaryMode === "percentage" ? "active" : ""}" data-mode="percentage">%</button>
+    </div>
+    <div class="plan-summary-total">${Math.round(s.kcal)} kcal total · P ${s.protein_g.toFixed(0)}g · C ${s.carbs_g.toFixed(0)}g · F ${s.fat_g.toFixed(0)}g</div>
+    ${byMeal}
+  `;
+  line.querySelectorAll(".plan-summary-mode-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      planSummaryMode = btn.dataset.mode;
+      renderPlanSummaryLine(entries);
+    });
+  });
+}
+
 // Hidden by default — a tap-to-reveal total, not a persistent fixture,
 // per the explicit ask: an idea of the numbers without the plan screen
 // being about them all the time. Computed fresh at the moment it's
@@ -292,22 +342,7 @@ document.getElementById("plan-summary-toggle").addEventListener("click", async (
   const willShow = line.hidden;
   if (willShow) {
     const entries = await getEntriesForDate(currentDate);
-    const s = computeSummary(entries);
-    // Broken down by meal, not just one grand total — this is what
-    // actually answers "where did each meal fit" and, since a duplicate
-    // shows up as a meal with an unexpectedly high kcal/item count, it
-    // doubles as the spot-check view asked for.
-    const byMeal = MEAL_TYPES.map(({ id, label }) => {
-      const mealEntries = entries.filter((en) => (en.meal_type || inferMealType(new Date(en.logged_at))) === id);
-      if (mealEntries.length === 0) return "";
-      const kcal = mealEntries.reduce((sum, en) => sum + (Number(en.kcal) || 0), 0);
-      const itemWord = mealEntries.length === 1 ? "item" : "itens";
-      return `<div class="plan-summary-row">${escapeHtml(label)}: ${Math.round(kcal)} kcal · ${mealEntries.length} ${itemWord}</div>`;
-    }).join("");
-    line.innerHTML = `
-      <div class="plan-summary-total">${Math.round(s.kcal)} kcal total · P ${s.protein_g.toFixed(0)}g · C ${s.carbs_g.toFixed(0)}g · F ${s.fat_g.toFixed(0)}g</div>
-      ${byMeal}
-    `;
+    renderPlanSummaryLine(entries);
   }
   line.hidden = !willShow;
   e.currentTarget.setAttribute("aria-expanded", String(willShow));
