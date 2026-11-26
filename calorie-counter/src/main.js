@@ -264,7 +264,21 @@ document.getElementById("plan-summary-toggle").addEventListener("click", async (
   if (willShow) {
     const entries = await getEntriesForDate(currentDate);
     const s = computeSummary(entries);
-    line.textContent = `${Math.round(s.kcal)} kcal · P ${s.protein_g.toFixed(0)}g · C ${s.carbs_g.toFixed(0)}g · F ${s.fat_g.toFixed(0)}g`;
+    // Broken down by meal, not just one grand total — this is what
+    // actually answers "where did each meal fit" and, since a duplicate
+    // shows up as a meal with an unexpectedly high kcal/item count, it
+    // doubles as the spot-check view asked for.
+    const byMeal = MEAL_TYPES.map(({ id, label }) => {
+      const mealEntries = entries.filter((en) => (en.meal_type || inferMealType(new Date(en.logged_at))) === id);
+      if (mealEntries.length === 0) return "";
+      const kcal = mealEntries.reduce((sum, en) => sum + (Number(en.kcal) || 0), 0);
+      const itemWord = mealEntries.length === 1 ? "item" : "itens";
+      return `<div class="plan-summary-row">${escapeHtml(label)}: ${Math.round(kcal)} kcal · ${mealEntries.length} ${itemWord}</div>`;
+    }).join("");
+    line.innerHTML = `
+      <div class="plan-summary-total">${Math.round(s.kcal)} kcal total · P ${s.protein_g.toFixed(0)}g · C ${s.carbs_g.toFixed(0)}g · F ${s.fat_g.toFixed(0)}g</div>
+      ${byMeal}
+    `;
   }
   line.hidden = !willShow;
   e.currentTarget.setAttribute("aria-expanded", String(willShow));
