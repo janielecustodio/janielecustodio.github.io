@@ -1,6 +1,4 @@
-import { USDA_API_KEY } from "../config.js";
-
-const BASE = "https://api.nal.usda.gov/fdc/v1";
+import { supabase } from "../supabaseClient.js";
 
 // SR Legacy items often carry two "Energy" entries — one in kcal, one in kJ.
 // Matching on name alone risks grabbing the kJ value (~4.2x too high).
@@ -112,14 +110,25 @@ export async function backfillMissingEnergy(food) {
   }
 }
 
+// Both of these go through the "usda-proxy" Supabase Edge Function
+// (supabase/functions/usda-proxy) instead of calling USDA directly — the
+// API key lives server-side as a Supabase secret, never in client code.
+// See SETUP.md for why: this app ships as plain static files with no
+// build step, so anything in src/config.js is plain text in a public
+// repo, and a committed USDA key gets auto-revoked within minutes of a
+// push. In local mode (no real Supabase project) this throws, same as any
+// other network failure here — callers already treat that as "USDA
+// unavailable" and fall back to the other sources.
+
 // foodPortions (household units like "1 large", "1 slice") only comes back
 // on the full detail record, never the search endpoint — fetched lazily
 // when the user actually selects a result to add, not for every search hit.
 export async function fetchUsdaDetail(fdcId) {
-  const res = await fetch(`${BASE}/food/${fdcId}?api_key=${USDA_API_KEY}`);
-  if (!res.ok) throw new Error(`USDA detail fetch failed: ${res.status}`);
-  const full = await res.json();
-  return normalize(full);
+  const { data, error } = await supabase.functions.invoke("usda-proxy", {
+    body: { path: `/food/${fdcId}` },
+  });
+  if (error) throw error;
+  return normalize(data);
 }
 
 export async function searchUSDA(query) {
@@ -127,17 +136,14 @@ export async function searchUSDA(query) {
   // dataType — the GET query-string form (dataType=Foundation,SR Legacy)
   // silently failed to filter anything, letting Branded/processed items
   // through and diluting results for whole-food searches.
-  const res = await fetch(`${BASE}/foods/search?api_key=${USDA_API_KEY}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      query,
-      pageSize: 25,
-      dataType: ["Foundation", "SR Legacy"],
-    }),
+  const { data, error } = await supabase.functions.invoke("usda-proxy", {
+    body: {
+      path: "/foods/search",
+      method: "POST",
+      body: { query, pageSize: 25, dataType: ["Foundation", "SR Legacy"] },
+    },
   });
-  if (!res.ok) throw new Error(`USDA search failed: ${res.status}`);
-  const data = await res.json();
+  if (error) throw error;
   // No backfill here — kcal_100g may be null. foodSearch.js ranks first,
   // then backfills only the handful of results actually shown.
   return (data.foods || []).map(normalize);

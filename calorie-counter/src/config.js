@@ -4,10 +4,7 @@
 export const SUPABASE_URL = "https://wrbwcppfxgyxjyffuptb.supabase.co";
 export const SUPABASE_ANON_KEY = "sb_publishable_QQXybZ1Y1WwjqjWAa6OylQ_5WMkKyK5";
 
-// Free key from https://fdc.nal.usda.gov/api-key-signup.html
-//
-// DO NOT commit your real key here — this file is served as plain client
-// JS by GitHub Pages, and GitHub's secret scanning (and USDA's own) will
-// find and revoke it within minutes of a push. Set it locally only; see
-// SETUP.md for how to keep it out of git while still deploying it.
-export const USDA_API_KEY = "REPLACE_WITH_YOUR_USDA_KEY";
+// There is no USDA_API_KEY here on purpose — it lives server-side as a
+// Supabase secret, read by the "usda-proxy" Edge Function
+// (supabase/functions/usda-proxy) instead of being shipped in this file.
+// See SETUP.md section 2 for why and how to set it up.

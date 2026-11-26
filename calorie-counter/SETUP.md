@@ -35,24 +35,34 @@ Everything below is free. Total time: ~15 minutes.
 
 ## 2. Get a free USDA FoodData Central API key
 
-1. Go to https://fdc.nal.usda.gov/api-key-signup.html
-2. Fill in first name, last name, email — no approval wait, the key is
-   shown immediately and emailed to you.
-3. Paste it into `src/config.js` as `USDA_API_KEY`.
+This site is classic branch-deployed GitHub Pages with no build step, so
+anything committed to `src/config.js` is served as plain client JS —
+visible in the repo, its history, and to anyone who views source on the
+live site. USDA (and GitHub's own secret scanning) actively scan public
+repos for exactly this pattern and revoke a key within minutes of it
+being pushed — which is exactly what happened the first time this app
+tried committing the key directly. So the key never goes in `config.js`
+at all: it's read server-side by the `usda-proxy` Supabase Edge Function
+(`supabase/functions/usda-proxy/index.ts`), which the client calls
+instead of hitting USDA directly.
 
-**Before you commit this**, understand the tradeoff: this site is classic
-branch-deployed GitHub Pages with no build step, so whatever is committed
-to `src/config.js` is served as plain client JS — visible in the repo,
-its history, and to anyone who views source on the live site. USDA (and
-GitHub's own secret scanning) actively scan public repos for exactly this
-pattern and will revoke a key within minutes of it being pushed, which is
-exactly what happened the first time around. If that's an acceptable
-tradeoff for a free, individually-rate-limited key on a personal project,
-committing it is fine and matches how this app was originally designed to
-work. If not, the key needs to move behind a server component (e.g. a
-Supabase Edge Function, since this app already uses Supabase) so it never
-ships to the client at all — that's a real code change, not a config one,
-so ask for it explicitly if you want it built.
+1. Go to https://fdc.nal.usda.gov/api-key-signup.html, fill in first
+   name, last name, email — no approval wait, the key is shown
+   immediately and emailed to you.
+2. Deploy the Edge Function, in the Supabase dashboard (no CLI needed):
+   **Edge Functions → Deploy a new function → via Editor**, name it
+   `usda-proxy`, and paste in the contents of
+   `supabase/functions/usda-proxy/index.ts`. Deploy.
+   - (If you prefer the CLI: `supabase functions deploy usda-proxy`
+     after `supabase login` and `supabase link`.)
+3. Set the key as a secret so the function can read it, without it ever
+   appearing in the repo: **Edge Functions → Manage secrets** (or
+   `supabase secrets set USDA_API_KEY=your-key-here` via the CLI) — name
+   `USDA_API_KEY`, value the key from step 1.
+
+That's it — no key, real or placeholder, belongs in `src/config.js`.
+Food search picks the function up automatically the next time the app
+calls it; nothing else to redeploy on the client side.
 
 ## 3. Open Food Facts
 
