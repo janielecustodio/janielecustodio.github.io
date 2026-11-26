@@ -17,6 +17,7 @@ import { computeSummary, KCAL_PER_G } from "./summary.js";
 import { MEAL_TYPES, inferMealType } from "./mealTypes.js";
 import { renderTrends } from "./trends.js";
 import { renderPlan, setAddFoodHandler, setEditFoodLogHandler } from "./planView.js";
+import { getMealPlan } from "./mealPlan.js";
 import { saveWeight, getWeightForDate } from "./bodyLog.js";
 import { getTargets, saveTargets, clearTargets } from "./targets.js";
 
@@ -164,11 +165,28 @@ onAuthChange((session) => {
   }
 });
 
+// The plan's slot/option/item structure barely ever changes and is shared
+// reference data (not per-user), so it's fetched once and reused — same
+// reasoning as planView.js's own renderPlan, just cached here since
+// refresh() runs far more often than the plan itself changes. Falls back
+// to [] on failure so a flaky fetch degrades the log back to plain
+// meal_type grouping instead of going blank.
+let planSlotsCache = null;
+async function getPlanSlots() {
+  if (planSlotsCache) return planSlotsCache;
+  try {
+    planSlotsCache = await getMealPlan();
+  } catch {
+    return [];
+  }
+  return planSlotsCache;
+}
+
 async function refresh() {
   renderDateLabel();
   const entries = await getEntriesForDate(currentDate);
   renderSummary(entries);
-  renderLog(entries);
+  renderLog(entries, await getPlanSlots());
   refreshBodyLog();
   if (!planView.hidden) renderPlan(planBody, currentDate);
   // Re-hide the on-demand Plano summary on any date change rather than
@@ -408,23 +426,116 @@ const timeFmt = new Intl.DateTimeFormat(undefined, {
   minute: "2-digit",
 });
 
+// Groups logged entries the same way Plano itself does, not by the
+// coarser 6-type meal_type scheme alone — several Plano slots can share
+// one meal_type (e.g. "Ciclo das sementes"/"Em jejum"/"Shot"/"Café da
+// manhã" are all breakfast), and lumping them into a single "Café da
+// manhã" bucket here was exactly what made this view and Trends look
+// like they disagreed with Plano: Plano showed one slot's items, this
+// view (and the day's total) silently included all four. A logged
+// entry is traced back to its own slot via the same (foods.source,
+// foods.source_id) -> meal_plan_items -> meal_plan_options -> slot chain
+// the Plano tab itself is built from — no schema change needed, it's
+// derived from data that already exists. Only meal-plan-sourced entries
+// can be traced this way; manual/search-added extras (even ones added
+// from inside a Plano slot's own "+" button) aren't part of the plan's
+// fixed items, so they fall back to a meal_type-level bucket same as
+// before. A slot that's the only one for its meal_type (Almoço, Jantar)
+// is unambiguous, so its bucket keeps today's exact behavior (same
+// label, same copy-from-yesterday) — only a meal_type split across
+// several slots changes anything.
+function buildLogSections(entries, slots) {
+  const itemSlot = new Map();
+  for (const slot of slots) {
+    for (const option of slot.options) {
+      for (const item of option.items) itemSlot.set(item.id, slot);
+    }
+  }
+  const slotsByMealType = new Map();
+  for (const slot of slots) {
+    if (!slotsByMealType.has(slot.meal_type)) slotsByMealType.set(slot.meal_type, []);
+    slotsByMealType.get(slot.meal_type).push(slot);
+  }
+
+  const bySlotId = new Map();
+  const leftoverByMealType = new Map(MEAL_TYPES.map((m) => [m.id, []]));
+  for (const e of entries) {
+    const slot = e.foods?.source === "mealplan" ? itemSlot.get(e.foods.source_id) : null;
+    if (slot) {
+      if (!bySlotId.has(slot.id)) bySlotId.set(slot.id, []);
+      bySlotId.get(slot.id).push(e);
+    } else {
+      const mealType = e.meal_type || inferMealType(new Date(e.logged_at));
+      (leftoverByMealType.get(mealType) || leftoverByMealType.get("evening_snack")).push(e);
+    }
+  }
+
+  const sections = [];
+  const handledMealTypes = new Set();
+  const orderedSlots = [...slots].sort((a, b) => a.order_index - b.order_index);
+  for (const slot of orderedSlots) {
+    const siblingCount = (slotsByMealType.get(slot.meal_type) || []).length;
+    const slotEntries = bySlotId.get(slot.id) || [];
+    if (siblingCount > 1) {
+      sections.push({
+        key: `slot-${slot.id}`,
+        label: slot.title,
+        entries: slotEntries,
+        addMealType: slot.meal_type,
+        copyMealType: null,
+      });
+    } else {
+      handledMealTypes.add(slot.meal_type);
+      sections.push({
+        key: `slot-${slot.id}`,
+        label: slot.title,
+        entries: [...slotEntries, ...(leftoverByMealType.get(slot.meal_type) || [])],
+        addMealType: slot.meal_type,
+        copyMealType: slot.meal_type,
+      });
+    }
+  }
+  // Extras logged under a split meal_type but not traceable to any one of
+  // its slots — shown only when non-empty, since an always-on section
+  // here would just repeat one of the slot titles above it.
+  for (const [mealType, slotList] of slotsByMealType) {
+    if (slotList.length <= 1 || handledMealTypes.has(mealType)) continue;
+    handledMealTypes.add(mealType);
+    const leftover = leftoverByMealType.get(mealType) || [];
+    if (leftover.length === 0) continue;
+    const label = MEAL_TYPES.find((m) => m.id === mealType)?.label || mealType;
+    sections.push({
+      key: `extra-${mealType}`,
+      label: `${label} (outros)`,
+      entries: leftover,
+      addMealType: mealType,
+      copyMealType: null,
+    });
+  }
+  // Meal types the plan has no slot for at all — same always-on bucket
+  // as before.
+  for (const { id, label } of MEAL_TYPES) {
+    if (handledMealTypes.has(id)) continue;
+    sections.push({
+      key: `type-${id}`,
+      label,
+      entries: leftoverByMealType.get(id) || [],
+      addMealType: id,
+      copyMealType: id,
+    });
+  }
+  return sections;
+}
+
 // All six meal sections always render, even empty — each with its own
 // "+ Add" button that pins where the next searched/scanned food lands
 // (see setAddTarget below), instead of guessing from the current time.
-function renderLog(entries) {
+function renderLog(entries, slots = []) {
   const list = document.getElementById("log-list");
-
-  // Entries logged before meal_type existed have none — bucket those by
-  // time of day so every entry always lands in one of the fixed groups.
-  const groups = new Map(MEAL_TYPES.map((m) => [m.id, []]));
-  for (const e of entries) {
-    const mealType = e.meal_type || inferMealType(new Date(e.logged_at));
-    (groups.get(mealType) || groups.get("evening_snack")).push(e);
-  }
+  const sections = buildLogSections(entries, slots);
 
   list.innerHTML = "";
-  for (const { id, label } of MEAL_TYPES) {
-    const groupEntries = groups.get(id);
+  for (const { key, label, entries: groupEntries, addMealType, copyMealType } of sections) {
     const groupKcal = groupEntries.reduce((sum, e) => sum + (Number(e.kcal) || 0), 0);
 
     const group = document.createElement("div");
@@ -441,17 +552,22 @@ function renderLog(entries) {
             new Date(Math.min(...groupEntries.map((e) => new Date(e.logged_at).getTime())))
           )}</span>`
         : "";
+    const copyBtnHtml = copyMealType
+      ? `<button class="log-group-copy" type="button" title="Copy from yesterday">⧉</button>`
+      : "";
     group.innerHTML = `
       <div class="log-group-header">
-        <span>${label} ${timeHtml} ${kcalHtml}</span>
+        <span>${escapeHtml(label)} ${timeHtml} ${kcalHtml}</span>
         <span class="log-group-actions">
-          <button class="log-group-copy" type="button" title="Copy from yesterday">⧉</button>
+          ${copyBtnHtml}
           <button class="log-group-add" type="button">+ Add</button>
         </span>
       </div>
     `;
-    group.querySelector(".log-group-add").addEventListener("click", () => setAddTarget(id));
-    group.querySelector(".log-group-copy").addEventListener("click", () => copyMealFromYesterday(id, label));
+    group.querySelector(".log-group-add").addEventListener("click", () => setAddTarget(addMealType));
+    if (copyMealType) {
+      group.querySelector(".log-group-copy").addEventListener("click", () => copyMealFromYesterday(copyMealType, label));
+    }
 
     for (const e of groupEntries) {
       const wrap = document.createElement("div");
