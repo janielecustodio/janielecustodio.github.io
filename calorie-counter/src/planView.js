@@ -1,6 +1,6 @@
 import { getMealPlan, logMealPlanItem, unlogMealPlanItem, relogMealPlanItem, getNotesForDate, saveNote } from "./mealPlan.js";
 import { getCycleStartDate, saveCycleStartDate } from "./cycleSettings.js";
-import { getDayEdits, setItemExcluded, setItemMultiplier } from "./mealPlanDayEdits.js";
+import { getDayEdits, setItemExcluded, setItemMultiplier, resetDayEdits } from "./mealPlanDayEdits.js";
 import { getEntriesForDate, deleteEntry } from "./log.js";
 
 const CYCLE_SLOT_TITLE = "Ciclo das sementes";
@@ -300,6 +300,16 @@ function addFoodButton(slot) {
     </button>`;
 }
 
+// Undoes every exclusion/quantity edit made today for this option, back
+// to exactly what the plan says — disabled when there's nothing to undo.
+function resetButton(option, dayEdits) {
+  const hasEdits = dayEdits.excluded_item_ids.length > 0 || Object.keys(dayEdits.quantity_multipliers).length > 0;
+  return `
+    <button type="button" class="plan-reset-btn" data-option-id="${option.id}" ${hasEdits ? "" : "disabled"} title="Restaurar plano original" aria-label="Restaurar plano original">
+      ↺
+    </button>`;
+}
+
 function notesSection(slot, note) {
   return `
     <div class="plan-notes">
@@ -386,6 +396,7 @@ function slotCard(slot, loggedItemIds, notesBySlot, cycleStartDate, viewDate, da
           </span>
         </button>
         <span class="plan-slot-header-actions">
+          ${rawActiveOption ? resetButton(rawActiveOption, dayEdits) : ""}
           ${addFoodButton(slot)}
           ${activeOption ? logAllButton(activeOption, loggedItemIds) : ""}
         </span>
@@ -481,6 +492,30 @@ export async function renderPlan(container, date) {
 
   container.querySelectorAll(".plan-add-food-btn").forEach((btn) => {
     btn.addEventListener("click", () => onAddFoodRequested?.(btn.dataset.mealType));
+  });
+
+  container.querySelectorAll(".plan-reset-btn").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      if (btn.disabled) return;
+      const option = slots.flatMap((s) => s.options.map((o) => ({ ...o, slot: s }))).find((o) => o.id === btn.dataset.optionId);
+      if (!option) return;
+      const dayEdits = dayEditsByOption.get(option.id) || { quantity_multipliers: {} };
+      btn.disabled = true;
+      try {
+        // Items logged at a scaled quantity get relogged at the plan's
+        // original amount — excluded items are just made visible again,
+        // not auto-logged (whether they were actually eaten today is a
+        // separate question from whether they're on the menu).
+        for (const [itemId, mult] of Object.entries(dayEdits.quantity_multipliers)) {
+          if (mult === 1 || !loggedItemIds.has(itemId)) continue;
+          const found = itemById.get(itemId);
+          if (found) await relogMealPlanItem(found.item, option.slot.meal_type, date);
+        }
+        await resetDayEdits(option.id, date);
+      } finally {
+        renderPlan(container, date);
+      }
+    });
   });
 
   container.querySelectorAll(".plan-sub-badge").forEach((btn) => {

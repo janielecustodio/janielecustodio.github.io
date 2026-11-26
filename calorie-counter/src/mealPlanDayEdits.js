@@ -69,3 +69,9 @@ export async function setItemMultiplier(optionId, date, itemId, multiplier) {
     return edits;
   });
 }
+
+// Discards every exclusion and quantity edit for this option/date — back
+// to exactly what the nutritionist's plan says, no per-item undo needed.
+export async function resetDayEdits(optionId, date) {
+  await updateDayEdits(optionId, date, () => ({ excluded_item_ids: [], quantity_multipliers: {} }));
+}
