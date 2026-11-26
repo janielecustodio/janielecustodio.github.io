@@ -529,6 +529,25 @@ export async function renderPlan(container, date) {
         for (const item of effectiveItems(effectiveOption)) {
           if (!loggedItemIds.has(item.id)) await logMealPlanItem(item, option.slot.meal_type, now);
         }
+        // Diagnostic, not a guess: re-fetch fresh from the data layer
+        // (not the stale loggedItemIds closure above) and check every
+        // item that was supposed to get logged actually did. This has
+        // never fired in testing, including against the live site with
+        // this exact plan — if it ever does, it names the exact item,
+        // which is the one thing needed to find a bug that otherwise
+        // can't be reproduced off of this device.
+        const freshEntries = await getEntriesForDate(date);
+        const freshLoggedIds = new Set(
+          freshEntries.filter((e) => e.foods?.source === "mealplan").map((e) => e.foods.source_id)
+        );
+        const stillMissing = effectiveItems(effectiveOption).filter((i) => !freshLoggedIds.has(i.id));
+        if (stillMissing.length > 0) {
+          window.alert(
+            `Registrar tudo: ${stillMissing.length} item(ns) não foram reconhecidos como registrados mesmo após tentar:\n\n${stillMissing
+              .map((i) => `• ${i.name} (id: ${i.id})`)
+              .join("\n")}\n\nOpção: ${option.id}`
+          );
+        }
       } catch (err) {
         reportActionError("registrar tudo", err);
       } finally {
