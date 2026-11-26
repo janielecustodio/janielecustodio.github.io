@@ -467,6 +467,7 @@ function buildLogSections(entries, slots, notesBySlot = new Map()) {
     if (!slotsByMealType.has(slot.meal_type)) slotsByMealType.set(slot.meal_type, []);
     slotsByMealType.get(slot.meal_type).push(slot);
   }
+  for (const slotList of slotsByMealType.values()) slotList.sort((a, b) => a.order_index - b.order_index);
 
   const bySlotId = new Map();
   const leftoverByMealType = new Map(MEAL_TYPES.map((m) => [m.id, []]));
@@ -481,61 +482,59 @@ function buildLogSections(entries, slots, notesBySlot = new Map()) {
     }
   }
 
+  // Walk meal types in the same breakfast -> ... -> evening_snack order
+  // the rest of the app already uses, NOT just slots in their own
+  // order_index — a slot's order_index only orders it among its
+  // siblings sharing one meal_type (e.g. the 4 breakfast slots), it says
+  // nothing about where that meal_type as a whole falls in the day. The
+  // previous version looped over all slots first and only appended the
+  // split-meal_type leftovers ("(outros)") and no-slot meal types
+  // afterward, which could — and did — put something logged under
+  // breakfast visually after dinner, just because breakfast happened to
+  // be the type with leftovers.
   const sections = [];
-  const handledMealTypes = new Set();
-  const orderedSlots = [...slots].sort((a, b) => a.order_index - b.order_index);
-  for (const slot of orderedSlots) {
-    const siblingCount = (slotsByMealType.get(slot.meal_type) || []).length;
-    const slotEntries = bySlotId.get(slot.id) || [];
-    if (siblingCount > 1) {
+  for (const { id: mealType, label } of MEAL_TYPES) {
+    const slotsForType = slotsByMealType.get(mealType) || [];
+    const leftover = leftoverByMealType.get(mealType) || [];
+
+    if (slotsForType.length === 0) {
+      // No slot defines this meal type at all — same always-on bucket
+      // as before.
+      sections.push({ key: `type-${mealType}`, label, entries: leftover, addMealType: mealType, copyMealType: mealType, note: "" });
+      continue;
+    }
+
+    if (slotsForType.length === 1) {
+      // Unambiguous (e.g. Almoço, Jantar) — fold leftovers in, keep
+      // today's exact behavior including copy-from-yesterday.
+      const slot = slotsForType[0];
       sections.push({
         key: `slot-${slot.id}`,
         label: slot.title,
-        entries: slotEntries,
-        addMealType: slot.meal_type,
+        entries: [...(bySlotId.get(slot.id) || []), ...leftover],
+        addMealType: mealType,
+        copyMealType: mealType,
+        note: notesBySlot.get(slot.id) || "",
+      });
+      continue;
+    }
+
+    // Several slots share this meal_type — one section per slot, in
+    // their own order_index order, plus a trailing "(outros)" for
+    // anything logged under this type but not traceable to one of them.
+    for (const slot of slotsForType) {
+      sections.push({
+        key: `slot-${slot.id}`,
+        label: slot.title,
+        entries: bySlotId.get(slot.id) || [],
+        addMealType: mealType,
         copyMealType: null,
         note: notesBySlot.get(slot.id) || "",
       });
-    } else {
-      handledMealTypes.add(slot.meal_type);
-      sections.push({
-        key: `slot-${slot.id}`,
-        label: slot.title,
-        entries: [...slotEntries, ...(leftoverByMealType.get(slot.meal_type) || [])],
-        addMealType: slot.meal_type,
-        copyMealType: slot.meal_type,
-        note: notesBySlot.get(slot.id) || "",
-      });
     }
-  }
-  // Extras logged under a split meal_type but not traceable to any one of
-  // its slots — shown only when non-empty, since an always-on section
-  // here would just repeat one of the slot titles above it.
-  for (const [mealType, slotList] of slotsByMealType) {
-    if (slotList.length <= 1 || handledMealTypes.has(mealType)) continue;
-    handledMealTypes.add(mealType);
-    const leftover = leftoverByMealType.get(mealType) || [];
-    if (leftover.length === 0) continue;
-    const label = MEAL_TYPES.find((m) => m.id === mealType)?.label || mealType;
-    sections.push({
-      key: `extra-${mealType}`,
-      label: `${label} (outros)`,
-      entries: leftover,
-      addMealType: mealType,
-      copyMealType: null,
-    });
-  }
-  // Meal types the plan has no slot for at all — same always-on bucket
-  // as before.
-  for (const { id, label } of MEAL_TYPES) {
-    if (handledMealTypes.has(id)) continue;
-    sections.push({
-      key: `type-${id}`,
-      label,
-      entries: leftoverByMealType.get(id) || [],
-      addMealType: id,
-      copyMealType: id,
-    });
+    if (leftover.length > 0) {
+      sections.push({ key: `extra-${mealType}`, label: `${label} (outros)`, entries: leftover, addMealType: mealType, copyMealType: null, note: "" });
+    }
   }
   return sections;
 }
