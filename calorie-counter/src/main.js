@@ -419,11 +419,11 @@ function renderLog(entries) {
           <div class="log-name">${escapeHtml(e.foods?.name || "Food")}</div>
           <div class="log-meta">${escapeHtml(
             e.quantity_label || `${e.quantity_g} g`
-          )} · P ${e.protein_g.toFixed(0)} · C ${e.carbs_g.toFixed(
+          )} · P ${(e.protein_g || 0).toFixed(0)} · C ${(e.carbs_g || 0).toFixed(
         0
-      )} · F ${e.fat_g.toFixed(0)}</div>
+      )} · F ${(e.fat_g || 0).toFixed(0)}</div>
         </div>
-        <div class="log-kcal">${Math.round(e.kcal)} kcal</div>
+        <div class="log-kcal">${Math.round(e.kcal || 0)} kcal</div>
         <button class="log-del" aria-label="Delete entry">✕</button>
       `;
       wrap.innerHTML = `<div class="log-swipe-bg">Delete</div>`;
