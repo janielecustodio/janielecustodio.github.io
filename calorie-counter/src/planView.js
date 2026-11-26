@@ -173,7 +173,14 @@ function defaultActiveOption(slot, loggedItemIds) {
 // yet. A pencil button edits its quantity (via setItemMultiplier), an
 // X button excludes it from today — used for extra (non-plan) rows,
 // which edit/delete the real food_log entry instead (see extraItemRow).
-function itemRow(item, isLogged, { badgeHtml = "" } = {}) {
+//
+// `excludeIds` is every id the X button should exclude at once — for a
+// substitution group this is ALL the alternatives, not just the one
+// currently showing: otherwise deleting "removes" the active pick only
+// to immediately reveal the next alternative in its place (the picker
+// already covers "I want a different one" — X means "not eating this
+// food slot at all today").
+function itemRow(item, isLogged, { badgeHtml = "", excludeIds = [item.id] } = {}) {
   const supplementTag = item.is_supplement ? `<span class="plan-item-tag">Suplemento</span>` : "";
   const multTag = item._multiplier ? `<span class="plan-item-mult">× ${item._multiplier}</span>` : "";
   return `
@@ -187,7 +194,7 @@ function itemRow(item, isLogged, { badgeHtml = "" } = {}) {
         ${badgeHtml}
         <span class="plan-item-actions">
           <button type="button" class="plan-item-edit-btn" data-item-id="${item.id}" aria-label="Editar quantidade" title="Editar quantidade">✎</button>
-          <button type="button" class="plan-item-del-btn" data-item-id="${item.id}" aria-label="Excluir" title="Excluir">✕</button>
+          <button type="button" class="plan-item-del-btn" data-item-id="${item.id}" data-exclude-ids="${excludeIds.join(",")}" aria-label="Excluir" title="Excluir">✕</button>
         </span>
       </div>
     </div>`;
@@ -225,7 +232,10 @@ function substitutionGroupRow(groupItemsList, loggedItemIds) {
   const altCount = groupItemsList.length - 1;
   const altLabel = altCount === 1 ? "+1 opção" : `+${altCount} opções`;
   const badge = `<button type="button" class="plan-sub-badge" data-group-key="${key}">${altLabel}</button>`;
-  const row = itemRow(activeItem, loggedItemIds.has(activeItem.id), { badgeHtml: badge });
+  const row = itemRow(activeItem, loggedItemIds.has(activeItem.id), {
+    badgeHtml: badge,
+    excludeIds: groupItemsList.map((i) => i.id),
+  });
 
   if (!expandedGroups.has(key)) return row;
 
@@ -564,7 +574,11 @@ export async function renderPlan(container, date) {
       const found = itemById.get(itemId);
       if (!found) return;
       const { item, option } = found;
-      await setItemExcluded(option.id, date, itemId, true);
+      // A substitution group's X excludes every alternative, not just
+      // the one currently showing — otherwise "deleting" it just
+      // reveals the next alternative in its place (see itemRow).
+      const excludeIds = (btn.dataset.excludeIds || itemId).split(",");
+      for (const id of excludeIds) await setItemExcluded(option.id, date, id, true);
       if (loggedItemIds.has(itemId)) await unlogMealPlanItem(item, date);
       renderPlan(container, date);
     });
