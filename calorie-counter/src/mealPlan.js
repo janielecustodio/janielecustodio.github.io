@@ -70,7 +70,15 @@ function itemAsFood(item) {
   };
 }
 
+// Idempotent by design, not just by convention — "Registrar tudo" is
+// meant to reconcile what's logged with what's currently shown, never to
+// blindly append, so logging an item already logged for this day is a
+// no-op here regardless of what the caller already believed about its
+// state (the UI's own loggedItemIds check is the fast path; this is the
+// backstop against ever actually double-logging the same item/day).
 export async function logMealPlanItem(item, mealType, loggedAt) {
+  const existing = await findTodayLogRows(item, loggedAt);
+  if (existing.length > 0) return;
   await addEntry(itemAsFood(item), 100, loggedAt, mealType, item.quantity_label);
 }
 
