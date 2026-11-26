@@ -51,6 +51,11 @@ const expandedGroups = new Set();
 // the auto-collapse doesn't immediately re-hide a slot the person just
 // chose to reopen, or vice versa.
 const collapseOverrideBySlot = new Map();
+// Blocks a second "Registrar tudo" from starting on an option that's
+// already mid-log — the disabled DOM attribute alone isn't a reliable
+// enough guard against a fast double-tap on a touch device beating the
+// first click's re-render, which would otherwise log every item twice.
+const loggingInProgress = new Set();
 let lastRenderedDateStr = null;
 function resetForDate(dateStr) {
   if (dateStr !== lastRenderedDateStr) {
@@ -510,6 +515,12 @@ export async function renderPlan(container, date) {
     btn.addEventListener("click", async () => {
       const option = slots.flatMap((s) => s.options.map((o) => ({ ...o, slot: s }))).find((o) => o.id === btn.dataset.optionId);
       if (!option) return;
+      // Synchronous re-entrancy guard, checked and set before anything
+      // else — this is what actually prevents a double-tap from logging
+      // everything twice, not just the (slower, less reliable) disabled
+      // attribute on the button itself.
+      if (loggingInProgress.has(option.id)) return;
+      loggingInProgress.add(option.id);
       const dayEdits = dayEditsByOption.get(option.id) || { excluded_item_ids: [], quantity_multipliers: {} };
       const effectiveOption = { ...option, items: applyDayEdits(option.items, dayEdits) };
       btn.disabled = true;
@@ -521,6 +532,7 @@ export async function renderPlan(container, date) {
       } catch (err) {
         reportActionError("registrar tudo", err);
       } finally {
+        loggingInProgress.delete(option.id);
         renderPlan(container, date);
       }
     });
