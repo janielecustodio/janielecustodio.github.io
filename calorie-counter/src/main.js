@@ -295,6 +295,37 @@ function macroShare(part, whole) {
   return `${Math.round((part / whole) * 100)}%`;
 }
 
+// Always shows the %-of-calories-by-macro breakdown (same convention as
+// the main Daily Summary donut), regardless of the Gramas/% toggle below
+// — that toggle is about each MEAL's share of the day, a different
+// question from "what fraction of today's calories came from each
+// macro," which this answers at a glance no matter which mode you're in.
+function planSummaryDonut(s) {
+  const macros = [
+    { pct: s.pctProtein, colorVar: "--series-protein" },
+    { pct: s.pctCarbs, colorVar: "--series-carbs" },
+    { pct: s.pctFat, colorVar: "--series-fat" },
+  ];
+  const arcs = buildDonutSegments(macros)
+    .map(
+      (seg) => `<circle class="donut-seg" cx="70" cy="70" r="${DONUT_R}"
+        style="stroke:var(${seg.colorVar})"
+        stroke-dasharray="${seg.dasharray}" stroke-dashoffset="${seg.dashoffset}"></circle>`
+    )
+    .join("");
+  return `
+    <div class="plan-summary-donut-wrap">
+      <svg class="donut-svg" viewBox="0 0 140 140">
+        <circle class="donut-track" cx="70" cy="70" r="${DONUT_R}"></circle>
+        ${arcs}
+      </svg>
+      <div class="donut-center">
+        <div class="donut-center-kcal">${Math.round(s.kcal).toLocaleString()}</div>
+        <div class="donut-center-label">kcal</div>
+      </div>
+    </div>`;
+}
+
 function renderPlanSummaryLine(entries) {
   const line = document.getElementById("plan-summary-line");
   const s = computeSummary(entries);
@@ -316,13 +347,25 @@ function renderPlanSummaryLine(entries) {
         : `P ${protein.toFixed(0)}g · C ${carbs.toFixed(0)}g · F ${fat.toFixed(0)}g`;
     return `<div class="plan-summary-row">${escapeHtml(label)}: ${Math.round(kcal)} kcal · ${macroText} · ${mealEntries.length} ${itemWord}</div>`;
   }).join("");
+  // The total line itself follows the same toggle the per-meal rows do —
+  // it used to stay in grams even while switched to percentage, which
+  // looked like the toggle wasn't doing anything at the top of the panel.
+  const totalMacroText =
+    planSummaryMode === "percentage"
+      ? `P ${s.pctProtein.toFixed(0)}% · C ${s.pctCarbs.toFixed(0)}% · F ${s.pctFat.toFixed(0)}%`
+      : `P ${s.protein_g.toFixed(0)}g · C ${s.carbs_g.toFixed(0)}g · F ${s.fat_g.toFixed(0)}g`;
   line.innerHTML = `
-    <div class="plan-summary-mode-toggle">
-      <button type="button" class="plan-summary-mode-btn ${planSummaryMode === "quantity" ? "active" : ""}" data-mode="quantity">Gramas</button>
-      <button type="button" class="plan-summary-mode-btn ${planSummaryMode === "percentage" ? "active" : ""}" data-mode="percentage">%</button>
+    <div class="plan-summary-header">
+      <div class="plan-summary-header-text">
+        <div class="plan-summary-mode-toggle">
+          <button type="button" class="plan-summary-mode-btn ${planSummaryMode === "quantity" ? "active" : ""}" data-mode="quantity">Gramas</button>
+          <button type="button" class="plan-summary-mode-btn ${planSummaryMode === "percentage" ? "active" : ""}" data-mode="percentage">%</button>
+        </div>
+        <div class="plan-summary-total">${Math.round(s.kcal)} kcal total · ${totalMacroText}</div>
+        ${byMeal}
+      </div>
+      ${planSummaryDonut(s)}
     </div>
-    <div class="plan-summary-total">${Math.round(s.kcal)} kcal total · P ${s.protein_g.toFixed(0)}g · C ${s.carbs_g.toFixed(0)}g · F ${s.fat_g.toFixed(0)}g</div>
-    ${byMeal}
   `;
   line.querySelectorAll(".plan-summary-mode-btn").forEach((btn) => {
     btn.addEventListener("click", () => {

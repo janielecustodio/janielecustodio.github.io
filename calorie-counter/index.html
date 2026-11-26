@@ -205,6 +205,8 @@ button{font-family:inherit;-webkit-tap-highlight-color:transparent}
   font-size:12px;color:var(--muted2);font-family:'IBM Plex Mono',monospace;
   margin:-8px 0 16px;padding:8px 10px;background:var(--ink2);border-radius:var(--r);
 }
+.plan-summary-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.plan-summary-header-text{flex:1;min-width:0}
 .plan-summary-mode-toggle{display:flex;gap:6px;margin-bottom:8px}
 .plan-summary-mode-btn{
   border:1px solid var(--line2);border-radius:14px;background:none;color:var(--muted2);
@@ -214,6 +216,13 @@ button{font-family:inherit;-webkit-tap-highlight-color:transparent}
 .plan-summary-mode-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
 .plan-summary-total{color:var(--head);font-weight:500;margin-bottom:4px}
 .plan-summary-row{padding:2px 0}
+/* A small always-percentage donut (same convention as the main Daily
+   Summary one) next to Resumo do dia's totals — answers "what share of
+   today's calories came from each macro" at a glance, independent of
+   whichever Gramas/% mode the per-meal breakdown is currently in. */
+.plan-summary-donut-wrap{position:relative;width:76px;height:76px;flex-shrink:0}
+.plan-summary-donut-wrap .donut-center-kcal{font-size:13px}
+.plan-summary-donut-wrap .donut-center-label{font-size:7px}
 .plan-slot{
   background:var(--ink2);border:1px solid var(--line);border-radius:8px;
   padding:16px;margin-bottom:14px;
