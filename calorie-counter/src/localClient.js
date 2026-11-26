@@ -54,6 +54,13 @@ function loadDb() {
         Object.assign(db, freshMealPlanTables());
         db.mealPlanSeedVersion = MEAL_PLAN_SEED_VERSION;
       }
+      // A db saved before some later feature shipped (e.g. meal_plan_day_edits,
+      // added well after people were already using local mode) simply won't
+      // have that key — back it in rather than letting _execUpsert/_execInsert
+      // crash on `undefined.find(...)` the first time it's touched.
+      for (const [key, value] of Object.entries(freshDb())) {
+        if (!(key in db)) db[key] = value;
+      }
       return db;
     }
   } catch {
@@ -201,7 +208,7 @@ class QueryBuilder {
   }
 
   async _execUpsert() {
-    const table = db[this.table];
+    const table = db[this.table] || (db[this.table] = []);
     const conflictCols = (this.upsertOpts.onConflict || "id").split(",");
     const existing = table.find((r) => conflictCols.every((c) => r[c] === this.payload[c]));
     let row;
@@ -218,7 +225,7 @@ class QueryBuilder {
   }
 
   async _execInsert() {
-    const table = db[this.table];
+    const table = db[this.table] || (db[this.table] = []);
     const rows = Array.isArray(this.payload) ? this.payload : [this.payload];
     const inserted = rows.map((r) => ({ id: `local-${nextId++}`, ...r }));
     table.push(...inserted);
