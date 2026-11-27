@@ -219,6 +219,22 @@ export async function getFrequentFoodsForMeal(mealType, limit = 6) {
     .map((e) => e.row);
 }
 
+// Every manually-entered food (typed by hand or read off a photo via
+// nutrition-label-proxy) so it can be picked again later without
+// retyping — each one otherwise has no barcode/database entry anywhere
+// else to find it by. `cached: true` lets openQtyModal/ensureFoodCached
+// skip re-inserting it, same as a food already read from a log entry.
+export async function getManualFoods(limit = 50) {
+  const { data, error } = await supabase
+    .from("foods")
+    .select("id, name, kcal_100g, protein_100g, fat_100g, carbs_100g, fiber_100g, micros, source, source_id, synced_at")
+    .eq("source", "manual")
+    .order("synced_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data || []).map((f) => ({ ...f, cached: true }));
+}
+
 // Duplicates one day's entries (optionally scoped to a single meal) into
 // another day, keeping each entry's original time-of-day. Returns the
 // number of entries copied.

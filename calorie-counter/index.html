@@ -695,10 +695,16 @@ button{font-family:inherit;-webkit-tap-highlight-color:transparent}
       <div class="frequent-label">Frequent for <span id="frequent-meal-label"></span></div>
       <div class="frequent-chips" id="frequent-chips"></div>
     </div>
+    <div id="manual-foods" class="frequent-foods" hidden>
+      <div class="frequent-label">Minhas comidas</div>
+      <div class="frequent-chips" id="manual-foods-chips"></div>
+    </div>
     <div class="search-row">
       <input id="search-input" type="text" placeholder="Search foods (e.g. chicken breast, arroz)…" autocomplete="off">
       <button class="btn-scan" id="scan-btn">Scan</button>
+      <button class="btn-scan" id="photo-scan-btn">Foto</button>
     </div>
+    <input type="file" id="photo-scan-input" accept="image/*" capture="environment" hidden>
     <div id="search-status" class="search-status" hidden></div>
     <div id="search-results"></div>
     <div class="manual-add-link">
