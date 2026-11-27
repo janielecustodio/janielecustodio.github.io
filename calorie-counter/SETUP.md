@@ -97,3 +97,29 @@ table and then queried like any other cached food:
 
 That's it — the app's search bar will immediately start returning TACO/TBCA
 results alongside USDA and Open Food Facts once the table has rows.
+
+## 5. Photo-to-nutrition (optional)
+
+Lets you snap a photo of any Nutrition Facts label — a store-brand item,
+a restaurant's printed label, anything with no barcode or database entry
+at all — and have it read the numbers off the photo instead of typing
+them in by hand. Same reasoning and pattern as the USDA key: the AI
+provider's key is read server-side by the `nutrition-label-proxy` Edge
+Function, never shipped in client code.
+
+This one has an ongoing (small, per-photo) cost, unlike USDA/Open Food
+Facts/TACO which are all free — skip this section entirely if that's not
+worth it; everything else in the app works without it, and "Add manually"
+is always there as a free fallback.
+
+1. Go to https://console.anthropic.com, create an account, add billing,
+   and create an API key under **API Keys**.
+2. Deploy the Edge Function the same way as `usda-proxy`: **Edge
+   Functions → Deploy a new function → via Editor**, name it
+   `nutrition-label-proxy`, paste in the contents of
+   `supabase/functions/nutrition-label-proxy/index.ts`, Deploy.
+3. **Edge Functions → Manage secrets** — name `ANTHROPIC_API_KEY`, value
+   the key from step 1.
+
+The "Foto" button next to search picks the function up automatically —
+nothing else to redeploy on the client side.

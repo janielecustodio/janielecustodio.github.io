@@ -4,12 +4,14 @@ import { searchAll } from "./foodSearch.js";
 import { startScan, barcodeScanningSupported } from "./barcode.js";
 import { lookupBarcode } from "./sources/off.js";
 import { fetchUsdaDetail } from "./sources/usda.js";
+import { scanNutritionLabel } from "./sources/labelScan.js";
 import {
   addEntry,
   updateEntry,
   deleteEntry,
   getEntriesForDate,
   getFrequentFoodsForMeal,
+  getManualFoods,
   copyDay,
   saveRecipe,
 } from "./log.js";
@@ -916,6 +918,34 @@ async function renderFrequentFoods(mealId) {
   }
 }
 
+// Every food ever typed/photo-scanned by hand, quick-pickable again — a
+// manual entry otherwise has no barcode/database entry anywhere else to
+// find it by, so without this, logging the same homemade or packaged
+// item a second time meant retyping all its macros from scratch.
+const manualFoodsSection = document.getElementById("manual-foods");
+const manualFoodsChips = document.getElementById("manual-foods-chips");
+async function renderManualFoods() {
+  try {
+    const foods = await getManualFoods(12);
+    if (foods.length === 0) {
+      manualFoodsSection.hidden = true;
+      return;
+    }
+    manualFoodsChips.innerHTML = "";
+    for (const food of foods) {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "frequent-chip";
+      chip.textContent = food.name;
+      chip.addEventListener("click", () => openQtyModal(food));
+      manualFoodsChips.appendChild(chip);
+    }
+    manualFoodsSection.hidden = false;
+  } catch {
+    manualFoodsSection.hidden = true;
+  }
+}
+
 // ── Copy day / copy meal ──
 function prevDate(d) {
   const x = new Date(d);
@@ -1172,6 +1202,7 @@ function openSearchModal() {
   searchResults.innerHTML = "";
   searchStatus.hidden = true;
   searchInput.focus();
+  renderManualFoods();
 }
 
 function closeSearchModal() {
@@ -1262,13 +1293,17 @@ const manualConfirm = document.getElementById("manual-confirm");
 
 manualMeal.innerHTML = MEAL_TYPES.map((m) => `<option value="${m.id}">${m.label}</option>`).join("");
 
-document.getElementById("manual-add-link").addEventListener("click", () => {
-  manualName.value = "";
-  manualDesc.value = "";
-  manualKcal.value = "";
-  manualProtein.value = "0";
-  manualFat.value = "0";
-  manualCarbs.value = "0";
+// `prefill` (used by the photo-scan flow) pre-fills the fields with
+// whatever was read off the label, but never logs anything by itself —
+// the person still reviews/edits and taps "Add to log" themselves, since
+// a misread label (a blurry photo, an odd layout) is always possible.
+function openManualModal(prefill) {
+  manualName.value = prefill?.name || "";
+  manualDesc.value = prefill?.quantity_label || "";
+  manualKcal.value = prefill?.kcal != null ? String(prefill.kcal) : "";
+  manualProtein.value = prefill?.protein_g != null ? String(prefill.protein_g) : "0";
+  manualFat.value = prefill?.fat_g != null ? String(prefill.fat_g) : "0";
+  manualCarbs.value = prefill?.carbs_g != null ? String(prefill.carbs_g) : "0";
   manualError.hidden = true;
   const now = new Date();
   const defaultTime = new Date(currentDate);
@@ -1277,7 +1312,9 @@ document.getElementById("manual-add-link").addEventListener("click", () => {
   manualMeal.value = pinnedMealType || inferMealType(defaultTime);
   manualModal.hidden = false;
   manualName.focus();
-});
+}
+
+document.getElementById("manual-add-link").addEventListener("click", () => openManualModal());
 
 document.getElementById("manual-cancel").addEventListener("click", () => {
   manualModal.hidden = true;
@@ -1666,4 +1703,38 @@ document.getElementById("scan-btn").addEventListener("click", async () => {
 document.getElementById("scan-cancel").addEventListener("click", () => {
   stopScan?.();
   scanModal.hidden = true;
+});
+
+// ── Photo-to-nutrition (for anything with no barcode/database entry at
+// all — a store-brand item, a restaurant's printed label) ──
+// Opens the device's native camera/photo picker directly; no in-app
+// camera preview needed the way barcode scanning needs one, since this
+// just needs one still photo, not a live feed to detect a code in.
+const photoScanInput = document.getElementById("photo-scan-input");
+document.getElementById("photo-scan-btn").addEventListener("click", () => photoScanInput.click());
+
+function readFileAsBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(",")[1] || "");
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+
+photoScanInput.addEventListener("change", async () => {
+  const file = photoScanInput.files?.[0];
+  photoScanInput.value = "";
+  if (!file) return;
+  searchStatus.hidden = false;
+  searchStatus.textContent = "Lendo o rótulo…";
+  try {
+    const base64 = await readFileAsBase64(file);
+    const result = await scanNutritionLabel(base64, file.type || "image/jpeg");
+    searchStatus.hidden = true;
+    openManualModal(result);
+  } catch (err) {
+    searchStatus.hidden = true;
+    alert("Não foi possível ler o rótulo: " + (err?.message || err));
+  }
 });
